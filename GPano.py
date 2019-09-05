@@ -18,28 +18,43 @@ chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
 web_driver_path = r'chromedriver.exe'
 driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
-Process_cnt = 10
+#Process_cnt = 10
+
+"""
+Read Me 
+lon/lat = longitude/latitude
+The current objective of GPano class is to download the panorama image from Google Street View according to lon/lat.
+Main workflow: get panorama image ID based on lon/lat -> according to the panorama id, get tiles of a Panorama image and then mosaic them 
+Please implement all the methods. I have written some tips (not code) in the method body to assist you. -- Huan
+"""
 
 class GPano:
     # Obtain a panomaro image from Google Street View Map
-    def getPanosfrmLonlats(self, list_lonlat, saved_path, zoom=4):
+    def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, zoom=4):
         """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
         """
         statuses = []      # succeeded: 1; failed: 0
         for lon, lat in list_lonlat.pop(0):
-
+            PanoID = self.getPanoJPGfrmLonlat(lon, lat)
 
 
         return statuses
 
     def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, zoom: int = 4) -> bool:
+        """Reference:
+            https://developers.google.com/maps/documentation/javascript/streetview
+            See the part from "Providing Custom Street View Panoramas" section.
+            When zoom=4, a panorama image have 6 rows, 13 cols.
+            Get those tiles and mosaic them to a large image.
+        """
         status = 0
-        PanoID, lon_pano, lat_pano = getPanoIDfrmLonlat(lat, lon, zoom=4)
+        PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
 
         return status
 
-    def getPanosfrmLonlats_mp(self, list_lonlat, saved_path, zoom=4, Process_cnt=Process_cnt):
+
+    def getPanosfrmLonlats_mp(self, list_lonlat, saved_path, zoom=4, Process_cnt=10):
         """ Multi_processing version of getPanosfrmLonlats()
             Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
@@ -49,9 +64,8 @@ class GPano:
 
 
 
-        return statuses
-
-    # Obtain a panomara_ID according to lon/lat
+    # Obtain a panomara_ID according to lon/lat.
+    # Finished!
     def getPanoIDfrmLonlat(self, lon:float, lat:float,) -> (str, float, float):
         """ Obtain panomara_id from lat/lon.
             Use selenium to obtain the new url, which contains the panomara_id
@@ -90,9 +104,7 @@ class GPano:
         except Exception as e:
             print("Error in getPanoIDfrmLonlat()", e)
 
-    def getPanoTiles(selft, PanoID):
-        imgs = []
-        return imgs, lat_acc, lon_acc
+
 
 if __name__ == '__main__':
     gpano = GPano()

@@ -45,8 +45,11 @@ class GPano:
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
-            When zoom=4, a panorama image have 6 rows, 13 cols.
             Get those tiles and mosaic them to a large image.
+            The url of a tile:
+            https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=CJ31ttcx7ez9qcWzoygVqA&output=tile&x=1&y=1&zoom=4&nbt&fover=2
+            Make sure randomly use geo0 - geo3 server.
+            When zoom=4, a panorama image have 6 rows, 13 cols.
         """
         status = 0
         PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)

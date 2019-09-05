@@ -39,7 +39,17 @@ class GPano:
 
         return status
 
+    def getPanosfrmLonlats_mp(self, list_lonlat, saved_path, zoom=4, Process_cnt=Process_cnt):
+        """ Multi_processing version of getPanosfrmLonlats()
+            Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
+        """
+        statuses = []      # succeeded: 1; failed: 0
+        pool = mp.Pool(processes=Process_cnt)
+
+
+
+        return statuses
 
     # Obtain a panomara_ID according to lon/lat
     def getPanoIDfrmLonlat(self, lon:float, lat:float,) -> (str, float, float):

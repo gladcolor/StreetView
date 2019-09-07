@@ -52,7 +52,8 @@ class GPano:
             When zoom=4, a panorama image have 6 rows, 13 cols.
         """
         status = 0
-        PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+        PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon)
+        print(PanoID)
 
         return status
 
@@ -114,13 +115,14 @@ if __name__ == '__main__':
 
     # Test getPanoIDfrmLonlat()
     print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
+    gpano.getPanoJPGfrmLonlat(-74.24756, 40.689524, "G:\\")
 
     # Using multi_processing to download panorama images from a list
-    list_lonlat = pd.read_csv(r'morris_points_10.csv')
-    list_lonlat = list_lonlat[:200]
-    mp_lonlat = mp.Manager().list()
-    for idx, row in list_lonlat.iterrows():
-        mp_lonlat.append([row['lon'], row['lat']])
+    # list_lonlat = pd.read_csv(r'morris_points_10.csv')
+    # list_lonlat = list_lonlat[:200]
+    # mp_lonlat = mp.Manager().list()
+    # for idx, row in list_lonlat.iterrows():
+    #     mp_lonlat.append([row['lon'], row['lat']])
 
 
 

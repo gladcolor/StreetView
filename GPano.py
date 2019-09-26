@@ -38,10 +38,12 @@ class GPano:
 
         """
         statuses = []      # succeeded: 1; failed: 0
-        for lon, lat in list_lonlat.pop(0):
-            PanoID = self.getPanoJPGfrmLonlat(lon, lat)
+        #print(list_lonlat.pop(0))
 
-
+        while len(list_lonlat) > 0:
+            lon, lat = list_lonlat.pop(0)
+            print(lon, lat)
+            self.getPanoJPGfrmLonlat(lon, lat, saved_path)
         return statuses
 
     def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, zoom: int = 4) -> bool:
@@ -69,8 +71,7 @@ class GPano:
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
-                                                                                                          0:22] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=4&nbt&fover=2'
                 response = requests.get(url)
                 image = Image.open(BytesIO(response.content))
@@ -82,8 +83,7 @@ class GPano:
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
-                                                                                                          0:22] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
                 response = requests.get(url)
                 image = Image.open(BytesIO(response.content))
@@ -92,32 +92,37 @@ class GPano:
                 break
 
         UNIT_SIZE = 512
-        target = Image.new('RGB', (UNIT_SIZE * m, UNIT_SIZE * n))  # new graph
-        for x in range(m):  # list
-            for y in range(n):  # row
-                num = random.randint(0, 3)
-                url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
-                                                                                                          0:22] + '&output=tile&x=' + str(
-                    x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
-                target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
-        mapname = os.path.join(saved_path, (adcode[1] + '_' + adcode[2] + '_' + adcode[0] + '.jpg'))
-        target.save(mapname)
+        try:
+            target = Image.new('RGB', (UNIT_SIZE * m, UNIT_SIZE * n))  # new graph
+            for x in range(m):  # list
+                for y in range(n):  # row
+                    num = random.randint(0, 3)
+                    url = 'https://geo' + str(
+                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                        x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
+                    response = requests.get(url)
+                    image = Image.open(BytesIO(response.content))
+                    target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
+            mapname = os.path.join(saved_path, (adcode[1] + '_' + adcode[2] + '_' + adcode[0] + '.jpg'))
+            target.save(mapname)
+        except Exception as e:
+            print("Error in getPanoJPGfrmLonlat():", e)
 
 
         return status
 
 
-    def getPanosfrmLonlats_mp(self, list_lonlat, saved_path, zoom=4, Process_cnt=10):
+    def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, zoom=4, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
             Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
         """
         statuses = []      # succeeded: 1; failed: 0
         pool = mp.Pool(processes=Process_cnt)
-
+        for i in range(Process_cnt):
+            pool.apply_async(self.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
+        pool.close()
+        pool.join()
 
 
     # Obtain a panomara_ID according to lon/lat.
@@ -165,6 +170,20 @@ class GPano:
             print("Error in getPanoIDfrmLonlat()", e)
 
 
+def getPanosfrmLonlats_mp(list_lonlat_mp, saved_path, zoom=4, Process_cnt=4):
+    """ Multi_processing version of getPanosfrmLonlats()
+        Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
+
+    """
+    statuses = []      # succeeded: 1; failed: 0
+    gpano2 = GPano()
+    print(gpano2)
+    pool = mp.Pool(processes=Process_cnt)
+    for i in range(Process_cnt):
+        pool.apply_async(gpano2.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
+    pool.close()
+    pool.join()
+
 
 if __name__ == '__main__':
     gpano = GPano()
@@ -174,14 +193,14 @@ if __name__ == '__main__':
 
     # Using multi_processing to download panorama images from a list
     list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[30000:30200]
+    list_lonlat = list_lonlat[40000:40200]
     mp_lonlat = mp.Manager().list()
     for idx, row in list_lonlat.iterrows():
         mp_lonlat.append([row['lon'], row['lat']])
-        gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
-    print(mp_lonlat.pop(0))
-    print(mp_lonlat.pop(0))
-    print(len(mp_lonlat))
+        #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
+    print(mp_lonlat)
+    getPanosfrmLonlats_mp(mp_lonlat, saved_path='jpg', Process_cnt=4)
+
 
 
 

@@ -59,6 +59,11 @@ class GPano:
 
         adcode = self.getPanoIDfrmLonlat(lon, lat)
 
+        if adcode[0] == 0:
+            print(adcode[0], "is not a PanoID.")
+            return
+
+
         print(adcode)  # Works well.
         for x in range(30):  # test for the size of map
             try:
@@ -130,16 +135,18 @@ class GPano:
         fov = 90
         url_part1 = r'!3m6!1e1!3m4!1s'
         url_part2 = r'!2e0!7i16384!8i8192'
-        url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
+        url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
 
         #print(url)
         try:
             driver.get(url)
             time.sleep(4)
             new_url = driver.current_url
-            if new_url == url:
+            end_new_url = new_url[new_url.find("data="):]
+            #print(end_new_url)
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
                 time.sleep(2)
-            if new_url == url:
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
                 PanoID = 0
                 lon_pano = 0
                 lat_pano = 0
@@ -150,7 +157,8 @@ class GPano:
                 #pos2 = new_url.find(url_part2)
                 pos2 = new_url.find(url_part2[:5])
                 PanoID = new_url[(pos1 + len(url_part1)):pos2]
-                #print(new_url)
+                print(url)
+                print(new_url)
 
             return PanoID, lon_pano, lat_pano   # if cannot find the panomara, return (0, 0, 0)
         except Exception as e:
@@ -166,7 +174,7 @@ if __name__ == '__main__':
 
     # Using multi_processing to download panorama images from a list
     list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[2:200]
+    list_lonlat = list_lonlat[30000:30200]
     mp_lonlat = mp.Manager().list()
     for idx, row in list_lonlat.iterrows():
         mp_lonlat.append([row['lon'], row['lat']])

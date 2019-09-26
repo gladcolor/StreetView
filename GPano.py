@@ -199,7 +199,7 @@ if __name__ == '__main__':
         mp_lonlat.append([row['lon'], row['lat']])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
     print(mp_lonlat)
-    getPanosfrmLonlats_mp(mp_lonlat, saved_path='jpg', Process_cnt=4)
+    gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path='jpg', Process_cnt=4)
 
 
 

@@ -99,7 +99,8 @@ class GPano:
                 lat_pano, lon_pano = new_url.split(',')[:2]
                 lat_pano = lat_pano.split("@")[1]
                 pos1 = new_url.find(url_part1)
-                pos2 = new_url.find(url_part2)
+                #pos2 = new_url.find(url_part2)
+                pos2 = new_url.find(url_part2[:5])
                 PanoID = new_url[(pos1 + len(url_part1)):pos2]
                 #print(new_url)
 
@@ -113,14 +114,17 @@ if __name__ == '__main__':
     gpano = GPano()
 
     # Test getPanoIDfrmLonlat()
-    print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
+    #print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
 
     # Using multi_processing to download panorama images from a list
-    list_lonlat = pd.read_csv(r'morris_points_10.csv')
+    list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
     list_lonlat = list_lonlat[:200]
     mp_lonlat = mp.Manager().list()
     for idx, row in list_lonlat.iterrows():
         mp_lonlat.append([row['lon'], row['lat']])
+    print(mp_lonlat.pop(0))
+    print(mp_lonlat.pop(0))
+    print(len(mp_lonlat))
 
 
 

@@ -5,12 +5,15 @@ Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 import multiprocessing as mp
 import selenium
-
+import os
 import time
+from io import BytesIO
 import pandas as pd
+import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from PIL import Image
+import requests
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -52,7 +55,52 @@ class GPano:
             When zoom=4, a panorama image have 6 rows, 13 cols.
         """
         status = 0
-        PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+        #PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+
+        adcode = self.getPanoIDfrmLonlat(lon, lat)
+
+        print(adcode)  # Works well.
+        for x in range(30):  # test for the size of map
+            try:
+                num = random.randint(0, 3)
+                url = 'https://geo' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
+                                                                                                          0:22] + '&output=tile&x=' + str(
+                    x) + '&y=' + str(0) + '&zoom=4&nbt&fover=2'
+                response = requests.get(url)
+                image = Image.open(BytesIO(response.content))
+            except OSError:
+                m = x
+                break
+
+        for x in range(30):
+            try:
+                num = random.randint(0, 3)
+                url = 'https://geo' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
+                                                                                                          0:22] + '&output=tile&x=' + str(
+                    0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
+                response = requests.get(url)
+                image = Image.open(BytesIO(response.content))
+            except OSError:
+                n = x
+                break
+
+        UNIT_SIZE = 512
+        target = Image.new('RGB', (UNIT_SIZE * m, UNIT_SIZE * n))  # new graph
+        for x in range(m):  # list
+            for y in range(n):  # row
+                num = random.randint(0, 3)
+                url = 'https://geo' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0][
+                                                                                                          0:22] + '&output=tile&x=' + str(
+                    x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
+                response = requests.get(url)
+                image = Image.open(BytesIO(response.content))
+                target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
+        mapname = os.path.join(saved_path, (adcode[1] + '_' + adcode[2] + '_' + adcode[0] + '.jpg'))
+        target.save(mapname)
+
 
         return status
 
@@ -118,10 +166,11 @@ if __name__ == '__main__':
 
     # Using multi_processing to download panorama images from a list
     list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[:200]
+    list_lonlat = list_lonlat[2:200]
     mp_lonlat = mp.Manager().list()
     for idx, row in list_lonlat.iterrows():
         mp_lonlat.append([row['lon'], row['lat']])
+        gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
     print(mp_lonlat.pop(0))
     print(mp_lonlat.pop(0))
     print(len(mp_lonlat))

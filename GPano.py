@@ -14,6 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import requests
+import csv
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -33,7 +34,7 @@ Please implement all the methods. I have written some tips (not code) in the met
 
 class GPano:
     # Obtain a panomaro image from Google Street View Map
-    def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, zoom=4):
+    def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
         """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
         """
@@ -41,12 +42,13 @@ class GPano:
         #print(list_lonlat.pop(0))
 
         while len(list_lonlat) > 0:
-            lon, lat = list_lonlat.pop(0)
-            print(lon, lat)
-            self.getPanoJPGfrmLonlat(lon, lat, saved_path)
+            lon, lat, row = list_lonlat.pop(0)
+            print(lon, lat, row)
+            prefix = row
+            self.getPanoJPGfrmLonlat(lon, lat, saved_path, prefix, suffix)
         return statuses
 
-    def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, zoom: int = 4) -> bool:
+    def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
@@ -103,7 +105,11 @@ class GPano:
                     response = requests.get(url)
                     image = Image.open(BytesIO(response.content))
                     target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
-            mapname = os.path.join(saved_path, (adcode[1] + '_' + adcode[2] + '_' + adcode[0] + '.jpg'))
+            if prefix == "":
+                prefix += '_'
+            if suffix == "":
+                suffix = '_' + suffix
+            mapname = os.path.join(saved_path, (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
             target.save(mapname)
         except Exception as e:
             print("Error in getPanoJPGfrmLonlat():", e)
@@ -112,7 +118,7 @@ class GPano:
         return status
 
 
-    def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, zoom=4, Process_cnt=4):
+    def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=4, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
             Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
@@ -192,14 +198,16 @@ if __name__ == '__main__':
     #print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
 
     # Using multi_processing to download panorama images from a list
-    list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[40000:40200]
+    #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
+    list_lonlat = pd.read_csv(r'K:\Research\StreetView\Google_street_view\Peng_Qiong\peng.csv', quoting=csv.QUOTE_ALL)
+    #list_lonlat = list_lonlat[50000:50200]
     mp_lonlat = mp.Manager().list()
+    print(list_lonlat)
     for idx, row in list_lonlat.iterrows():
-        mp_lonlat.append([row['lon'], row['lat']])
+        mp_lonlat.append([row['lon'], row['lat'], idx + 1])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
     print(mp_lonlat)
-    gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path='jpg', Process_cnt=4)
+    gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path='peng_jpg', Process_cnt=4)
 
 
 

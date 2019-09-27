@@ -105,9 +105,9 @@ class GPano:
                     response = requests.get(url)
                     image = Image.open(BytesIO(response.content))
                     target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
-            if prefix == "":
+            if prefix != "":
                 prefix += '_'
-            if suffix == "":
+            if suffix != "":
                 suffix = '_' + suffix
             mapname = os.path.join(saved_path, (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
             target.save(mapname)
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     mp_lonlat = mp.Manager().list()
     print(list_lonlat)
     for idx, row in list_lonlat.iterrows():
-        mp_lonlat.append([row['lon'], row['lat'], idx + 1])
+        mp_lonlat.append([row['lon'], row['lat'], str(idx + 1)])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
     print(mp_lonlat)
     gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path='peng_jpg', Process_cnt=4)

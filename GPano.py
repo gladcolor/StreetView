@@ -195,32 +195,16 @@ class GPano:
         height = int(height)
         pitch = int(pitch)
         width = int(width)
-        #
-        # yaw1 = yaw - 90
-        # yaw2 = yaw + 90
 
         if yaw > 360:
             yaw = yaw - 360
         if yaw < 0:
             yaw = yaw + 360
 
-        # if yaw2 > 360:
-        #     yaw2 = yaw2 - 360
-        #
-        # if yaw2 < 0:
-        #     yaw2 = yaw2 + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
 
-        # url2 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-        #        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw2}"
-        #
-        # url3 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-        #       f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
-        #
-        # url4 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-        #        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw+180}"
         suffix = str(suffix)
         prefix = str(prefix)
         if prefix != "":
@@ -241,42 +225,6 @@ class GPano:
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
-        #
-        # try:
-        #     response = requests.get(url2)
-        #     image = Image.open(BytesIO(response.content))
-        #
-        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw2)) + suffix + '.jpg'))
-        #     if image.getbbox():
-        #         image.save(jpg_name)
-        #     #print(url2)
-        # except Exception as e:
-        #     print("Error in getImagefrmAngle() getting url2", e)
-        #     print(url2)
-        #
-        # try:
-        #     response = requests.get(url3)
-        #     image = Image.open(BytesIO(response.content))
-        #
-        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw)) + suffix + '.jpg'))
-        #     if image.getbbox():
-        #         image.save(jpg_name)
-        #     #print(url2)
-        # except Exception as e:
-        #     print("Error in getImagefrmAngle() getting url2", e)
-        #     print(url2)
-        #
-        # try:
-        #     response = requests.get(url4)
-        #     image = Image.open(BytesIO(response.content))
-        #
-        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw+180)) + suffix + '.jpg'))
-        #     if image.getbbox():
-        #         image.save(jpg_name)
-        #     #print(url2)
-        # except Exception as e:
-        #     print("Error in getImagefrmAngle() getting url3", e)
-        #     print(url2)
 
     def getImageCirclefrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0, interval=90):
         # w maximum: 1024
@@ -291,6 +239,58 @@ class GPano:
             yaw = road_compassA + i * interval
             self.getImagefrmAngle(lon, lat, saved_path, prefix, suffix, width, height, pitch, yaw)
 
+    def getImage4DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+        # w maximum: 1024
+        # h maximum: 768
+        # FOV should be 90, cannot be changed
+        # interval: degree, not rad
+        suffix = str(suffix)
+        if suffix != '':
+            suffix = '_' + suffix
+
+        #img_cnt = math.ceil(360/interval)
+        names = ['F', 'R', 'B', 'L']  # forward, backward, left, right
+        #interval = math.ceil(360 / len(names))
+        for idx, name in enumerate(names):
+            yaw = road_compassA + idx * 90
+            # print('idx: ', idx)
+            # print('name:', name)
+            # print('yaw: ', yaw)
+            self.getImagefrmAngle(lon, lat, saved_path, prefix, name + suffix, width, height, pitch, yaw)
+
+    def getImage4DirectionfrmLonlats(self, list_lonlat, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+        #print(len(list_lonlat))
+
+
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 100
+        origin_len = len(list_lonlat)
+        current_len = origin_len
+        while current_len > 0:
+            try:
+                #print(list_lonlat.pop(0))
+                lon, lat, id, road_compassA = list_lonlat.pop(0)
+                prefix = str(id)
+                current_len = len(list_lonlat)
+                print('id :', id)
+                self.getImage4DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
+                Cnt = current_len - origin_len
+                if Cnt % Cnt_interval == (Cnt_interval - 1):
+                    print(
+                        "Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+            except Exception as e:
+                print("Error in getImage4DirectionfrmLonlats(): ", e, id)
+                continue
+
+    def getImage4DirectionfrmLonlats_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt = 6, prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+        #statuses = []      # succeeded: 1; failed: 0
+        pool = mp.Pool(processes=Process_cnt)
+
+        for i in range(Process_cnt):
+            pool.apply_async(self.getImage4DirectionfrmLonlats, args=(list_lonlat_mp, saved_path, prefix, suffix, width, height, pitch, road_compassA))
+        pool.close()
+        pool.join()
 
 
 if __name__ == '__main__':
@@ -305,18 +305,18 @@ if __name__ == '__main__':
     print(sys.getdefaultencoding())
     #list_lonlat = pd.read_csv(r'G:\My Drive\Research\sidewalk\test_data.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
     list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[:100]
+    list_lonlat = list_lonlat[:1000]
     list_lonlat = list_lonlat.fillna(0)
-    #mp_lonlat = mp.Manager().list()
-    print(len(list_lonlat))
+    mp_lonlat = mp.Manager().list()
+    #print(len(list_lonlat))
     for idx, row in list_lonlat.iterrows():
-        #mp_lonlat.append([row['lon'], row['lat'], str(idx + 1), row['CompassA']])
+        mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['CompassA']])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
-        print(idx)
-        gpano.getImageCirclefrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'],prefix=int(row['id']), interval=90)
+        #print(idx)
+        #gpano.getImage4DirectionfrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', road_compassA=row['CompassA'], prefix=int(row['id']))
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
-
+    gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=4)
 
 
 

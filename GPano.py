@@ -15,6 +15,7 @@ from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import requests
 import csv
+import math
 import sys
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
@@ -194,60 +195,102 @@ class GPano:
         height = int(height)
         pitch = int(pitch)
         width = int(width)
+        #
+        # yaw1 = yaw - 90
+        # yaw2 = yaw + 90
 
-        yaw1 = yaw - 90
-        yaw2 = yaw + 90
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
 
-        if yaw1 > 360:
-            yaw1 = yaw1 - 360
-        if yaw1 < 0:
-            yaw1 = yaw1 + 360
-
-        if yaw2 > 360:
-            yaw2 = yaw1 - 360
-
-        if yaw2 < 0:
-            yaw2 = yaw1 + 360
+        # if yaw2 > 360:
+        #     yaw2 = yaw2 - 360
+        #
+        # if yaw2 < 0:
+        #     yaw2 = yaw2 + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw1}"
+              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
 
-        url2 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw2}"
+        # url2 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+        #        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw2}"
+        #
+        # url3 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+        #       f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
+        #
+        # url4 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+        #        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw+180}"
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
 
 
         try:
             response = requests.get(url1)
             image = Image.open(BytesIO(response.content))
 
-            if prefix != "":
-                prefix += '_'
-            if suffix != "":
-                suffix = '_' + suffix
-            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(yaw1) + suffix + '.jpg'))
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw)) + suffix + '.jpg'))
             if image.getbbox():
                 image.save(jpg_name)
             #print(url2)
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
+        #
+        # try:
+        #     response = requests.get(url2)
+        #     image = Image.open(BytesIO(response.content))
+        #
+        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw2)) + suffix + '.jpg'))
+        #     if image.getbbox():
+        #         image.save(jpg_name)
+        #     #print(url2)
+        # except Exception as e:
+        #     print("Error in getImagefrmAngle() getting url2", e)
+        #     print(url2)
+        #
+        # try:
+        #     response = requests.get(url3)
+        #     image = Image.open(BytesIO(response.content))
+        #
+        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw)) + suffix + '.jpg'))
+        #     if image.getbbox():
+        #         image.save(jpg_name)
+        #     #print(url2)
+        # except Exception as e:
+        #     print("Error in getImagefrmAngle() getting url2", e)
+        #     print(url2)
+        #
+        # try:
+        #     response = requests.get(url4)
+        #     image = Image.open(BytesIO(response.content))
+        #
+        #     jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw+180)) + suffix + '.jpg'))
+        #     if image.getbbox():
+        #         image.save(jpg_name)
+        #     #print(url2)
+        # except Exception as e:
+        #     print("Error in getImagefrmAngle() getting url3", e)
+        #     print(url2)
 
+    def getImageCirclefrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0, interval=90):
+        # w maximum: 1024
+        # h maximum: 768
+        # FOV should be 90, cannot be changed
+        # interval: degree, not rad
+        interval = abs(interval)
+        interval = max(interval, 1)
 
-        try:
-            response = requests.get(url2)
-            image = Image.open(BytesIO(response.content))
+        img_cnt = math.ceil(360/interval)
+        for i in range(img_cnt):
+            yaw = road_compassA + i * interval
+            self.getImagefrmAngle(lon, lat, saved_path, prefix, suffix, width, height, pitch, yaw)
 
-            if prefix != "":
-                prefix += '_'
-            if suffix != "":
-                suffix = '_' + suffix
-            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(yaw2) + suffix + '.jpg'))
-            if image.getbbox():
-                image.save(jpg_name)
-            #print(url2)
-        except Exception as e:
-            print("Error in getImagefrmAngle() getting url2", e)
-            print(url2)
 
 
 if __name__ == '__main__':
@@ -270,7 +313,7 @@ if __name__ == '__main__':
         #mp_lonlat.append([row['lon'], row['lat'], str(idx + 1), row['CompassA']])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
         print(idx)
-        gpano.getImagefrmAngle(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'])
+        gpano.getImagefrmAngle(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'], prefix=int(row['id']))
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
 

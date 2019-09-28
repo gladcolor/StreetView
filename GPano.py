@@ -313,7 +313,7 @@ if __name__ == '__main__':
         #mp_lonlat.append([row['lon'], row['lat'], str(idx + 1), row['CompassA']])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
         print(idx)
-        gpano.getImagefrmAngle(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'], prefix=int(row['id']))
+        gpano.getImageCirclefrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'],prefix=int(row['id']), interval=90)
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
 

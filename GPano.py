@@ -15,12 +15,13 @@ from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import requests
 import csv
+import sys
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
-web_driver_path = r'chromedriver.exe'
+web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
 driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 #Process_cnt = 10
 
@@ -40,12 +41,18 @@ class GPano:
         """
         statuses = []      # succeeded: 1; failed: 0
         #print(list_lonlat.pop(0))
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 100
 
         while len(list_lonlat) > 0:
             lon, lat, row = list_lonlat.pop(0)
             print(lon, lat, row)
             prefix = row
             self.getPanoJPGfrmLonlat(lon, lat, saved_path, prefix, suffix)
+            Cnt += 1
+            if Cnt % Cnt_interval == (Cnt_interval - 1):
+                print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
         return statuses
 
     def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
@@ -63,13 +70,12 @@ class GPano:
 
         adcode = self.getPanoIDfrmLonlat(lon, lat)
 
-        if adcode[0] == 0:
+        if str(adcode[0]) == str(0):
             print(adcode[0], "is not a PanoID.")
-            return
-
+            return status
 
         print(adcode)  # Works well.
-        for x in range(30):  # test for the size of map
+        for x in range(30):  # test for the size of map, column, x
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
@@ -81,7 +87,7 @@ class GPano:
                 m = x
                 break
 
-        for x in range(30):
+        for x in range(30):   # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
@@ -92,6 +98,7 @@ class GPano:
             except OSError:
                 n = x
                 break
+        print('col, row:', m, n)
 
         UNIT_SIZE = 512
         try:
@@ -111,9 +118,10 @@ class GPano:
                 suffix = '_' + suffix
             mapname = os.path.join(saved_path, (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
             target.save(mapname)
+            status = 1
         except Exception as e:
             print("Error in getPanoJPGfrmLonlat():", e)
-
+            status = 0
 
         return status
 
@@ -161,6 +169,8 @@ class GPano:
                 PanoID = 0
                 lon_pano = 0
                 lat_pano = 0
+                print("No new url for: ", url)
+
             else:
                 lat_pano, lon_pano = new_url.split(',')[:2]
                 lat_pano = lat_pano.split("@")[1]
@@ -175,20 +185,69 @@ class GPano:
         except Exception as e:
             print("Error in getPanoIDfrmLonlat()", e)
 
+    def getImagefrmAngle(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        lon = round(lon, 7)
+        lat = round(lat, 7)
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
 
-def getPanosfrmLonlats_mp(list_lonlat_mp, saved_path, zoom=4, Process_cnt=4):
-    """ Multi_processing version of getPanosfrmLonlats()
-        Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
+        yaw1 = yaw - 90
+        yaw2 = yaw + 90
 
-    """
-    statuses = []      # succeeded: 1; failed: 0
-    gpano2 = GPano()
-    print(gpano2)
-    pool = mp.Pool(processes=Process_cnt)
-    for i in range(Process_cnt):
-        pool.apply_async(gpano2.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
-    pool.close()
-    pool.join()
+        if yaw1 > 360:
+            yaw1 = yaw1 - 360
+        if yaw1 < 0:
+            yaw1 = yaw1 + 360
+
+        if yaw2 > 360:
+            yaw2 = yaw1 - 360
+
+        if yaw2 < 0:
+            yaw2 = yaw1 + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw1}"
+
+        url2 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw2}"
+
+
+        try:
+            response = requests.get(url1)
+            image = Image.open(BytesIO(response.content))
+
+            if prefix != "":
+                prefix += '_'
+            if suffix != "":
+                suffix = '_' + suffix
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(yaw1) + suffix + '.jpg'))
+            if image.getbbox():
+                image.save(jpg_name)
+            #print(url2)
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+
+
+        try:
+            response = requests.get(url2)
+            image = Image.open(BytesIO(response.content))
+
+            if prefix != "":
+                prefix += '_'
+            if suffix != "":
+                suffix = '_' + suffix
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(yaw2) + suffix + '.jpg'))
+            if image.getbbox():
+                image.save(jpg_name)
+            #print(url2)
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url2", e)
+            print(url2)
 
 
 if __name__ == '__main__':
@@ -199,15 +258,22 @@ if __name__ == '__main__':
 
     # Using multi_processing to download panorama images from a list
     #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = pd.read_csv(r'K:\Research\StreetView\Google_street_view\Peng_Qiong\peng.csv', quoting=csv.QUOTE_ALL)
-    #list_lonlat = list_lonlat[50000:50200]
-    mp_lonlat = mp.Manager().list()
-    print(list_lonlat)
+    print(sys.getfilesystemencoding())
+    print(sys.getdefaultencoding())
+    #list_lonlat = pd.read_csv(r'G:\My Drive\Research\sidewalk\test_data.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+    list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
+    list_lonlat = list_lonlat[:100]
+    list_lonlat = list_lonlat.fillna(0)
+    #mp_lonlat = mp.Manager().list()
+    print(len(list_lonlat))
     for idx, row in list_lonlat.iterrows():
-        mp_lonlat.append([row['lon'], row['lat'], str(idx + 1)])
+        #mp_lonlat.append([row['lon'], row['lat'], str(idx + 1), row['CompassA']])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
-    print(mp_lonlat)
-    gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path='peng_jpg', Process_cnt=4)
+        print(idx)
+        gpano.getImagefrmAngle(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', yaw=row['CompassA'])
+    #print(mp_lonlat)
+    #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
+
 
 
 

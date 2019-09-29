@@ -208,17 +208,17 @@ class GPano:
         suffix = str(suffix)
         prefix = str(prefix)
         if prefix != "":
-            print('prefix:', prefix)
+            #print('prefix:', prefix)
             prefix = prefix + '_'
         if suffix != "":
             suffix = '_' + suffix
-
 
         try:
             response = requests.get(url1)
             image = Image.open(BytesIO(response.content))
 
-            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + str(int(yaw)) + suffix + '.jpg'))
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
+                                                 str(int(yaw)) + suffix + '.jpg'))
             if image.getbbox():
                 image.save(jpg_name)
             #print(url2)
@@ -266,21 +266,22 @@ class GPano:
         Cnt = 0
         Cnt_interval = 100
         origin_len = len(list_lonlat)
-        current_len = origin_len
-        while current_len > 0:
+
+        while len(list_lonlat) > 0:
             try:
                 #print(list_lonlat.pop(0))
-                lon, lat, id, road_compassA = list_lonlat.pop(0)
+                lon, lat, id = list_lonlat.pop(0)
                 prefix = str(id)
                 current_len = len(list_lonlat)
                 print('id :', id)
                 self.getImage4DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
-                Cnt = current_len - origin_len
+                Cnt = origin_len - current_len
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     print(
-                        "Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+                        "Prcessed {} / {} items. Processing speed: {} points / hour.".format(Cnt, origin_len, int(Cnt / (time.time() - start_time + 0.001) * 3600)))
             except Exception as e:
                 print("Error in getImage4DirectionfrmLonlats(): ", e, id)
+                current_len = len(list_lonlat)
                 continue
 
     def getImage4DirectionfrmLonlats_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt = 6, prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
@@ -303,20 +304,22 @@ if __name__ == '__main__':
     #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
     print(sys.getfilesystemencoding())
     print(sys.getdefaultencoding())
-    #list_lonlat = pd.read_csv(r'G:\My Drive\Research\sidewalk\test_data.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
-    list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
-    list_lonlat = list_lonlat[:1000]
+    list_lonlat = pd.read_csv(r'G:\My Drive\Research\sidewalk\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+    #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
+    list_lonlat = list_lonlat[:]
     list_lonlat = list_lonlat.fillna(0)
     mp_lonlat = mp.Manager().list()
     #print(len(list_lonlat))
     for idx, row in list_lonlat.iterrows():
-        mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['CompassA']])
+        #mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['CompassA']])
+        #mp_lonlat.append([row['lon'], row['lat'], str(row['ID'])])
+        mp_lonlat.append([row['longitude'], row['latitude'], str(row['ID'])])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
         #print(idx)
         #gpano.getImage4DirectionfrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', road_compassA=row['CompassA'], prefix=int(row['id']))
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
-    gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=4)
+    gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Peng_panos2', Process_cnt=20)
 
 
 

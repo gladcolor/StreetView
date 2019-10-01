@@ -320,6 +320,7 @@ if __name__ == '__main__':
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
     gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Peng_panos2', Process_cnt=20)
+    #testing
 
 
 

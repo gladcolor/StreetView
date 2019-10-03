@@ -23,7 +23,7 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
 web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
-driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+#driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 #Process_cnt = 10
 
 """
@@ -270,10 +270,10 @@ class GPano:
         while len(list_lonlat) > 0:
             try:
                 #print(list_lonlat.pop(0))
-                lon, lat, id = list_lonlat.pop(0)
+                lon, lat, id, prefix, road_compassA = list_lonlat.pop(0)
                 prefix = str(id)
                 current_len = len(list_lonlat)
-                print('id :', id)
+                print('Current row :', id)
                 self.getImage4DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
                 Cnt = origin_len - current_len
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
@@ -304,22 +304,22 @@ if __name__ == '__main__':
     #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
     print(sys.getfilesystemencoding())
     print(sys.getdefaultencoding())
-    list_lonlat = pd.read_csv(r'G:\My Drive\Research\sidewalk\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
-    #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
+    #list_lonlat = pd.read_csv(r'J:\Sidewalk\google_street_view\Qiong_peng\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+    list_lonlat = pd.read_csv(r'K:\Research\NJTPA\Essex_10m_points.csv')
     list_lonlat = list_lonlat[:]
     list_lonlat = list_lonlat.fillna(0)
     mp_lonlat = mp.Manager().list()
     #print(len(list_lonlat))
     for idx, row in list_lonlat.iterrows():
-        #mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['CompassA']])
+        mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['id'], row['CompassA']])
         #mp_lonlat.append([row['lon'], row['lat'], str(row['ID'])])
-        mp_lonlat.append([row['longitude'], row['latitude'], str(row['ID'])])
+        #mp_lonlat.append([row['longitude'], row['latitude'], str(row['ID'])])
         #gpano.getPanoJPGfrmLonlat(row['lon'], row['lat'], saved_path='jpg')
         #print(idx)
         #gpano.getImage4DirectionfrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', road_compassA=row['CompassA'], prefix=int(row['id']))
     #print(mp_lonlat)
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
-    gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Peng_panos2', Process_cnt=20)
+    gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'J:\Sidewalk\google_street_view\Essex', Process_cnt=10)
 
 
 

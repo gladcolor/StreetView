@@ -14,6 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import requests
+import json
 import csv
 import math
 import sys
@@ -142,7 +143,7 @@ class GPano:
 
     # Obtain a panomara_ID according to lon/lat.
     # Finished!
-    def getPanoIDfrmLonlat(self, lon:float, lat:float,) -> (str, float, float):
+    def getPanoIDfrmLonlat0(self, lon:float, lat:float,) -> (str, float, float):  # degraded. No longer use it.
         """ Obtain panomara_id from lat/lon.
             Use selenium to obtain the new url, which contains the panomara_id
             Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
@@ -185,6 +186,16 @@ class GPano:
             return PanoID, lon_pano, lat_pano   # if cannot find the panomara, return (0, 0, 0)
         except Exception as e:
             print("Error in getPanoIDfrmLonlat()", e)
+
+    def getPanoIDfrmLonlat(self, lon, lat):
+        url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+        print(url)
+        r = requests.get(url)
+        data = r.json()
+        if 'Location' in data:
+            return (data['Location']['panoId'], data['Location']['original_lng'], data['Location']['original_lat'])
+        else:
+            return 0, 0, 0
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
@@ -258,6 +269,26 @@ class GPano:
             # print('yaw: ', yaw)
             self.getImagefrmAngle(lon, lat, saved_path, prefix, name + suffix, width, height, pitch, yaw)
 
+    def getImage8DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+        # w maximum: 1024
+        # h maximum: 768
+        # FOV should be 90, cannot be changed
+        # interval: degree, not rad
+        suffix = str(suffix)
+        if suffix != '':
+            suffix = '_' + suffix
+
+        #img_cnt = math.ceil(360/interval)
+        #names = ['F', 'R', 'B', 'L']  # forward, backward, left, right
+        names = ['F', 'FR', 'R', 'RB', 'B', 'BL', 'L', 'LF']  # forward, backward, left, right
+        interval = math.ceil(360 / len(names))
+        for idx, name in enumerate(names):
+            yaw = road_compassA + idx * interval
+            # print('idx: ', idx)
+            # print('name:', name)
+            # print('yaw: ', yaw)
+            self.getImagefrmAngle(lon, lat, saved_path, prefix, name + suffix, width, height, pitch, yaw)
+
     def getImage4DirectionfrmLonlats(self, list_lonlat, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
         #print(len(list_lonlat))
 
@@ -274,7 +305,7 @@ class GPano:
                 prefix = str(id)
                 current_len = len(list_lonlat)
                 print('Current row :', id)
-                self.getImage4DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
+                self.getImage8DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
                 Cnt = origin_len - current_len
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     print(
@@ -293,6 +324,11 @@ class GPano:
         pool.close()
         pool.join()
 
+    def getPanoIdDepthmapfrmLonlat(self, lon, lat, dm=1, saved_path='', prefix='', suffix=''):
+        url = f''
+        r = requests.get('url')
+        print(r)
+
 
 if __name__ == '__main__':
     gpano = GPano()
@@ -306,10 +342,10 @@ if __name__ == '__main__':
     print(sys.getdefaultencoding())
     #list_lonlat = pd.read_csv(r'J:\Sidewalk\google_street_view\Qiong_peng\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
     list_lonlat = pd.read_csv(r'K:\Research\NJTPA\Essex_10m_points.csv')
-    list_lonlat = list_lonlat[:]
+    #list_lonlat = list_lonlat[:]
     list_lonlat = list_lonlat.fillna(0)
     mp_lonlat = mp.Manager().list()
-    #print(len(list_lonlat))
+    print(len(list_lonlat))
     for idx, row in list_lonlat.iterrows():
         mp_lonlat.append([row['lon'], row['lat'], int(idx + 1), row['id'], row['CompassA']])
         #mp_lonlat.append([row['lon'], row['lat'], str(row['ID'])])
@@ -318,6 +354,7 @@ if __name__ == '__main__':
         #print(idx)
         #gpano.getImage4DirectionfrmLonlat(row['lon'], row['lat'], saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', road_compassA=row['CompassA'], prefix=int(row['id']))
     #print(mp_lonlat)
+    print(len(mp_lonlat))
     #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
     gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'J:\Sidewalk\google_street_view\Essex', Process_cnt=10)
 

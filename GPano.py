@@ -303,9 +303,10 @@ class GPano:
                 #print(list_lonlat.pop(0))
                 lon, lat, id, prefix, road_compassA = list_lonlat.pop(0)
                 prefix = str(id)
-                current_len = len(list_lonlat)
+
                 print('Current row :', id)
                 self.getImage8DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
+                current_len = len(list_lonlat)
                 Cnt = origin_len - current_len
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     print(

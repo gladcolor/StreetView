@@ -30,9 +30,6 @@ def getJsonDepthmapfrmLonlat(lon, lat, dm=1, saved_path='', prefix='', suffix=''
         print("Error in getPanoIdDepthmapfrmLonlat():", str(e))
         print(url)
 
-
-
-
 def getJsonDepthmapsfrmLonlats(lonlat_list, dm=1, saved_path='', prefix='', suffix=''):
     start_time = time.time()
     Cnt = 0
@@ -86,7 +83,6 @@ def getJsonDepthmapsfrmLonlats_mp(lonlat_list, dm=1, saved_path='', prefix='', s
 
     except Exception as e:
         print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
-
 
 if __name__ == '__main__':
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,

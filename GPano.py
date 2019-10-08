@@ -330,6 +330,83 @@ class GPano:
         r = requests.get('url')
         print(r)
 
+    def getJsonDepthmapfrmLonlat(self, lon, lat, dm=1, saved_path='', prefix='', suffix=''):
+        prefix = str(prefix)
+        suffix = str(suffix)
+        if prefix != "":
+            prefix += '_'
+        if suffix != "":
+            suffix = '_' + suffix
+        url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}&dm={dm}'
+        # print(url)
+        try:
+            r = requests.get(url)
+            jdata = r.json()
+            # str_dm = jdata['model']['depth_map']
+
+            mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
+                'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
+
+            with open(mapname, 'w') as f:
+                json.dump(jdata, f)
+
+        except Exception as e:
+            print("Error in getPanoIdDepthmapfrmLonlat():", str(e))
+            print(url)
+
+    def getJsonDepthmapsfrmLonlats(self, lonlat_list, dm=1, saved_path='', prefix='', suffix=''):
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 1000
+        origin_len = len(lonlat_list)
+
+        while len(lonlat_list) > 0:
+            lon, lat, id, idx = lonlat_list.pop(0)
+            prefix = id
+            prefix = str(prefix)
+            suffix = str(suffix)
+            if prefix != "":
+                prefix += '_'
+            if suffix != "":
+                suffix = '_' + suffix
+            url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}&dm={dm}'
+            print("Current row:", idx)
+            try:
+                r = requests.get(url)
+                jdata = r.json()
+                # str_dm = jdata['model']['depth_map']
+
+                mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
+                    'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
+
+                with open(mapname, 'w') as f:
+                    json.dump(jdata, f)
+
+                current_len = len(lonlat_list)
+                Cnt = origin_len - current_len
+                if Cnt % Cnt_interval == (Cnt_interval - 1):
+                    print(
+                        "Prcessed {} / {} items. Processing speed: {} points / hour.".format(Cnt, origin_len, int(
+                            Cnt / (time.time() - start_time + 0.001) * 3600)))
+
+
+            except Exception as e:
+                print("Error in getJsonDepthmapsfrmLonlats():", str(e))
+                print(url)
+                continue
+
+    def getJsonDepthmapsfrmLonlats_mp(self, lonlat_list, dm=1, saved_path='', prefix='', suffix='', Process_cnt=4):
+
+        try:
+            pool = mp.Pool(processes=Process_cnt)
+            for i in range(Process_cnt):
+                pool.apply_async(getJsonDepthmapsfrmLonlats, args=(lonlat_list, dm, saved_path, prefix, suffix))
+            pool.close()
+            pool.join()
+
+
+        except Exception as e:
+            print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
 if __name__ == '__main__':
     gpano = GPano()

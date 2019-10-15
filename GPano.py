@@ -42,7 +42,7 @@ Main workflow: get panorama image ID based on lon/lat -> according to the panora
 Please implement all the methods. I have written some tips (not code) in the method body to assist you. -- Huan
 """
 
-class GPano:
+class GPanorama():
     # Obtain a panomaro image from Google Street View Map
     def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
         """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
@@ -266,7 +266,7 @@ class GPano:
 
     def getPanoIDfrmLonlat(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
-        print(url)
+        #print(url)
         r = requests.get(url)
         data = r.json()
         if 'Location' in data:
@@ -402,6 +402,10 @@ class GPano:
         pool.close()
         pool.join()
 
+
+
+class GSV_depthmap(object):
+
     def getPanoIdDepthmapfrmLonlat(self, lon, lat, dm=1, saved_path='', prefix='', suffix=''):
         url = f''
         r = requests.get('url')
@@ -487,9 +491,6 @@ class GPano:
     def lonlat2WebMercator(self, lon, lat):
         return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
 
-class GSV_depthmap:
-
-
     def parse(self, b64_string):
         # fix the 'inccorrect padding' error. The length of the string needs to be divisible by 4.
         b64_string += "=" * ((4 - len(b64_string) % 4) % 4)
@@ -542,6 +543,7 @@ class GSV_depthmap:
             planes.append({"n": n, "d": d})
 
         return {"planes": planes, "indices": indices}
+
 
     def computeDepthMap(self, header, indices, planes):
 

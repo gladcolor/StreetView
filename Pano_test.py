@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import multiprocessing as mp
 import time
-
+from GPano import *
 def getJsonDepthmapfrmLonlat(lon, lat, dm=1, saved_path='', prefix='', suffix=''):
     prefix = str(prefix)
     suffix = str(suffix)
@@ -91,19 +91,22 @@ if __name__ == '__main__':
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,
     #                          saved_path=r'J:\Sidewalk')
 
-    saved_path = r'D:\Code\StreetView\Essex\json'
-    #saved_path = r'J:\Sidewalk\t'
-    df = pd.read_csv(r'D:\Code\StreetView\Essex\Essex_10m_points.csv')
-    df = df.fillna(0)
-    df = df[170000:]
-    print('len of df:', len(df))
-    mp_list = mp.Manager().list()
-    for idx, row in df.iterrows():
-        mp_list.append([row.lon, row.lat, str(int(row.id)), str(int(idx))])
-    print('len of mp_list:', len(mp_list))
-    print('Started!')
-    try:
-        getJsonDepthmapsfrmLonlats_mp(mp_list, dm=1, saved_path=saved_path, Process_cnt=10)
+    # saved_path = r'D:\Code\StreetView\Essex\json'
+    # #saved_path = r'J:\Sidewalk\t'
+    # df = pd.read_csv(r'D:\Code\StreetView\Essex\Essex_10m_points.csv')
+    # df = df.fillna(0)
+    # df = df[170000:]
+    # print('len of df:', len(df))
+    # mp_list = mp.Manager().list()
+    # for idx, row in df.iterrows():
+    #     mp_list.append([row.lon, row.lat, str(int(row.id)), str(int(idx))])
+    # print('len of mp_list:', len(mp_list))
+    # print('Started!')
+    # try:
+    #     getJsonDepthmapsfrmLonlats_mp(mp_list, dm=1, saved_path=saved_path, Process_cnt=10)
+    #
+    # except Exception as e:
+    #     print("Error in row: ",  e)
 
-    except Exception as e:
-        print("Error in row: ",  e)
+
+    dm = GSV_depthmap()

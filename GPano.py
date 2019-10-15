@@ -2,7 +2,7 @@
 Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 """
-
+from pyproj import Proj, transform
 import multiprocessing as mp
 import selenium
 import os
@@ -203,6 +203,7 @@ class GPano:
             status = 0
 
         return status
+
 
     def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=4, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
@@ -483,6 +484,8 @@ class GPano:
 
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
+    def lonlat2WebMercator(self, lon, lat):
+        return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
 
 class GSV_depthmap:
 
@@ -591,6 +594,7 @@ class GSV_depthmap:
 
 if __name__ == '__main__':
 
+    print("Started to test...")
     gpano = GPano()
 
     #### Test for getPanoIDfrmLonlat()
@@ -623,6 +627,7 @@ if __name__ == '__main__':
 
     '''
     Test for getJsonlink()
+        Test Proj
     '''
     # list_lonlat = pd.read_csv(r'D:\Code\StreetView\Essex\Essex_10m_points.csv')
     # list_lonlat = list_lonlat[:100]
@@ -633,6 +638,14 @@ if __name__ == '__main__':
     #     mp_lonlat.append([row.lon, row.lat, str(int(row.id)), str(int(idx))])
     # print(len(mp_lonlat))
     # gpano.getJsonDepthmapsfrmLonlats_mp(mp_lonlat, saved_path=r'D:\Code\StreetView\Essex\t')
+
+    print("Started to lonlat2WebMercator().")
+    list_lonlat = pd.read_csv(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_-_Tree_Data.csv')
+    print("Got rows of :", len(list_lonlat))
+    list_lonlat = list_lonlat[:10]
+    for idx, row in list_lonlat.iterrows():
+        print(row.longitude, row.latitude)
+        print(gpano.lonlat2WebMercator(row.longitude, row.latitude))
 
 #------------------------------------
 

@@ -2,7 +2,7 @@
 Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 """
-
+from pyproj import Proj, transform
 import multiprocessing as mp
 import selenium
 import os
@@ -407,6 +407,9 @@ class GPano:
 
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
+
+    def lonlat2WebMercator(self, lon, lat):
+        return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), -0.1285907, 51.50809)
 
 
 

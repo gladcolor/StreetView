@@ -408,6 +408,8 @@ class GPano:
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
+
+
 if __name__ == '__main__':
     gpano = GPano()
 
@@ -420,7 +422,7 @@ if __name__ == '__main__':
     print(sys.getdefaultencoding())
     #list_lonlat = pd.read_csv(r'J:\Sidewalk\google_street_view\Qiong_peng\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
     list_lonlat = pd.read_csv(r'K:\Research\NJTPA\Essex_10m_points.csv')
-    #list_lonlat = list_lonlat[:]
+    list_lonlat = list_lonlat[274382:]
     list_lonlat = list_lonlat.fillna(0)
     mp_lonlat = mp.Manager().list()
     print(len(list_lonlat))

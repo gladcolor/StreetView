@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,
     #                          saved_path=r'J:\Sidewalk')
 
-    saved_path = r'J:\Sidewalk\google_street_view\Essex_detpthmap'
+    saved_path = r'J:\Sidewalk\google_street_view\Essex_json'
     #saved_path = r'J:\Sidewalk\t'
     df = pd.read_csv(r'K:\Research\NJTPA\Essex_10m_points.csv')
     df = df.fillna(0)

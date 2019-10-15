@@ -692,4 +692,4 @@ if __name__ == '__main__':
     #plt.imsave(r'D:\Code\StreetView\Essex\t\img.tiff', im)
     #------------------------------------
 
-    print(features.check('libtiff'))
+   # print(features.check('libtiff'))

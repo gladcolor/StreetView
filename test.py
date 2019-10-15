@@ -5,7 +5,7 @@ import numpy as np
 MAX_FEATURES = 500
 GOOD_MATCH_PERCENT = 0.15
 
-from GPano import *
+import GPano
 #import GPano.GSV_depthmap
 #%%
 
@@ -57,7 +57,7 @@ def alignImages(im1, im2):
 
 
 if __name__ == '__main__':
-    dm = GSV_depthmap()
+    dm = GPano.GSV_depthmap()
 
     # Read reference image
     refFilename = r"G:\My Drive\right.jpg"

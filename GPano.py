@@ -671,3 +671,4 @@ if __name__ == '__main__':
     #------------------------------------
 
     print(features.check('libtiff'))
+    print(features.check('libtiff'))

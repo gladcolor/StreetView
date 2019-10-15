@@ -84,23 +84,26 @@ def getJsonDepthmapsfrmLonlats_mp(lonlat_list, dm=1, saved_path='', prefix='', s
     except Exception as e:
         print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
+
+
+
 if __name__ == '__main__':
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,
     #                          saved_path=r'J:\Sidewalk')
 
-    saved_path = r'J:\Sidewalk\google_street_view\Essex_detpthmap'
+    saved_path = r'D:\Code\StreetView\Essex\json'
     #saved_path = r'J:\Sidewalk\t'
-    df = pd.read_csv(r'K:\Research\NJTPA\Essex_10m_points.csv')
+    df = pd.read_csv(r'D:\Code\StreetView\Essex\Essex_10m_points.csv')
     df = df.fillna(0)
-    #df = df[20000:]
+    df = df[170000:]
     print('len of df:', len(df))
     mp_list = mp.Manager().list()
     for idx, row in df.iterrows():
-        mp_list.append([row.lon, row.lat, row.id, str(int(idx))])
+        mp_list.append([row.lon, row.lat, str(int(row.id)), str(int(idx))])
     print('len of mp_list:', len(mp_list))
     print('Started!')
     try:
-        getJsonDepthmapsfrmLonlats_mp(mp_list, dm=1, saved_path=saved_path, Process_cnt=6)
+        getJsonDepthmapsfrmLonlats_mp(mp_list, dm=1, saved_path=saved_path, Process_cnt=10)
 
     except Exception as e:
         print("Error in row: ",  e)

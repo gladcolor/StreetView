@@ -4,6 +4,7 @@ Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 """
 from pyproj import Proj, transform
 import multiprocessing as mp
+from math import *
 import selenium
 import os
 import time
@@ -596,6 +597,27 @@ class GSV_depthmap(object):
 
     #
 
+    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
+        """
+        Args:
+            point p1(latA, lonA)
+            point p2(latB, lonB)
+        Returns:
+            bearing between the two GPS points,
+            default: the basis of heading direction is north
+            https://blog.csdn.net/zhuqiuhui/article/details/53180395
+        """
+        radLatA = math.radians(latA)
+        radLonA = math.radians(lonA)
+        radLatB = math.radians(latB)
+        radLonB = math.radians(lonB)
+        dLon = radLonB - radLonA
+        y = math.sin(dLon) * cos(radLatB)
+        x = cos(radLatA) * sin(radLatB) - sin(radLatA) * cos(radLatB) * cos(dLon)
+        brng = degrees(atan2(y, x))
+        brng = (brng + 360) % 360
+        return brng
+
 
 if __name__ == '__main__':
 
@@ -645,13 +667,38 @@ if __name__ == '__main__':
     # gpano.getJsonDepthmapsfrmLonlats_mp(mp_lonlat, saved_path=r'D:\Code\StreetView\Essex\t')
 
     print("Started to lonlat2WebMercator().")
-    list_lonlat = pd.read_csv(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_10sample.csv')
+    #list_lonlat = pd.read_csv(r'o:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_10sample.csv')
+    list_lonlat = pd.read_csv(r'o:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_-_Tree_Data.csv')
     print("Got rows of :", len(list_lonlat))
-    list_lonlat = list_lonlat[:10]
+    list_lonlat = list_lonlat[:100000]
     gsv_depthmap = GSV_depthmap()
+    f = open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\headings_mercator.csv', 'w')
+    f.writelines(r'row,tree_id,ori_lon,ort_lat,lon,lat,heading,heading_mercator' + '\n')
     for idx, row in list_lonlat.iterrows():
-        print(row.longitude, row.latitude, '       ', str(row.latitude) + ',' + str(row.longitude))
-        print(gsv_depthmap.lonlat2WebMercator(row.longitude, row.latitude))
+        print('lon/lat in csv:', row.longitude, row.latitude, '       ', str(row.latitude) + ',' + str(row.longitude))
+        panoid, lon, lat = gpano.getPanoIDfrmLonlat(row.longitude, row.latitude)
+        lon = float(lon)
+        lat = float(lat)
+        print('lon/lat in panorama:', lon, lat)
+        heading = gsv_depthmap.getDegreeOfTwoLonlat(lat, lon, row.latitude, row.longitude)
+        #heading2 = gsv_depthmap.getDegreeOfTwoLonlat(row.latitude, row.longitude, lat, lon)
+
+        #x1, y1 = gsv_depthmap.lonlat2WebMercator(row.longitude, row.latitude)
+        #x0, y0 = gsv_depthmap.lonlat2WebMercator(lon, lat)
+        #delta_x = x1 - x0
+        #delta_y = y1 - y0
+        #heading_mercator = degrees(atan2(delta_y, delta_x))
+        #heading_mercator = (heading_mercator + 360) % 360
+        print('Heading angle between tree and panorama:', heading)
+        f.writelines(f"{idx+2},{row.tree_id},{row.longitude},{row.latitude},{lon},{lat},{heading}" + '\n')
+        gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2', prefix=str(int(idx+2)), pitch=20, yaw=heading)
+        # gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2',
+        #                        prefix=str(int(idx + 2)), pitch=19, yaw=heading2)
+        # gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2',
+        #                        prefix=str(int(idx + 2)), pitch=19, yaw=heading_mercator)
+        #print(gsv_depthmap.lonlat2WebMercator(row.longitude, row.latitude))
+    f.close()
+    print("Finished.")
 
 #------------------------------------
 
@@ -685,10 +732,10 @@ if __name__ == '__main__':
     im = im.reshape((depthMap["height"], depthMap["width"]))#.astype(int)
     # display image
     img = PIL.Image.fromarray(im)
-    img.save(r'D:\Code\StreetView\Essex\img.tiff')
+    #img.save(r'D:\Code\StreetView\Essex\img.tiff')
     plt.imshow(im)
     plt.show()
-    print(im)
+    #print(im)
     #plt.imsave(r'D:\Code\StreetView\Essex\t\img.tiff', im)
     #------------------------------------
 

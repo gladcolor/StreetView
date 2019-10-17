@@ -45,6 +45,27 @@ Please implement all the methods. I have written some tips (not code) in the met
 
 class GPano():
     # Obtain a panomaro image from Google Street View Map
+    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
+        """
+        Args:
+            point p1(latA, lonA)
+            point p2(latB, lonB)
+        Returns:
+            bearing between the two GPS points,
+            default: the basis of heading direction is north
+            https://blog.csdn.net/zhuqiuhui/article/details/53180395
+        """
+        radLatA = math.radians(latA)
+        radLonA = math.radians(lonA)
+        radLatB = math.radians(latB)
+        radLonB = math.radians(lonB)
+        dLon = radLonB - radLonA
+        y = math.sin(dLon) * cos(radLatB)
+        x = cos(radLatA) * sin(radLatB) - sin(radLatA) * cos(radLatB) * cos(dLon)
+        brng = degrees(atan2(y, x))
+        brng = (brng + 360) % 360
+        return brng
+
     def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
         """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
@@ -290,7 +311,6 @@ class GPano():
         if yaw < 0:
             yaw = yaw + 360
 
-
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
 
@@ -314,6 +334,71 @@ class GPano():
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
+
+    def getImagesfrmAngles(self, lonlat_list, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+        # w maximum: 1024
+        # h maximum: 768
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 100
+        while len(lonlat_list) > 0:
+            lon, lat, prefix, yaw = lonlat_list.pop(0)
+            try:
+                self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix, yaw=yaw)
+                Cnt += 1
+                if Cnt % Cnt_interval == (Cnt_interval - 1):
+                    print("Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+
+            except Exception as e:
+                print("Error in getImagesfrmAngles():", e)
+
+    def getImagesfrmAngles_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt=4, prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+        pool = mp.Pool(processes=Process_cnt)
+        for i in range(Process_cnt):
+            pool.apply_async(self.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
+        pool.close()
+        pool.join()
+
+    def shootLonlat(self, ori_lon, ori_lat, saved_path, prefix='', suffix='', width=1024, height=768, pitch=0):
+        panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
+        if panoid == 0:
+            print("No PanoID return for location: ", ori_lon, ori_lat)
+            return 0
+        lon = float(lon)
+        lat = float(lat)
+
+        #print('lon/lat in panorama:', lon, lat)
+        heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+
+        #print(idx, 'Heading angle between tree and panorama:', heading)
+        #f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
+        self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
+                               pitch=0, yaw=heading)
+
+    def shootLonlats(self, ori_lonlats, saved_path, suffix='', width=1024, height=768, pitch=0):
+        # prepare for calculating processing speed
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 100
+        while len(ori_lonlats) > 0:
+            ori_lon, ori_lat, prefix = ori_lonlats.pop(0)
+            try:
+                self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, prefix=prefix, width=width, height=height, pitch=0)
+                # calculate processing speed
+                Cnt += 1
+                if Cnt % Cnt_interval == (Cnt_interval - 1):
+                    print(
+                        "Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+
+            except Exception as e:
+                print("Error in shootLonlats():", e, ori_lon, ori_lat, prefix)
+
+    def shootLonlats_mp(self, ori_lonlats_mp, saved_path, Process_cnt=4, suffix='', width=1024, height=768, pitch=0):
+        pool = mp.Pool(processes=Process_cnt)
+        for i in range(Process_cnt):
+            pool.apply_async(self.shootLonlats, args=(ori_lonlats_mp, saved_path))
+        pool.close()
+        pool.join()
 
     def getImageCirclefrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0, interval=90):
         # w maximum: 1024
@@ -666,38 +751,47 @@ if __name__ == '__main__':
     # print(len(mp_lonlat))
     # gpano.getJsonDepthmapsfrmLonlats_mp(mp_lonlat, saved_path=r'D:\Code\StreetView\Essex\t')
 
-    print("Started to lonlat2WebMercator().")
-    #list_lonlat = pd.read_csv(r'o:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_10sample.csv')
-    list_lonlat = pd.read_csv(r'o:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\2015_Street_Tree_Census_-_Tree_Data.csv')
-    print("Got rows of :", len(list_lonlat))
-    list_lonlat = list_lonlat[:100000]
-    gsv_depthmap = GSV_depthmap()
-    f = open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\headings_mercator.csv', 'w')
-    f.writelines(r'row,tree_id,ori_lon,ort_lat,lon,lat,heading,heading_mercator' + '\n')
-    for idx, row in list_lonlat.iterrows():
-        print('lon/lat in csv:', row.longitude, row.latitude, '       ', str(row.latitude) + ',' + str(row.longitude))
-        panoid, lon, lat = gpano.getPanoIDfrmLonlat(row.longitude, row.latitude)
-        lon = float(lon)
-        lat = float(lat)
-        print('lon/lat in panorama:', lon, lat)
-        heading = gsv_depthmap.getDegreeOfTwoLonlat(lat, lon, row.latitude, row.longitude)
-        #heading2 = gsv_depthmap.getDegreeOfTwoLonlat(row.latitude, row.longitude, lat, lon)
+    print("Started to download jpgs for trees.")
+    work_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Group_work\QiongPeng'
+    saved_path = os.path.join(work_path, 'house')
+    list_lonlat = pd.read_csv(
+        os.path.join(work_path, r'000_Residential_ready_regression_control_wait_street_quality.csv'), quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+    #m_point = int(len(list_lonlat)/2)
+    #num_sample = 2000
+    #list_lonlat = list_lonlat[(m_point - int(num_sample / 2)):(m_point + int(num_sample / 2))]
 
-        #x1, y1 = gsv_depthmap.lonlat2WebMercator(row.longitude, row.latitude)
-        #x0, y0 = gsv_depthmap.lonlat2WebMercator(lon, lat)
-        #delta_x = x1 - x0
-        #delta_y = y1 - y0
-        #heading_mercator = degrees(atan2(delta_y, delta_x))
-        #heading_mercator = (heading_mercator + 360) % 360
-        print('Heading angle between tree and panorama:', heading)
-        f.writelines(f"{idx+2},{row.tree_id},{row.longitude},{row.latitude},{lon},{lat},{heading}" + '\n')
-        gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2', prefix=str(int(idx+2)), pitch=20, yaw=heading)
-        # gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2',
-        #                        prefix=str(int(idx + 2)), pitch=19, yaw=heading2)
-        # gpano.getImagefrmAngle(lon, lat, saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\jpg2',
-        #                        prefix=str(int(idx + 2)), pitch=19, yaw=heading_mercator)
-        #print(gsv_depthmap.lonlat2WebMercator(row.longitude, row.latitude))
-    f.close()
+    list_lonlat = list_lonlat[38300:]
+    print("Got rows of :", len(list_lonlat))
+    #gsv_depthmap = GSV_depthmap()
+    #f = open(os.path.join(work_path, r'houses.csv'), 'w')
+    #f.writelines(r'row,id,ori_lon,ort_lat,lon,lat,heading' + '\n')
+    ori_lonlats_mp = mp.Manager().list()
+    print("Started to construct multi-processing list...")
+    for idx, row in list_lonlat.iterrows():
+        ori_lon = float(row.longitude)
+        ori_lat = float(row.latitude)
+        ID = str(int(row.ID))
+        ACCTID = str(int(row.ACCTID))
+        prefix = ID + "_" + ACCTID
+        ori_lonlats_mp.append((ori_lon, ori_lat, prefix))
+
+        # print('lon/lat in csv:', ori_lon, ori_lat, '       ', str(ori_lat) + ',' + str(ori_lon))
+        # panoid, lon, lat = gpano.getPanoIDfrmLonlat(ori_lon, ori_lat)
+        # lon = float(lon)
+        # lat = float(lat)
+        # if panoid == 0:
+        #     print("No PanoID return for row .", idx)
+        #     continue
+        # print('lon/lat in panorama:', lon, lat)
+        # heading = gsv_depthmap.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+
+        # print(idx, 'Heading angle between tree and panorama:', heading)
+        #f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
+        # gpano.getImagefrmAngle(lon, lat, saved_path=os.path.join(work_path, 'house'), prefix=str(ID + "_" + ACCTID),
+        #                        pitch=0, yaw=heading)
+    #f.close()
+    print("Got rows for multi-processing :", len(ori_lonlats_mp))
+    gpano.shootLonlats_mp(ori_lonlats_mp, Process_cnt=10, saved_path=saved_path)
     print("Finished.")
 
 #------------------------------------
@@ -705,6 +799,7 @@ if __name__ == '__main__':
 
     '''
     Test for computeDepthMap()
+    '''
     '''
     parser = GSV_depthmap()
     s = "eJzt2gt0FNUdx_FsQtgEFJIQiAlvQglBILzktTOZ2YitloKKD6qAFjy2KD5ABTlqMxUsqICcVqqC1VoUqS34TkMhydjaorYCStXSKkeEihQoICpUFOzuJruZO4_dmdmZe2fY3_cc4RCS-L_z-c_sguaNy8rKzgrkZSGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBCbgsFgB9YzIFYFo_wdsAAZWbC5DliATCwYVPhjATKsYNC0f5s2baiNhagUDFrzb47aeMjVgkF7_liC06JgWv7YAX-n1rfjjx3wbVp-m_5YAV_mpH-bPGpjI4dy1h8L4Lcc9scC-Cyn_bEA_sq6vzF_zB8b4Ktc8McC-Cg3_LEAvkmH3wF_LIBfcskfC-CTHH37r_DHAvgj1_yxAL7IPX8sgB9y0R8L4IPc9McCeD9X_bEAns9dfyyA13PZHwvg8Rz11_LnFVI7SVZWO2UU_71-7jTybwd_67nuT28B4G8j-Gd2LvsXFtJbAPjbyLq_MT_8_RcFf1oLAH8bwd9fFRQUOPr9aPhTWoDT378glqPfEv4-qSCRo98W_v6owM_-dBYA_jaCvz_ytz-VBYC_jeDvsfprP1SeRd0_yVfA39W0_uV0_R393z_gbzX42w3-1rP-8g9_d9P4D4C_yeBvOfhTr7Q06W_D33Z-8Y-l-ABBrvYf4B9_LX_Cf6iTQxsFf8vBn3qp_FULAH_T-cq_dQHgr1v37t0tfgX8LUfJf6hp_-7KLB4G_paj5W96IL_5d9Yp-VeY9j839qPX_I35k_zxT9d_2LDmn3v06NH6wdPBP_kCkP4jR44s7T8y1pCWRkeL_2JI1L9Xr14K_16tpT0-e_8ePUj_jq2d3v6juUhRxNL-vZIV8Q-Hwwr_0YO02R2fhf-w-M8a_45kp4l_GVncv8xs5eWRHxT-0Y_1S6T8TOvjwz_NdP1LkhXDN_zdLjqVR_5R-Ot9ijZz48PffmdF0_XvZjtDTl3_Ir3OUhcZtahrJL0z0PIfWl1dPSqWrv-YWB70P6O1Tt9qqahoYLwuXXT9E5e-p8V0QWMp_I2cI3VqLqv5M7oqa9tWcZb48QJG_n2jFTdX0ru1qip7_pWVY6OFolVWVtacE68y5h_5UKUgCGr_wZr68Txf0jpQ_BwjonOS_n365ChqTxbIVpZzpiLlZYoVCASIX8eucGIXdP31bmA9LnVdOnXS0YwX91d9WCT2RGUejTwLmZF_RUVFbl9FxfFK7PkrX-IqiWL-Le9lVP6xz-5NVBVpRLRiorMj5eYS_sb47SPnJv1ziA04k7xmigun3YNOhLvunTtQ8bRIUSfDRN1vrSVvqyiZeyr_6GWraC43Wusm2PJXvcnppyjm3wxbpfKvimsXG9TMHq1Pczk66ehr_VUroLmAqquoswjKWl8p3MjI2wK7Kf9EFcpNsOOv8z63Kn5Hx_xbPFX-KdUT8HruSfR1_bUPgRRLYGIR9NfC9F4kdTZUN8Ge0j83d7je1YwsgQ1_o9tXk7E_YZ7ihk_ysp9I199gA1IugY1V0C0lcnr3ujX_WDpLYN1f9Q7CvD8pbsU9hb6hf47ey4ClLdDZBbPLQIncir_OElj11zFsKXFvJz6i8rfJnlo_mb_xQ8DyFljcCPe1tRn4a7ESS2DRn3jvoLsAirtc7W8d3QC_vfrcyfxzkj4E0toCz2Xi9lctgSX_FErq76_ytwOvp69z7hT-KR8CBlvguzWw5h_Ngn9Kp-bv2PprZ_xT65vwzzHzEPD_08DAP3JR0vW3I-eEvxl9c_5mHwJ-fh4Y-xttgCl-W3IO-JvDD5j1t7MCvtqE_Pwk_vorkNrfJn6stPxN61vwz7H0OmB2GbyyDfn5mg0g_HU2IIW_7l8bWci2vwX8gDV_-w8BK1HxVhf1z49cAWN_zQYk9Vd-4nCbq2DL35q-VX8aK0BBW1vcP1bCP1tdUn-jN4o6mVsJy_5W8QM2_F1fAbepdSP8m5dAq0-sgFXyVCXbADv6Jg9ux9_VFXCV2TCtv3EOoqfyzzHtbws_YNvfvRVwzzhZVvzdWQGjy2zG38ZzP559f_UKOLQDbgknz6K_GyuQZAGs6Fs8eFr-mh3IIH_HV8D4EifzTws_4IC_egXS3QHnbc1ky9_ZFbBx4dO0j-aEv2YHMsffwRVIx94mfsA5f8d2wEFUC6Xh79QK2MZP6-BO-mt2wMYSOORptfT8HdkBW_bp4Qec99cuQYb4p70D1vGdOLgr_tolML0FTpzJRs74p7cDVuwdO7h7_va2wLGDWcs5f_s7QJs-ltv-eluQbA2cPZ3pnPW3twS06WPR8TfcBM0quHBEM7ngb3kJktC7d3Da_qly76RJc8vfyha0XgQK7vHIQdm5x3P_xLq5ym9yD3JoeGuCfzQ6_im2gcnJ4R-Nhb8mJicnJmCtD3_qEROw1oc_9YgJWOvDn3rEBKz14U89YgLW-vCnHjEBa334U4-YgLU-_KlHTMBaH_7UIyZgrc_K392__jcbk6MTE7DWhz_1iAlY68OfesQErPXhTz1iAtb68KceMQFrffhTj5iAtT78qUdMwFof_tQjJmCtD3_qEROw1oc_9YgJWOvDn3rEBKz14U89YgLW-vCnHjEBa334U48cgTU_Q3825srYnJ0YgTU__KlHjMCaH_7UI0ZgzQ9_6hEjsOaHP_WIEVjzw596xAis-eFPPWIE1vxs_L3xx3_4w59BxAis-eFPPWIE1vzwpx4xAmt--FOPGIE1P_ypR4zAmh_-1CNGYM0Pf-oRI7Dmhz_1yBky1p8NORGTs3vsAcDkCsA_EfzZxeTs8Ie_okzkh39rmejvkbf_8Ic_i4gZ4M8uJoeHP_wVwZ9dTA4P_0z399ICMDm_R_jhD38mEUPAn1lMDh_IeH-vvPzDH_5MIoaAP7NYHD4aMQT8mcXi8NHIKTLSnw24KhaHj0VMAX9WsTh8LGKKTPP3zOMf_vBnEzEF_FnF4PDNkWNkoD8bb3UMDt8SMQb8GcXg8C0RY2SWv3ce__CHP6PIOTLOnw23JvqHT0TMAX820T98ImKOTPL30OPfM_4MF4D6wT3Ez9LfKw8A2sf20u0Pf_izi5gko_wZaWujfXgiYpJM8ffU7c_W3xsLQPfI3uJn7O-JBaB7Ym_xw5-yv8duf9b-XlgAmsf1Gj9zfw8sAMXDeo6fvT_7BaB3VO_xe8Cf-QZQO6f39L3hz3gBKB3Sgzd_tkf8mW4AnQN6U98z_gz_ayCNw3kUP9tD_gFWK-D6sbyLn-0t_2jkdL7397R9NFdPbztiRH_ye_UFX5Vbx3coYlY_-PuEvTWHz-9q5OQe4fcbuKr0L4CnUp0uTX6f25qKCos3Y33pvRNrCfqxvuIeKUvVBQ0jQy8dv5C7_YQk140qE4-83eepF-Z-wT24W5KXc2XigpsnbdxVvzm0-ZQkDy_sJRZ1v1n4a93vmy5ecTs3ZG_X8M79k0PrF3UNzftGkis79BVnnXw-9P6Yu7l_H5Pk54RuYtuCvsLaBePkg8d3b1pQf1CcW1Ar5F57lN8-OJc__itZvGPKkL6XjNvCn6qrlee8Wyqurb5OXpW_vemSPuWNt71WUBN8f0moYO_chuD_JPny1eXi2ZMWhW6pq-BrX5fknPMGidftnh5aOvylhkOHJXluTkfxH5-WC7vHjxM6S8P5rhUrxQtH1cqzO-1r_OxnbRqrpn5P3DbuDuHXt11affmCjvzkSavDnz8_T5i0eHH1-Y915jeWXCRW1LXhpq96gbvlkCQLh7qIQnZJaOs5O7hv9knyd0b1jcw_ivt0wmBueGSeV7qVicOO3yEf2XF-de23X2zo0P7l8DfTa7i3nsjj978nyVPaDxWv--JYqG7UWu6uI5J84vVssfc7S7gfHdjDf_fqWrlnzzXiwH43yBc98Jdq4doZDbMW7ArnPXkF94fupfz1b0ry2qfGiOUFU7mTg5bxA6-S5Jo3ponbP-rIHdh4Fv_xNknu-dYocdn6WfKkvZub_jOxd2P9_iPhpaHb5SfvW9j0xtbixp-ce1icemxE6Muc5dyrX0jyhyfyxPlPZ_GLd57kBr0iySsmni3-MHsPd2LgyYZ7XpPkZy6bL55x_ZpN0z7N4St2SnL_2lzxq9_dKry54ZdN78jLuKpFi8Rrjrbnp67b1rhpca28_IKnxaG_HTj2uaPjG_ZH9mdhzUcCt6eSG_O3eu6rA5HzF58SpoXncdMmzGl8dZEk3_f0LeJD22bLby1ZX716xIKGrEVbw48-_CB39d7_chv-KcmPbn1PuC1vjsBNXNc0uHAh9_gnPcWmLl0aTn18H79wpiSPLXpC-NOPV4cOX5zVUHVSklcW7xBKtrfj31-6heeX18qXzd0nHp5ZyAtlsxpXXC_JM2pfFIuXLOS4wjHcVZ9J8rEzy8Qb7_6aO1BXyq9_UZLnyJeLj7w0R9jz0Nrq-9_syn__vZlC0Q2z5WObn21a1K174_3zDof3DPhNw_qartWTv75LLlp-hfBo2XNjz7t3PP_1s5K8ZcXjQocr53NjpD3c0A8j86z5l9D5gUF8Xtk6vtfOWnnSlQPCo_94KdfuyM9Db38pyatu3iB-_uS73Auz2_HhP0vyzG4jxKcmb-Rq9q0MTYrsW1Hdw-K-D-7hz19X3zj-xlp5SoUY3lA_ketdsJM7GLkfHzv3A-Guv-fzB7aM5JetjJxv-kLx6ISXN065cwI_a70kZxVdKVx7sIo_OKy0cfUvJPnWxmvCcu-e_FUzahse3yzJ9bPXiHN2_GTTK5_Mb_xBxOPolEeqZxQIPBd4g__kzlo5f9op8YwdS7mbJr7LleyS5HvXfSnsWjVHvrXgmeqbLvxpw6G9H4n_Bz8_xLw"
@@ -740,3 +835,4 @@ if __name__ == '__main__':
     #------------------------------------
 
    # print(features.check('libtiff'))
+'''

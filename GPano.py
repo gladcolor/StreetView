@@ -399,9 +399,9 @@ class GPano():
                 # calculate processing speed
                 Cnt += 1
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
-                    print(
-                        "Process speed: {} points / hour by all processes.".format(int((ini_len - len(ori_lonlats)) / (time.time() - start_time + 0.001) * 3600)))
-                    print("Processed {} / {},  {:.2%}.".format(ini_len - len(ori_lonlats), ini_len, (ini_len - len(ori_lonlats))/ini_len))
+                    speed_pt_hour = int((ini_len - len(ori_lonlats)) / (time.time() - start_time + 0.001) * 3600)
+                    print("Process speed: {} points / hour by all processes.".format(speed_pt_hour))
+                    print("Processed {} / {},  {:.2%}, {:.2f} hours left.".format(ini_len - len(ori_lonlats), ini_len, (ini_len - len(ori_lonlats))/ini_len, (len(ori_lonlats)/speed_pt_hour)))
 
             except Exception as e:
                 print("Error in shootLonlats():", e, ori_lon, ori_lat, prefix)
@@ -775,7 +775,7 @@ if __name__ == '__main__':
     #num_sample = 2000
     #list_lonlat = list_lonlat[(m_point - int(num_sample / 2)):(m_point + int(num_sample / 2))]
 
-    list_lonlat = list_lonlat[100:]
+    list_lonlat = list_lonlat[11000:]
     print("Got rows of :", len(list_lonlat))
     #gsv_depthmap = GSV_depthmap()
     #f = open(os.path.join(work_path, r'houses.csv'), 'w')

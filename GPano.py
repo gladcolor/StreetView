@@ -242,59 +242,25 @@ class GPano():
 
     # Obtain a panomara_ID according to lon/lat.
     # Finished!
-    def getPanoIDfrmLonlat0(self, lon:float, lat:float,) -> (str, float, float):  # degraded. No longer use it.
-        """ Obtain panomara_id from lat/lon.
-            Use selenium to obtain the new url, which contains the panomara_id
-            Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
-            New url returned by Google: https://www.google.com/maps/@39.9533227,-75.1544758,3a,90y,180h,90t/data=!3m6!1e1!3m4!1sAF1QipNWKtSlDw5M8fsZxdQnXtSw3zWOgMIY8fN_eEbv!2e10!7i5504!8i2752
-            PanoID: AF1QipNWKtSlDw5M8fsZxdQnXtSw3zWOgMIY8fN_eEbv
-            Function return the panomara_id and its lon/lon.
-        """
-        heading = 180
-        tilt = 90
-        fov = 90
-        url_part1 = r'!3m6!1e1!3m4!1s'
-        url_part2 = r'!2e0!7i16384!8i8192'
-        url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
-
-        #print(url)
-        try:
-            driver.get(url)
-            time.sleep(4)
-            new_url = driver.current_url
-            end_new_url = new_url[new_url.find("data="):]
-            #print(end_new_url)
-            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
-                time.sleep(2)
-            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
-                PanoID = 0
-                lon_pano = 0
-                lat_pano = 0
-                print("No new url for: ", url)
-
-            else:
-                lat_pano, lon_pano = new_url.split(',')[:2]
-                lat_pano = lat_pano.split("@")[1]
-                pos1 = new_url.find(url_part1)
-                #pos2 = new_url.find(url_part2)
-                pos2 = new_url.find(url_part2[:5])
-                PanoID = new_url[(pos1 + len(url_part1)):pos2]
-                print(url)
-                print(new_url)
-
-            return PanoID, lon_pano, lat_pano   # if cannot find the panomara, return (0, 0, 0)
-        except Exception as e:
-            print("Error in getPanoIDfrmLonlat()", e)
-
     def getPanoIDfrmLonlat(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
         #print(url)
         r = requests.get(url)
-        data = r.json()
+        data = self.getPanoJsonfrmLonat(lon, lat)
         if 'Location' in data:
             return (data['Location']['panoId'], data['Location']['original_lng'], data['Location']['original_lat'])
         else:
             return 0, 0, 0
+
+    def getPanoJsonfrmLonat(self, lon, lat):
+        try:
+            url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+            # print(url)
+            r = requests.get(url)
+            return r.json()
+        except Exception as e:
+            print("Error in getPanoJsonfrmLonnat():", e)
+            return 0
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
@@ -359,8 +325,19 @@ class GPano():
         pool.close()
         pool.join()
 
-    def shootLonlat(self, ori_lon, ori_lat, saved_path, prefix='', suffix='', width=1024, height=768, pitch=0):
-        panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
+
+    def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
+
+        #panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
+        jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
+        if 'Location' in jdata:
+            panoid = jdata['Location']['panoId']
+            lon = jdata['Location']['original_lng']
+            lat = jdata['Location']['original_lat']
+        else:
+            print("No Location in the Panojson file.")
+            return 0
+
         if panoid == 0:
             print("No PanoID return for location: ", ori_lon, ori_lat)
             return 0
@@ -373,30 +350,66 @@ class GPano():
         #print(idx, 'Heading angle between tree and panorama:', heading)
         #f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
         self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
-                               pitch=0, yaw=heading)
+                               pitch=pitch, yaw=heading)
+        if views == 3:
+            try:
+                links = jdata["Links"]
+            except Exception as e:
+                print("Error in shootLonlat() getting Links: ", e)
+                return 0
 
-    def shootLonlats(self, ori_lonlats, saved_path, suffix='', width=1024, height=768, pitch=0):
+            for link in links:
+                try:
+                    #print("link:", link)
+                    panoId1 = link['panoId']
+                    jdata1 = self.getJsonfrmPanoID(panoId1)
+                    #print("jdata1: ", jdata1['Location']['panoId'])
+                    lon = jdata1['Location']['original_lng']
+                    lat = jdata1['Location']['original_lat']
+                    lon = float(lon)
+                    lat = float(lat)
+                    heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+                    self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
+                                          pitch=pitch, yaw=heading)
+                except Exception as e:
+                    print("Error in processing links in shootLonlat():", e)
+                    continue
+
+
+    def getJsonfrmPanoID(self, panoId):
+        url = f"http://maps.google.com/cbk?output=json&panoid={panoId}"
+        try:
+            r = requests.get(url)
+            jdata = r.json()
+            return jdata
+        except Exception as e:
+            print("Error in getJsonfrmPanoID():", e)
+            return 0
+
+    def shootLonlats(self, ori_lonlats, saved_path, views=1, suffix='', width=1024, height=768, pitch=0):
         # prepare for calculating processing speed
         start_time = time.time()
+        ini_len = len(ori_lonlats)
         Cnt = 0
         Cnt_interval = 100
         while len(ori_lonlats) > 0:
             ori_lon, ori_lat, prefix = ori_lonlats.pop(0)
             try:
-                self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, prefix=prefix, width=width, height=height, pitch=0)
+                self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, views=views, prefix=prefix, width=width, height=height, pitch=0)
                 # calculate processing speed
                 Cnt += 1
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     print(
-                        "Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+                        "Process speed: {} points / hour by all processes.".format(int((ini_len - len(ori_lonlats)) / (time.time() - start_time + 0.001) * 3600)))
+                    print("Processed {} / {},  {:.2%}.".format(ini_len - len(ori_lonlats), ini_len, (ini_len - len(ori_lonlats))/ini_len))
 
             except Exception as e:
                 print("Error in shootLonlats():", e, ori_lon, ori_lat, prefix)
 
-    def shootLonlats_mp(self, ori_lonlats_mp, saved_path, Process_cnt=4, suffix='', width=1024, height=768, pitch=0):
+    def shootLonlats_mp(self, ori_lonlats_mp, saved_path, Process_cnt=4, views=1, suffix='', width=1024, height=768, pitch=0):
         pool = mp.Pool(processes=Process_cnt)
         for i in range(Process_cnt):
-            pool.apply_async(self.shootLonlats, args=(ori_lonlats_mp, saved_path))
+            pool.apply_async(self.shootLonlats, args=(ori_lonlats_mp, saved_path, views))
         pool.close()
         pool.join()
 
@@ -752,15 +765,17 @@ if __name__ == '__main__':
     # gpano.getJsonDepthmapsfrmLonlats_mp(mp_lonlat, saved_path=r'D:\Code\StreetView\Essex\t')
 
     print("Started to download jpgs for trees.")
-    work_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Group_work\QiongPeng'
-    saved_path = os.path.join(work_path, 'house')
+    work_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Waterloo'
+    saved_path = os.path.join(work_path, 'tree_jpg2')
     list_lonlat = pd.read_csv(
-        os.path.join(work_path, r'000_Residential_ready_regression_control_wait_street_quality.csv'), quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+        #os.path.join(work_path, r'Street_Tree_Inventory.csv'), quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
+        os.path.join(work_path, r'Street_Tree_Inventory.csv'))
+
     #m_point = int(len(list_lonlat)/2)
     #num_sample = 2000
     #list_lonlat = list_lonlat[(m_point - int(num_sample / 2)):(m_point + int(num_sample / 2))]
 
-    list_lonlat = list_lonlat[38300:]
+    list_lonlat = list_lonlat[100:]
     print("Got rows of :", len(list_lonlat))
     #gsv_depthmap = GSV_depthmap()
     #f = open(os.path.join(work_path, r'houses.csv'), 'w')
@@ -768,11 +783,10 @@ if __name__ == '__main__':
     ori_lonlats_mp = mp.Manager().list()
     print("Started to construct multi-processing list...")
     for idx, row in list_lonlat.iterrows():
-        ori_lon = float(row.longitude)
-        ori_lat = float(row.latitude)
-        ID = str(int(row.ID))
-        ACCTID = str(int(row.ACCTID))
-        prefix = ID + "_" + ACCTID
+        ori_lon = float(row.X)
+        ori_lat = float(row.Y)
+        ID = str(int(idx))
+        prefix = ID
         ori_lonlats_mp.append((ori_lon, ori_lat, prefix))
 
         # print('lon/lat in csv:', ori_lon, ori_lat, '       ', str(ori_lat) + ',' + str(ori_lon))
@@ -791,7 +805,7 @@ if __name__ == '__main__':
         #                        pitch=0, yaw=heading)
     #f.close()
     print("Got rows for multi-processing :", len(ori_lonlats_mp))
-    gpano.shootLonlats_mp(ori_lonlats_mp, Process_cnt=10, saved_path=saved_path)
+    gpano.shootLonlats_mp(ori_lonlats_mp, Process_cnt=10, saved_path=saved_path, views=3)
     print("Finished.")
 
 #------------------------------------

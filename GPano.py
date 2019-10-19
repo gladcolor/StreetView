@@ -502,9 +502,31 @@ class GPano():
         pool.join()
 
 
-    def castesian_to_shperical(self, rowcols, w, h, heading, pitch):
-        new_cowcols = []
-        return new_cowcols
+    def castesian_to_shperical(self, rowcols, w, h, heading, pitch, fov):
+        f = (0.5 * w) / math.tan(fov * 0.5)
+        print(f)
+        print(rowcols)
+        if type(rowcols) == "list":
+            pass
+
+            new_rowcols = []
+
+        else:
+            print(rowcols)
+            row = rowcols[0]
+            col = rowcols[1]
+            new_rowcols = 0
+            x = row - w * 0.5
+            y = h * 0.5 - col
+            z = f
+            theta = acos(z / sqrt(x * x + y * y + z * z))
+
+            phi = acos(x / sqrt(x * x + y * y))
+            if y < 0:
+                phi = 2 * pi - phi
+        print("Test.")
+        print(x, y, z)
+        return new_rowcols
 
 
 class GSV_depthmap(object):

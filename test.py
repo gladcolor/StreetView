@@ -55,29 +55,34 @@ def alignImages(im1, im2):
 
     return im1Reg, h
 
+def castesian_to_shperical(rowcols, w, h, heading, pitch):
+
 
 if __name__ == '__main__':
     dm = GPano.GSV_depthmap()
+    #
+    # # Read reference image
+    # refFilename = r"G:\My Drive\right.jpg"
+    # print("Reading reference image : ", refFilename)
+    # imReference = cv2.imread(refFilename, cv2.IMREAD_COLOR)
+    #
+    # # Read image to be aligned
+    # imFilename = r"G:\My Drive\left.jpg"
+    # print("Reading image to align : ", imFilename);
+    # im = cv2.imread(imFilename, cv2.IMREAD_COLOR)
+    #
+    # print("Aligning images ...")
+    # # Registered image will be resotred in imReg.
+    # # The estimated homography will be stored in h.
+    # imReg, h = alignImages(im, imReference)
+    #
+    # # Write aligned image to disk.
+    # outFilename = "aligned.jpg"
+    # print("Saving aligned image : ", outFilename);
+    # cv2.imwrite(outFilename, imReg)
+    #
+    # # Print estimated homography
+    # print("Estimated homography : \n", h)
 
-    # Read reference image
-    refFilename = r"G:\My Drive\right.jpg"
-    print("Reading reference image : ", refFilename)
-    imReference = cv2.imread(refFilename, cv2.IMREAD_COLOR)
 
-    # Read image to be aligned
-    imFilename = r"G:\My Drive\left.jpg"
-    print("Reading image to align : ", imFilename);
-    im = cv2.imread(imFilename, cv2.IMREAD_COLOR)
 
-    print("Aligning images ...")
-    # Registered image will be resotred in imReg.
-    # The estimated homography will be stored in h.
-    imReg, h = alignImages(im, imReference)
-
-    # Write aligned image to disk.
-    outFilename = "aligned.jpg"
-    print("Saving aligned image : ", outFilename);
-    cv2.imwrite(outFilename, imReg)
-
-    # Print estimated homography
-    print("Estimated homography : \n", h)

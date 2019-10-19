@@ -502,6 +502,10 @@ class GPano():
         pool.join()
 
 
+    def castesian_to_shperical(self, rowcols, w, h, heading, pitch):
+        new_cowcols = []
+        return new_cowcols
+
 
 class GSV_depthmap(object):
 

@@ -502,31 +502,45 @@ class GPano():
         pool.join()
 
 
-    def castesian_to_shperical(self, rowcols, w, h, heading, pitch, fov):
+    def castesian_to_shperical(self, colrows, w, h, fov): # yaw: set the heading, pitch
+        fov = radians(fov)
         f = (0.5 * w) / math.tan(fov * 0.5)
-        print(f)
-        print(rowcols)
-        if type(rowcols) == "list":
-            pass
+        print("f:", f)
+        if not isinstance(colrows, list):
+            colrows = [colrows]
 
-            new_rowcols = []
+        theta_phis = []
 
-        else:
-            print(rowcols)
-            row = rowcols[0]
-            col = rowcols[1]
+        for colrow in colrows:
+            #print(colrows)
+            row = colrow[1]
+            col = colrow[0]
             new_rowcols = 0
-            x = row - w * 0.5
-            y = h * 0.5 - col
+            x = col - w * 0.5
+            y = h * 0.5 - row
             z = f
-            theta = acos(z / sqrt(x * x + y * y + z * z))
 
-            phi = acos(x / sqrt(x * x + y * y))
-            if y < 0:
-                phi = 2 * pi - phi
-        print("Test.")
-        print(x, y, z)
-        return new_rowcols
+            theta = atan(y / z)
+
+            phi = atan(x / z)
+            # if y < 0:
+            #     phi = 2 * pi - phi
+
+            theta = degrees(theta)
+            phi = degrees(phi)
+
+            theta_phis.append((theta, phi))
+
+            #print("x, y, z, theta, phi, pi:")
+            #print(col, row, x, y, theta, phi)
+        #print('theta_phis:', theta_phis)
+        #print(x, y, z, theta + heading, phi + pitch, pi)
+        if len(theta_phis) == 1:
+            return theta_phis[0]
+        else:
+            return theta_phis
+
+
 
 
 class GSV_depthmap(object):
@@ -550,14 +564,14 @@ class GSV_depthmap(object):
             jdata = r.json()
             # str_dm = jdata['model']['depth_map']
 
-            mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
-                'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
-
-            with open(mapname, 'w') as f:
-                json.dump(jdata, f)
-
             if saved_path == '':
                 return jdata
+            else:
+                mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
+                    'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
+                with open(mapname, 'w') as f:
+                    json.dump(jdata, f)
+
 
         except Exception as e:
             print("Error in getPanoIdDepthmapfrmLonlat():", str(e))
@@ -719,7 +733,44 @@ class GSV_depthmap(object):
                     depthMap[y * w + (w - x - 1)] = 9999
         return {"width": w, "height": h, "depthMap": depthMap}
 
-    #
+    def getDepthmapfrmJson(self, jdata):
+        try:
+            depthMapData = self.parse(jdata['model']['depth_map'])
+            # parse first bytes to describe data
+            header = self.parseHeader(depthMapData)
+            # parse bytes into planes of float values
+            data = self.parsePlanes(header, depthMapData)
+            # compute position and values of pixels
+            depthMap = self.computeDepthMap(header, data["indices"], data["planes"])
+            return depthMap
+        except Exception as e:
+            print("Error in getDepthmapfrmJson():", e)
+
+    def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb,pitch_of_thumb, depthmap):
+        try:
+            if not isinstance(theta_phis_in_thumb, list):
+                theta_phis_in_thumb = [theta_phis_in_thumb]
+
+            theta_phis_in_thumb = [tuple([row[0] + heading_of_thumb, row[1] + pitch_of_thumb]) for row in theta_phis_in_thumb]
+            distance = []
+            print('depthmap[width]: ', depthmap['width'])
+            print('depthmap[height]:', depthmap['height'])
+            for ray in theta_phis_in_thumb:
+                theta = ray[0]
+                phi = ray[1]
+                x = phi / 180 * depthmap['width']
+                y = theta / 90 * depthmap['height']
+                row = int(depthmap['height'] / 2 - y)
+                col = int(x - depthmap['width'] / 2)
+                print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
+                distance.append(depthmap['depthMap'][depthmap['width'] * row + col])
+
+            return distance
+        except Exception as e:
+            print("Error in getPointCloud():", e)
+
+
+
 
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
         """

@@ -514,8 +514,8 @@ class GPano():
 
         for colrow in colrows:
             #print(colrows)
-            row = colrow[1]
-            col = colrow[0]
+            row = colrow[0]
+            col = colrow[1]
             new_rowcols = 0
             x = col - w * 0.5
             y = h * 0.5 - row
@@ -523,21 +523,35 @@ class GPano():
 
             #print('y:', y)
 
-            theta = atan(y / z)
+           #  theta = atan(y / z)
             #print('theta:', theta)
             # if y < 0:
             #     theta = theta * -1
             #print('theta:', theta)
 
+
+            #theta = atan(y / z)
+
+            # theta = acos(z / sqrt(x * x + y * y + z * z))
+            # if y < 0:
+            #     theta = -1 * theta
+
+            #phi = acos(x / sqrt(x * x + y * y))
+            # if y < 0:
+            #     #phi = 2 * pi - phi
+            #     phi = -1 * phi
+
             phi = atan(x / z)
+            theta = atan(y / sqrt(x * x + z * z))
+            # phi = atan(x / y)
 
             theta = degrees(theta)
             phi = degrees(phi)
 
             theta_phis.append((theta, phi))
 
-            print("col, row, x, y, z, theta, phi:")
-            print(col, row, x, y, z, theta, phi)
+            #print("col, row, x, y, z, theta, phi:")
+            #print(col, row, x, y, z, theta, phi)
         #print('theta_phis:', theta_phis)
         #print(x, y, z, theta + heading, phi + pitch, pi)
         if len(theta_phis) == 1:
@@ -761,27 +775,27 @@ class GSV_depthmap(object):
 
     def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb,pitch_of_thumb, depthmap, cameraLon, cameraLat, cameraH, heading_of_pano, pitch_of_pano):
         try:
-            print('heading_of_thumb:', heading_of_thumb)
-            print('pitch_of_thumb:', pitch_of_thumb)
+            # print('heading_of_thumb:', heading_of_thumb)
+            # print('pitch_of_thumb:', pitch_of_thumb)
             if not isinstance(theta_phis_in_thumb, list):
                 theta_phis_in_thumb = [theta_phis_in_thumb]
 
-            for row in theta_phis_in_thumb:
-                print("theta_phis_in_thumb (before adding thumb_heading): ", row)
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             theta_phis_in_thumb = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
 
-            for row in theta_phis_in_thumb:
-                print("theta_phis_in_thumb (after adding thumb_heading): ", row)
-
-            for row in theta_phis_in_thumb:
-                print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
+            #
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
 
             #print("row: ", row)
             points3D = []
-            print('depthmap[width]: ', depthmap['width'])
-            print('depthmap[height]:', depthmap['height'])
-            print('theta_phis_in_thumb： ', theta_phis_in_thumb)
+            # print('depthmap[width]: ', depthmap['width'])
+            # print('depthmap[height]:', depthmap['height'])
+            # print('theta_phis_in_thumb： ', theta_phis_in_thumb)
             cnt = 0
             cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
             heading_of_pano = radians(heading_of_pano)
@@ -800,15 +814,17 @@ class GSV_depthmap(object):
                 pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
                 pointZ = cameraH + distance * sin(theta)
 
-                print("distance * cos(theta):",distance * cos(theta))
-                #
                 points3D.append((pointX, pointY, pointZ, distance))
-                print('point_lat, point_lon: ', self.WebMercator2lonlat(pointX, pointY))
-                print("pointX, pointY, pointZ, distance: ", pointX, pointY, pointZ, distance)
-                print("d_pointX, d_pointY, d_pointZ: ", distance * cos(theta) * sin(phi + heading_of_pano), distance * cos(theta) * cos(phi + heading_of_pano), distance * sin(theta))
-                if cnt < 3:
-                    print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
-                cnt += 1
+
+                # print("distance * cos(theta):",distance * cos(theta))
+                # #
+                #
+                # print('point_lat, point_lon: ', self.WebMercator2lonlat(pointX, pointY))
+                # print("pointX, pointY, pointZ, distance: ", pointX, pointY, pointZ, distance)
+                # print("d_pointX, d_pointY, d_pointZ: ", distance * cos(theta) * sin(phi + heading_of_pano), distance * cos(theta) * cos(phi + heading_of_pano), distance * sin(theta))
+                # if cnt < 3:
+                #     print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
+                # cnt += 1
 
             return points3D
         except Exception as e:

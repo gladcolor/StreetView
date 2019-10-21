@@ -13,16 +13,36 @@ class MyTestCase(unittest.TestCase):
         #print('predict: ', predict)
         #print('predict shape: ', predict.shape)
         predict = np.array(predict)
-        sidewalks = np.argwhere(predict == 11)
+        sidewalks = np.argwhere(predict == 11)[:2]
+        sidewalks[0] = (50, 650)   # col, row
+        sidewalks[1] = (638, 290)  # col, row
+        print("sidewalks[0]: ", sidewalks[0])
         sidewalks = [tuple(row) for row in sidewalks]
 
-        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 1024, 768, 90)
-        sidewalks_sph = [tuple([row[0], row[1] + 99.08]) for row in sidewalks_sph]
+        print("len of sidewalks pixels: ", len(sidewalks))
 
-        obj_json = GPano.GSV_depthmap.getJsonDepthmapfrmLonlat(GPano.GPano(), -76.741101, 38.852598)
+        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 1024, 768, 90)
+        #sidewalks_sph = [tuple([row[0], row[1] + 99.08]) for row in sidewalks_sph]
+
+        lon = -76.741101
+        lat = 38.852598
+        pano_heading = 188.92
+        pano_pitch = 0.61
+        pano_H = -3.285989
+        thumb_heading = 288
+        thumb_pitch = 0
+
+        obj_json = GPano.GSV_depthmap.getJsonDepthmapfrmLonlat(GPano.GPano(), lon, lat)
+
+        webX, webY = GPano.GSV_depthmap.lonlat2WebMercator( GPano.GSV_depthmap(), lon, lat)
+        print("webX, webY:", webX, webY)
+
         dm = GPano.GSV_depthmap.getDepthmapfrmJson(GPano.GSV_depthmap(), obj_json)
-        pointcloud = GPano.GSV_depthmap.getPointCloud(GPano.GSV_depthmap(), sidewalks_sph, 99.08, 0, dm)
-        print('pointcloud:', pointcloud)
+        print("dm[depthmap]: ", dm['depthMap'])
+        print("len of dm[depthmap]: ", len(dm['depthMap']))
+        pointcloud = GPano.GSV_depthmap.getPointCloud(GPano.GSV_depthmap(), sidewalks_sph,  thumb_heading - pano_heading, pano_pitch + thumb_pitch, dm, lon, lat, pano_H, pano_heading, pano_pitch)
+        print('pointcloud:', pointcloud[0])
+        print('pointcloud:', pointcloud[1])
         # for row in sidewalks_sph:
         #     print(row)
         dm_w = 512

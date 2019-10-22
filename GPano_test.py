@@ -1,4 +1,5 @@
 import unittest
+from GPano import *
 import GPano
 from PIL import Image
 from skimage import io
@@ -6,10 +7,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class MyTestCase(unittest.TestCase):
+
     def test_castesian_to_shperical(self):
         predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
         predict = io.imread(
-            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198790_17033655685_-76.735723_38.853229_0_268.png')
+            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\265746_-74.2180614_40.7864947_0_53_FR.png')
 
         #print('predict: ', predict)
         #print('predict shape: ', predict.shape)
@@ -22,15 +24,15 @@ class MyTestCase(unittest.TestCase):
 
         print("len of sidewalks pixels: ", len(sidewalks))
 
-        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 1024, 768, 90)
+        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 512, 384, 90)
         #sidewalks_sph = [tuple([row[0], row[1] + 99.08]) for row in sidewalks_sph]
 
-        lon = -76.735723
-        lat = 38.853229
-        pano_heading = 2.9399998
-        pano_pitch = 1.36
-        pano_H = 5.045045
-        thumb_heading = 268
+        lon = -74.218032
+        lat = 40.786579
+        pano_heading = 9.25
+        pano_pitch = 0.28
+        pano_H = 15.42182
+        thumb_heading = 53
         thumb_pitch = 0
 
         obj_json = GPano.GSV_depthmap.getJsonDepthmapfrmLonlat(GPano.GPano(), lon, lat)
@@ -65,5 +67,29 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(True, sidewalks_sph)
 
 
+
+    """
+    def test_getNextJson(self):
+        jdata = GPano.GPano.getJsonfrmPanoID(GPano.GPano(), 'JDDtY3d4sUkNgOfTfzt1pw')
+        print(jdata)
+        self.assertEqual('jFXMdc6V_a1w7WrMbbmItw', GPano.GPano.getNextJson(GPano.GPano(), jdata)['Location']['panoId'])
+    """
+    """
+    def test_readCoords_csv(self):
+        coords = GPano.GPano.readCoords_csv(GPano.GPano(), r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\coords_of_boundary.csv')
+        print(coords)
+    """
+    """
+    def test_point_in_polygon(self):
+        point = Point(-74.271202, 40.775623)
+        point = Point(-64.271202, 40.775623)
+        coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+                                            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\coords_of_boundary.csv')
+        polygon = GPano.GPano.formPolygon(GPano.GPano(), coords)
+        #print(polygon)
+        #print(point)
+        self.assertEqual(False, GPano.GPano.point_in_polygon(GPano.GPano(), point, polygon))
+    """
+
 if __name__ == '__main__':
-    unittest.main()
+   unittest.main()

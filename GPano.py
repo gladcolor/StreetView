@@ -5,6 +5,7 @@ Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 from pyproj import Proj, transform
 import multiprocessing as mp
 from math import *
+import pandas as pd
 import selenium
 import os
 import time
@@ -25,6 +26,8 @@ import numpy as np
 import struct
 import matplotlib.pyplot as plt
 import PIL
+from shapely.geometry import Point, Polygon
+import csv
 from skimage import io
 from PIL import features
 WINDOWS_SIZE = '100, 100'
@@ -86,6 +89,26 @@ class GPano():
             if Cnt % Cnt_interval == (Cnt_interval - 1):
                 print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
         return statuses
+
+    def readCoords_csv(self, file_path):
+        df = pd.read_csv(file_path)
+        return list(df.itertuples(index=False, name=None))
+        # with open(file_path, 'r') as f:
+        #     lines = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+        #     # This skips the first row of the CSV file.
+        #     # csvreader.next() also works in Python 2.
+        #     # drop header
+        #     next(lines)
+        #     return [tuple(line) for line in lines]
+        #     #for line in lines:
+        #         #print(line)
+
+
+    def formPolygon(self, coords):
+        return Polygon(coords)
+
+    def point_in_polygon(self, point, polygon):
+        return point.within(polygon)
 
     def getPanoJPGfrmLonlat0(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
         """Reference:
@@ -325,6 +348,15 @@ class GPano():
             pool.apply_async(self.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
         pool.close()
         pool.join()
+
+    def getNextJson(self, jdata):
+        try:
+            links = jdata["Links"]
+            panoId = links[1]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
+            return self.getJsonfrmPanoID(panoId)
+        except Exception as e:
+            print("Error in shootLonlat() getting Links: ", e)
+            return 0
 
 
     def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):

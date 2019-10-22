@@ -109,14 +109,14 @@ class MyTestCase(unittest.TestCase):
         pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
                                                r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\road_seeds.csv')
         coords = GPano.GPano.readCoords_csv(GPano.GPano(),
-                                            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\coords_of_boundary.csv')
+                                            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
         polygon = GPano.GPano.formPolygon(GPano.GPano(), coords)
 
         print(polygon)
         lonlats = []
         for pt in pts:
             print(pt)
-            #lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000, polygon=polygon))
+            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000, polygon=polygon))
             lonlats += (GPano.GPano.go_along_road_backward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000,
                                                           polygon=polygon))
             print(len(lonlats))

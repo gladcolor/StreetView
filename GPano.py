@@ -396,19 +396,19 @@ class GPano():
 
             diff = [abs(yawDeg - yaw) for yawDeg in yaw_in_links]
             idx = diff.index(max(diff))
-            print(idx, diff)
+            #print(idx, diff)
             panoId = links[idx]['panoId']  # Warning: Not necessarily the second link node is the next panorama.
 
             if panoId == pre_panoId and len(links) > 1:
-                print("getNextJson: ", panoId, pre_panoId)
-                print("idx: ", idx)
+                #print("getNextJson: ", panoId, pre_panoId)
+                #print("idx: ", idx)
                 diff.pop(idx)
                 links.pop(idx)
                 idx = diff.index(max(diff))
-                print("idx: ", idx)
+                #print("idx: ", idx)
                 panoId = links[idx]['panoId']
-                print("links: ", links)
-                print("getNextJson: ", panoId, pre_panoId)
+                #print("links: ", links)
+                #print("getNextJson: ", panoId, pre_panoId)
                 return self.getJsonfrmPanoID(panoId)
 
             if len(links) == 1:
@@ -422,6 +422,8 @@ class GPano():
             return "Error"
 
     def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+        lon = float(lon)
+        lat = float(lat)
         if not self.point_in_polygon(Point((lon, lat)), polygon):
             print("Starting point is not in the polygon.")
             return
@@ -432,15 +434,17 @@ class GPano():
         pre_panoId = ""
 
         lonlats = []
+        pt_lon = lon
+        pt_lat = lat
 
-        while step_cnt < steps and self.point_in_polygon(Point(lon, lat), polygon):
+        while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
 
             try:
                 #print(panoId)
                 jdata = self.getJsonfrmPanoID(next_panoId)
                 # print('jdata: ', jdata)
-                pt_lon = jdata["Location"]["original_lng"]
-                pt_lat = jdata["Location"]["original_lat"]
+                pt_lon = float(jdata["Location"]["original_lng"])
+                pt_lat = float(jdata["Location"]["original_lat"])
                 lonlats.append((pt_lon, pt_lat))
                 panoId = jdata["Location"]["panoId"]
 
@@ -469,6 +473,8 @@ class GPano():
         return lonlats
 
     def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+        lon = float(lon)
+        lat = float(lat)
         if not self.point_in_polygon(Point((lon, lat)), polygon):
             print("Starting point is not in the polygon.")
             return
@@ -479,20 +485,22 @@ class GPano():
         pre_panoId = ""
 
         lonlats = []
+        pt_lon = lon
+        pt_lat = lat
 
-        while step_cnt < steps and self.point_in_polygon(Point(lon, lat), polygon):
+        while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
 
             try:
                 #print(panoId)
                 jdata = self.getJsonfrmPanoID(next_panoId)
                 # print('jdata: ', jdata)
-                pt_lon = jdata["Location"]["original_lng"]
-                pt_lat = jdata["Location"]["original_lat"]
+                pt_lon = float(jdata["Location"]["original_lng"])
+                pt_lat = float(jdata["Location"]["original_lat"])
                 lonlats.append((pt_lon, pt_lat))
                 panoId = jdata["Location"]["panoId"]
 
                 print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                #print(pt_lat, pt_lon)
+                print(pt_lat, pt_lon)
 
                 next_Json = self.getLastJson(jdata, pre_panoId)
                 #print("next_Json: ", next_Json)
@@ -567,8 +575,8 @@ class GPano():
                     continue
 
 
-    def getJsonfrmPanoID(self, panoId):
-        url = f"http://maps.google.com/cbk?output=json&panoid={panoId}"
+    def getJsonfrmPanoID(self, panoId, dm=0):
+        url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
         try:
             r = requests.get(url)
             jdata = r.json()

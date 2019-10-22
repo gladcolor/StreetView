@@ -349,14 +349,99 @@ class GPano():
         pool.close()
         pool.join()
 
-    def getNextJson(self, jdata):
+    def readRoadSeedsPts_csv(self, file_path):
+        df = pd.read_csv(file_path)
+        return list(df.itertuples(index=False, name=False))
+
+    def getNextJson(self, jdata, pre_panoId=""):
+        try:
+            yaw = float(jdata['Projection']['pano_yaw_deg'])
+            links = jdata["Links"]
+            #print("jdata[Links]: ", jdata["Links"])
+            yaw_in_links = [float(link['yawDeg']) for link in links]
+            #yaw_in_links = [float(link['yawDeg']) for link in links]
+            #print("yaw_in_links: ", yaw_in_links)
+
+            diff = [abs(yawDeg - yaw) for yawDeg in yaw_in_links]
+            idx = diff.index(min(diff))
+            #print(idx, diff)
+            panoId = links[idx]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
+            #print("getNextJson: ", panoId, pre_panoId)
+            if panoId == pre_panoId and len(links) > 1:
+                diff.pop(idx)
+                idx = diff.index(min(diff))
+                panoId = links[idx]['panoId']
+                return self.getJsonfrmPanoID(panoId)
+
+            if len(links) == 1:
+                return 0
+            else:
+                return self.getJsonfrmPanoID(panoId)
+
+        except Exception as e:
+            print("Error in getNextJson(): ", e)
+            print(links)
+            return "Error"
+
+    def getLastJson(self, jdata):
         try:
             links = jdata["Links"]
-            panoId = links[1]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
+            panoId = links[0]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
             return self.getJsonfrmPanoID(panoId)
         except Exception as e:
             print("Error in shootLonlat() getting Links: ", e)
             return 0
+
+    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+        if not self.point_in_polygon(Point((lon, lat)), polygon):
+            print("Starting point is not in the polygon.")
+            return
+
+        step_cnt = 0
+        next_pt = (lon, lat)
+        next_panoId = self.getPanoIDfrmLonlat(lon, lat)[0]
+        pre_panoId = ""
+
+        lonlats = []
+
+        while step_cnt < steps and self.point_in_polygon(Point(lon, lat), polygon):
+
+            try:
+                #print(panoId)
+                jdata = self.getJsonfrmPanoID(next_panoId)
+                # print('jdata: ', jdata)
+                pt_lon = jdata["Location"]["original_lng"]
+                pt_lat = jdata["Location"]["original_lat"]
+                lonlats.append((pt_lon, pt_lat))
+                panoId = jdata["Location"]["panoId"]
+
+                #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                #print(pt_lat, pt_lon)
+
+                next_Json = self.getNextJson(jdata, pre_panoId)
+                #print("next_Json: ", next_Json)
+
+                if next_Json == 0:
+                    print("The road is dead end in Google Stree Map.")
+                    break
+                else:
+                    next_lon = next_Json["Location"]["original_lng"]
+                    next_lat = next_Json["Location"]["original_lat"]
+                    next_panoId = next_Json["Location"]["panoId"]
+
+                    next_pt  = (next_lon, next_lat)
+
+                    step_cnt += 1
+
+                    pre_panoId = panoId
+
+            except Exception as e:
+                print("Error in go_along_road_forward():", e)
+        return lonlats
+
+    def go_along_road_backward(self, lon, lat, save_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+
+        pass
 
 
     def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):

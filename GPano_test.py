@@ -7,9 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class MyTestCase(unittest.TestCase):
-
+    """
     def test_castesian_to_shperical(self):
-        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
+#        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
         predict = io.imread(
             r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\265746_-74.2180614_40.7864947_0_53_FR.png')
 
@@ -66,13 +66,20 @@ class MyTestCase(unittest.TestCase):
         #print('sidewalks: ', sidewalks)
         self.assertEqual(True, sidewalks_sph)
 
-
+"""
 
     """
     def test_getNextJson(self):
         jdata = GPano.GPano.getJsonfrmPanoID(GPano.GPano(), 'JDDtY3d4sUkNgOfTfzt1pw')
         print(jdata)
         self.assertEqual('jFXMdc6V_a1w7WrMbbmItw', GPano.GPano.getNextJson(GPano.GPano(), jdata)['Location']['panoId'])
+    """
+    """
+    def test_getLastJson(self):
+        jdata = GPano.GPano.getJsonfrmPanoID(GPano.GPano(), 'JDDtY3d4sUkNgOfTfzt1pw')
+        print(jdata)
+        self.assertEqual('nbz-Fu3YZlFJwZwQp-IRFA', GPano.GPano.getLastJson(GPano.GPano(), jdata)['Location']['panoId'])
+
     """
     """
     def test_readCoords_csv(self):
@@ -90,6 +97,27 @@ class MyTestCase(unittest.TestCase):
         #print(point)
         self.assertEqual(False, GPano.GPano.point_in_polygon(GPano.GPano(), point, polygon))
     """
+
+    """
+    def test_readRoadSeedsPts_csv(self):
+        pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(), r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\road_seeds.csv')
+        print(pts)
+        self.assertEqual((-74.203195, 40.794957000000004), pts[0])
+    """
+
+    def test_go_along_road_forward(self):
+        pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
+                                               r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\road_seeds.csv')
+        coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+                                            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\coords_of_boundary.csv')
+        polygon = GPano.GPano.formPolygon(GPano.GPano(), coords)
+
+        print(polygon)
+        lonlats = []
+        for pt in pts:
+            print(pt)
+            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000, polygon=polygon))
+            print(len(lonlats))
 
 if __name__ == '__main__':
    unittest.main()

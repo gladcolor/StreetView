@@ -286,7 +286,7 @@ class GPano():
             print("Error in getPanoJsonfrmLonnat():", e)
             return 0
 
-    def getImagefrmAngle(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+    def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
         # h maximum: 768
         server_num = random.randint(0, 3)
@@ -319,11 +319,61 @@ class GPano():
             jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
                                                  str(int(yaw)) + suffix + '.jpg'))
             if image.getbbox():
-                image.save(jpg_name)
+                if saved_path != '':
+                    image.save(jpg_name)
+                    return 1
+                else:
+                    return image
             #print(url2)
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
+            return 0
+
+    def getImageclipfrmPano(self, panoId, saved_path='', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        jdata = self.getJsonfrmPanoID(panoId)
+        lon = jdata["Location"]["original_lng"]
+        lat = jdata["Location"]["original_lat"]
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
+
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+              f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}"
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            #print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+            response = requests.get(url1)
+            image = Image.open(BytesIO(response.content))
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
+                                                 str(int(yaw)) + suffix + '.jpg'))
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                    return 1
+                else:
+                    return image
+            #print(url2)
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+            return 0
 
     def getImagesfrmAngles(self, lonlat_list, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
@@ -421,9 +471,35 @@ class GPano():
             print(links)
             return "Error"
 
+    def getImageclipsfrmJson(self, jdata, yaw_list=0, pitch_list=0, saved_path=''):
+        try:
+            panoId = jdata["Location"]["panoId"]
+            heading = float(jdata["Projection"]["pano_yaw_deg"])
+            lon = float(jdata["Location"]["original_lng"])
+            lat = float(jdata["Location"]["original_lat"])
+
+            if not isinstance(yaw_list, list):
+                yaw_list = [yaw_list]
+
+            if not isinstance(pitch_list, list):
+                pitch_list = [pitch_list]
+
+            for yaw in yaw_list:
+                for pitch in pitch_list:
+                    self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch, yaw=yaw + heading)
+
+        except Exception as e:
+            print("Error in getImageclipsfrmJson():", e)
+
     def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None):
         lon = float(lon)
         lat = float(lat)
+        if not isinstance(yaw_list, list):
+            yaw_list = [yaw_list]
+
+        if not isinstance(pitch_list, list):
+            pitch_list = [pitch_list]
+
         if not self.point_in_polygon(Point((lon, lat)), polygon):
             print("Starting point is not in the polygon.")
             return
@@ -447,6 +523,9 @@ class GPano():
                 pt_lat = float(jdata["Location"]["original_lat"])
                 lonlats.append((pt_lon, pt_lat))
                 panoId = jdata["Location"]["panoId"]
+                heading = float(jdata["Projection"]["pano_yaw_deg"])
+
+                self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
 
                 #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
                 #print(pt_lat, pt_lon)
@@ -498,9 +577,11 @@ class GPano():
                 pt_lat = float(jdata["Location"]["original_lat"])
                 lonlats.append((pt_lon, pt_lat))
                 panoId = jdata["Location"]["panoId"]
-
+                heading = float(jdata["Projection"]["pano_yaw_deg"])
                 #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
                 #print(pt_lat, pt_lon)
+                self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
+
 
                 next_Json = self.getLastJson(jdata, pre_panoId)
                 #print("next_Json: ", next_Json)
@@ -518,6 +599,9 @@ class GPano():
                     step_cnt += 1
 
                     pre_panoId = panoId
+
+                if step_cnt % 100 == 0:
+                    print("Step count:", step_cnt)
 
             except Exception as e:
                 print("Error in go_along_road_forward():", e)

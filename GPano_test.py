@@ -5,18 +5,23 @@ from PIL import Image
 from skimage import io
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
 
 class MyTestCase(unittest.TestCase):
-    """
+
+
     def test_castesian_to_shperical(self):
-#        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
-        predict = io.imread(
-            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\265746_-74.2180614_40.7864947_0_53_FR.png')
+        #        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+        #file = r'D:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\sidewalk\\Essex_test\\jpg\\segmented_1024\\-9eYImoKzQ9iOYWIPxDaXA_-74.206696_40.793733_20.2_1.1.png'
+        predict = io.imread(file)
+
+        predict = io.imread(file)
 
         #print('predict: ', predict)
         #print('predict shape: ', predict.shape)
         predict = np.array(predict)
-        sidewalks = np.argwhere(predict == 11)#[:2]
+        sidewalks = np.argwhere((predict == 11) | (predict == 52))#[:2]
         #sidewalks[0] = (50, 650)   # col, row
         #sidewalks[1] = (638, 290)  # col, row
         print("sidewalks[0]: ", sidewalks[0])
@@ -25,7 +30,26 @@ class MyTestCase(unittest.TestCase):
         print("len of sidewalks pixels: ", len(sidewalks))
 
         sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 512, 384, 90)
-        #sidewalks_sph = [tuple([row[0], row[1] + 99.08]) for row in sidewalks_sph]
+
+
+
+        basename = os.path.basename(file)
+        params = basename[:-4].split('_')
+        # print("params:", params)
+        thumb_panoId = '_'.join(params[:(len(params) - 4)])
+        # if len(params) > 5:
+        #     print("thumb_panoId:", thumb_panoId)
+        # pano_lon = params[-4]
+        # pano_lat = params[-3]
+        # pano_heading = params[-4]
+        # pano_pitch = params[-4]
+        # pano_H = params[-4]
+
+
+        obj_json = GPano.GPano.getJsonfrmPanoID(GPano.GPano(), thumb_panoId, dm=1)
+        print(obj_json)
+        #obj_json = GPano.GSV_depthmap.getJsonDepthmapfrmLonlat(GPano.GPano(), lon, lat)
+
 
         lon = -74.218032
         lat = 40.786579
@@ -35,7 +59,23 @@ class MyTestCase(unittest.TestCase):
         thumb_heading = 53
         thumb_pitch = 0
 
-        obj_json = GPano.GSV_depthmap.getJsonDepthmapfrmLonlat(GPano.GPano(), lon, lat)
+        thumb_heading = float(params[-1])
+        thumb_pitch = float(params[-2])
+
+        pano_heading = obj_json["Projection"]['pano_yaw_deg']
+        pano_heading = float(pano_heading)
+        pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
+        pano_pitch = float(pano_pitch)
+
+
+        pano_lon = float(obj_json["Location"]['original_lng'])
+        # print('pano_lon:', pano_lon)
+        pano_lat = float(obj_json["Location"]['original_lat'])
+        lon = pano_lon
+        lat = pano_lat
+
+
+
 
         webX, webY = GPano.GSV_depthmap.lonlat2WebMercator( GPano.GSV_depthmap(), lon, lat)
         print("webX, webY:", webX, webY)
@@ -43,7 +83,11 @@ class MyTestCase(unittest.TestCase):
         dm = GPano.GSV_depthmap.getDepthmapfrmJson(GPano.GSV_depthmap(), obj_json)
         print("dm[depthmap]: ", dm['depthMap'])
         print("len of dm[depthmap]: ", len(dm['depthMap']))
-        pointcloud = GPano.GSV_depthmap.getPointCloud(GPano.GSV_depthmap(), sidewalks_sph,  thumb_heading - pano_heading, pano_pitch + thumb_pitch, dm, lon, lat, pano_H, pano_heading, pano_pitch)
+        #pointcloud = GPano.GSV_depthmap.getPointCloud(GPano.GSV_depthmap(), sidewalks_sph,  thumb_heading - pano_heading, pano_pitch + thumb_pitch, dm, lon, lat, pano_H, pano_heading, pano_pitch)
+        pointcloud = GPano.GSV_depthmap.getPointCloud(GPano.GSV_depthmap(), sidewalks_sph, thumb_heading - pano_heading,
+                                                      thumb_pitch, dm, lon, lat, pano_H, pano_heading,
+                                                      pano_pitch)
+
         print('pointcloud:', pointcloud[0])
         print('pointcloud:', pointcloud[1])
         print(pointcloud[11])
@@ -64,9 +108,20 @@ class MyTestCase(unittest.TestCase):
         #print(sidewalks)
         #print('predict: ', predict)
         #print('sidewalks: ', sidewalks)
-        self.assertEqual(True, sidewalks_sph)
+        #self.assertEqual(True, sidewalks_sph)
 
-"""
+
+
+    def test_seg_to_pointcloud(self):
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+
+        seglist = glob.glob(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+        seglist = seglist[:3]
+        seglist.append(file)
+        print("seglist:", seglist[:2])
+        saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+        GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist[:4], saved_path=saved_path, fov=90)
+        print("Finished.")
 
     """
     def test_getNextJson(self):
@@ -105,6 +160,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual((-74.203195, 40.794957000000004), pts[0])
     """
 
+    """
     def test_go_along_road_forward(self):
         pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
                                                r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\road_seeds.csv')
@@ -126,5 +182,8 @@ class MyTestCase(unittest.TestCase):
 
         plt.scatter(lons, lats)
         plt.show()
+
+        """
+
 if __name__ == '__main__':
    unittest.main()

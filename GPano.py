@@ -788,7 +788,7 @@ class GPano():
     def castesian_to_shperical(self, colrows, w, h, fov): # yaw: set the heading, pitch
         fov = radians(fov)
         f = (0.5 * w) / math.tan(fov * 0.5)
-        print("f:", f)
+        #print("f:", f)
         if not isinstance(colrows, list):
             colrows = [colrows]
 
@@ -988,7 +988,6 @@ class GSV_depthmap(object):
 
         return {"planes": planes, "indices": indices}
 
-
     def computeDepthMap(self, header, indices, planes):
 
         v = [0, 0, 0]
@@ -1059,13 +1058,23 @@ class GSV_depthmap(object):
         try:
             # print('heading_of_thumb:', heading_of_thumb)
             # print('pitch_of_thumb:', pitch_of_thumb)
+
             if not isinstance(theta_phis_in_thumb, list):
                 theta_phis_in_thumb = [theta_phis_in_thumb]
 
+            heading_of_thumb = float(heading_of_thumb)
+            pitch_of_thumb = float(pitch_of_thumb)
+            cameraLon = float(cameraLon)
+            cameraLat = float(cameraLat)
+            cameraH = float(cameraH)
+            heading_of_pano = float(heading_of_pano)
+            pitch_of_pano = float(pitch_of_pano)
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
-            theta_phis_in_thumb = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
+            #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
+            theta_phis_in_thumb = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
+                                   theta_phis_in_thumb]
 
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
@@ -1112,8 +1121,90 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getPointCloud():", e)
 
+    def seg_to_pointcloud(self, seg_list, saved_path, fov):
+        try:
+            if not isinstance(seg_list, list):
+                seg_list = [seg_list]
+                print("Converted the single file into a list.")
+            #print(io.imread(seg_list[0]).shape)
 
 
+            for idx, seg in enumerate(seg_list):
+
+                try:
+                    h, w = io.imread(seg).shape
+                    print("image w, h: ", w, h)
+
+                    predict = io.imread(seg)
+                    predict = np.array(predict)
+                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 53))  # sidewalk and path classes in ADE20k.
+                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    print(seg)
+
+
+                    # plt_x = [row[1] for row in sidewalk_idx]
+                    # plt_y = [row[0] for row in sidewalk_idx]
+                    # plt.scatter(plt_x, plt_y)
+                    # plt.show()
+                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    basename = os.path.basename(seg)
+                    params = basename[:-4].split('_')
+                    #print("params:", params)
+                    thumb_panoId = '_'.join(params[:(len(params) - 4)])
+                    # if len(params) > 5:
+                    #     print("thumb_panoId:", thumb_panoId)
+                    # pano_lon = params[-4]
+                    # pano_lat = params[-3]
+                    # pano_heading = params[-4]
+                    # pano_pitch = params[-4]
+                    # pano_H = params[-4]
+                    thumb_heading = float(params[-1])
+                    thumb_pitch = float(params[-2])
+                    #print("thumb_heading:", thumb_heading)
+
+                    if len(sidewalk_idx) > 1:
+                        # get spherial coordinates
+                        sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
+                        #print('sidewalk_sph[0]:', sidewalk_sph[0])
+
+                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
+                        obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1)
+                        #print(obj_json)
+                        pano_heading = obj_json["Projection"]['pano_yaw_deg']
+                        pano_heading = float(pano_heading)
+                        pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
+                        pano_pitch = float(pano_pitch)
+                        # print('pano_heading:', pano_heading)
+                        pano_lon = obj_json["Location"]['original_lng']
+                        # print('pano_lon:', pano_lon)
+                        pano_lat = obj_json["Location"]['original_lat']
+                        # print('pano_lat:', pano_lat)
+                        pano_H = obj_json["Location"]['elevation_wgs84_m']
+                        # print('pano_H:', pano_H)
+                        dm = self.getDepthmapfrmJson(obj_json)
+                        #print(dm)
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        #print(pointcloud)
+                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
+                        #print('new_file_name: ', new_file_name)
+                        plt_x = [row[0] for row in pointcloud]
+                        plt_y = [row[1] for row in pointcloud]
+                        plt.scatter(plt_x, plt_y)
+                        plt.show()
+
+                        with open(new_file_name, 'w') as f:
+                            f.write('x,y,h,d\n')
+                            f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
+                    else:
+                        print("No point in image:", seg)
+
+                except Exception as e:
+                    print("Error in seg_to_pointcloud() for loop:", e, seg)
+                    continue
+
+        except Exception as e:
+            print("Error in seg_to_pointcloud():", e, seg)
 
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
         """

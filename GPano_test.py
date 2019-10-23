@@ -116,10 +116,10 @@ class MyTestCase(unittest.TestCase):
         lonlats = []
         for pt in pts:
             print(pt)
-            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000, polygon=polygon))
-            lonlats += (GPano.GPano.go_along_road_backward(GPano.GPano(), pt[0], pt[1], saved_path='', steps=1000000,
+            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path='', yaw_list=[60, 120, -60, -120], pitch_list=20, steps=1000000, polygon=polygon))
+            lonlats += (GPano.GPano.go_along_road_backward(GPano.GPano(), pt[0], pt[1], saved_path='', yaw_list=[60, 120, -60, -120], pitch_list=20, steps=1000000,
                                                           polygon=polygon))
-            print(len(lonlats))
+            print("len(lonlats): ", len(lonlats))
 
         lons = [lonlat[0] for lonlat in lonlats]
         lats = [lonlat[1] for lonlat in lonlats]

@@ -421,7 +421,7 @@ class GPano():
             print(links)
             return "Error"
 
-    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None):
         lon = float(lon)
         lat = float(lat)
         if not self.point_in_polygon(Point((lon, lat)), polygon):
@@ -499,8 +499,8 @@ class GPano():
                 lonlats.append((pt_lon, pt_lat))
                 panoId = jdata["Location"]["panoId"]
 
-                print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                print(pt_lat, pt_lon)
+                #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                #print(pt_lat, pt_lon)
 
                 next_Json = self.getLastJson(jdata, pre_panoId)
                 #print("next_Json: ", next_Json)

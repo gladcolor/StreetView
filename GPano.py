@@ -1151,6 +1151,12 @@ class GSV_depthmap(object):
                     params = basename[:-4].split('_')
                     #print("params:", params)
                     thumb_panoId = '_'.join(params[:(len(params) - 4)])
+                    pano_lon = params[-4]
+                    pano_lat = params[-3]
+                    if len(thumb_panoId) < 16:
+                        thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
+                        print("thumb_panoId: ",thumb_panoId)
+
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
                     # pano_lon = params[-4]

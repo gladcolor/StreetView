@@ -116,11 +116,13 @@ class MyTestCase(unittest.TestCase):
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
 
         seglist = glob.glob(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-        seglist = seglist[:3]
+        seglist = glob.glob(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\segmented\*.png')
+        #seglist = seglist[:]
         seglist.append(file)
         print("seglist:", seglist[:2])
         saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist[:4], saved_path=saved_path, fov=90)
+        saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\segmented'
+        GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
         print("Finished.")
 
     """

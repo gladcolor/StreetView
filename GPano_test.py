@@ -7,13 +7,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 
-class MyTestCase(unittest.TestCase):
 
+class MyTestCase(unittest.TestCase):
 
     def test_castesian_to_shperical(self):
         #        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
         #file = r'D:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\sidewalk\\Essex_test\\jpg\\segmented_1024\\-9eYImoKzQ9iOYWIPxDaXA_-74.206696_40.793733_20.2_1.1.png'
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
         predict = io.imread(file)
 
         predict = io.imread(file)
@@ -21,15 +22,21 @@ class MyTestCase(unittest.TestCase):
         #print('predict: ', predict)
         #print('predict shape: ', predict.shape)
         predict = np.array(predict)
+        h, w = predict.shape
         sidewalks = np.argwhere((predict == 11) | (predict == 52))#[:2]
         #sidewalks[0] = (50, 650)   # col, row
         #sidewalks[1] = (638, 290)  # col, row
         print("sidewalks[0]: ", sidewalks[0])
         sidewalks = [tuple(row) for row in sidewalks]
 
+        # plt_x = [row[1] for row in sidewalks]
+        # plt_y = [h - row[0] for row in sidewalks]
+        # plt.scatter(plt_x, plt_y)
+        # plt.show()
+
         print("len of sidewalks pixels: ", len(sidewalks))
 
-        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, 512, 384, 90)
+        sidewalks_sph = GPano.GPano.castesian_to_shperical(GPano.GPano(), sidewalks, w, h, 90)
 
 
 
@@ -91,20 +98,25 @@ class MyTestCase(unittest.TestCase):
         print('pointcloud:', pointcloud[0])
         print('pointcloud:', pointcloud[1])
         print(pointcloud[11])
-        plt_x = [row[0] for row in pointcloud]
-        plt_y = [row[1] for row in pointcloud]
-        plt.scatter(plt_x, plt_y)
-        plt.show()
-        with open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\pointcloud.csv', 'w') as f:
+        # plt_x = [row[1] for row in pointcloud]
+        # plt_y = [row[0] for row in pointcloud]
+        # plt.scatter(plt_x, plt_y)
+        # plt.show()
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test'
+        with open(os.path.join(saved_path, r'pointcloud2.csv'), 'w') as f:
+            f.write('x,y,h,d\n')
             f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
 
-        with open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\sidewalk_pixels.csv', 'w') as ff:
-            ff.write('\n'.join('%s,%s' % x for x in sidewalks))
+
+        with open(os.path.join(saved_path, r'sidewalk_pixels.csv'), 'w')as f:
+            f.write('\n'.join('%s,%s,%s' % x for x in zip(sidewalks, sidewalks_sph, pointcloud)))
+            # f.write('\n'.join('%s,%s' % x for x in sidewalks_sph))
+            # f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
 
         # for row in sidewalks_sph:
         #     print(row)
-        dm_w = 512
-        dm_h = 216
+        # dm_w = 512
+        # dm_h = 216
         #print(sidewalks)
         #print('predict: ', predict)
         #print('sidewalks: ', sidewalks)
@@ -112,18 +124,24 @@ class MyTestCase(unittest.TestCase):
 
 
 
-    def test_seg_to_pointcloud(self):
-        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+    # def test_seg_to_pointcloud(self):
+    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+    #
+    #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+    #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+    #     predicts = []
+    #     for seg in seglist:
+    #         if not "color" in seg:
+    #             predicts.append(seg)
+    #     #seglist = seglist[:]
+    #     seglist = predicts
+    #     seglist.append(file)
+    #     print("seglist:", seglist[:2])
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
+    #     GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
+    #     print("Finished.")
 
-        seglist = glob.glob(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-        seglist = glob.glob(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\segmented\*.png')
-        #seglist = seglist[:]
-        seglist.append(file)
-        print("seglist:", seglist[:2])
-        saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\segmented'
-        GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
-        print("Finished.")
 
     """
     def test_getNextJson(self):
@@ -131,6 +149,7 @@ class MyTestCase(unittest.TestCase):
         print(jdata)
         self.assertEqual('jFXMdc6V_a1w7WrMbbmItw', GPano.GPano.getNextJson(GPano.GPano(), jdata)['Location']['panoId'])
     """
+
     """
     def test_getLastJson(self):
         jdata = GPano.GPano.getJsonfrmPanoID(GPano.GPano(), 'JDDtY3d4sUkNgOfTfzt1pw')
@@ -138,11 +157,13 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual('nbz-Fu3YZlFJwZwQp-IRFA', GPano.GPano.getLastJson(GPano.GPano(), jdata)['Location']['panoId'])
 
     """
+
     """
     def test_readCoords_csv(self):
         coords = GPano.GPano.readCoords_csv(GPano.GPano(), r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\coords_of_boundary.csv')
         print(coords)
     """
+
     """
     def test_point_in_polygon(self):
         point = Point(-74.271202, 40.775623)
@@ -161,7 +182,6 @@ class MyTestCase(unittest.TestCase):
         print(pts)
         self.assertEqual((-74.203195, 40.794957000000004), pts[0])
     """
-
     """
     def test_go_along_road_forward(self):
         pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
@@ -174,9 +194,15 @@ class MyTestCase(unittest.TestCase):
         lonlats = []
         for pt in pts:
             print(pt)
-            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1], saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg', yaw_list=[0, 60, 120, -60, -120, 180], pitch_list=20, steps=1000000, polygon=polygon))
-            lonlats += (GPano.GPano.go_along_road_backward(GPano.GPano(), pt[0], pt[1], saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg', yaw_list=[0, 180, 60, 120, -60, -120], pitch_list=20, steps=1000000,
-                                                          polygon=polygon))
+            lonlats += (GPano.GPano.go_along_road_forward(GPano.GPano(), pt[0], pt[1],
+                                                          saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0',
+                                                          yaw_list=[0, 60, 120, -60, -120, 180], pitch_list=0,
+                                                          steps=1000000, polygon=polygon))
+            lonlats += (GPano.GPano.go_along_road_backward(GPano.GPano(), pt[0], pt[1],
+                                                           saved_path=r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0',
+                                                           yaw_list=[0, 180, 60, 120, -60, -120], pitch_list=0,
+                                                           steps=1000000,
+                                                           polygon=polygon))
             print("len(lonlats): ", len(lonlats))
 
         lons = [lonlat[0] for lonlat in lonlats]
@@ -184,8 +210,7 @@ class MyTestCase(unittest.TestCase):
 
         plt.scatter(lons, lats)
         plt.show()
-
-        """
+    """
 
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()

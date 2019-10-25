@@ -3,7 +3,14 @@ Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 """
 from pyproj import Proj, transform
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib as mpl
+from scipy import interpolate
+import matplotlib.cm as cm
 import multiprocessing as mp
+import numpy as np
+import scipy.ndimage
+from scipy import interpolate
 from math import *
 import pandas as pd
 import selenium
@@ -22,7 +29,7 @@ import math
 import sys
 import base64
 import zlib
-import numpy as np
+
 import struct
 import matplotlib.pyplot as plt
 import PIL
@@ -317,7 +324,7 @@ class GPano():
             image = Image.open(BytesIO(response.content))
 
             jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
-                                                 str(int(yaw)) + suffix + '.jpg'))
+                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
             if image.getbbox():
                 if saved_path != '':
                     image.save(jpg_name)
@@ -793,6 +800,8 @@ class GPano():
             colrows = [colrows]
 
         theta_phis = []
+        plt_x = []
+        plt_y = []
 
         for colrow in colrows:
             #print(colrows)
@@ -802,6 +811,9 @@ class GPano():
             x = col - w * 0.5
             y = h * 0.5 - row
             z = f
+
+            plt_x.append(x)
+
 
             #print('y:', y)
 
@@ -825,17 +837,21 @@ class GPano():
 
             phi = atan(x / z)
             theta = atan(y / sqrt(x * x + z * z))
+
             # phi = atan(x / y)
 
             theta = degrees(theta)
             phi = degrees(phi)
+            #plt_y.append(phi)
 
             theta_phis.append((theta, phi))
 
-            #print("col, row, x, y, z, theta, phi:")
-            #print(col, row, x, y, z, theta, phi)
+            # print("col, row, x, y, z, theta, phi:")
+            # print(col, row, x, y, z, theta, phi)
         #print('theta_phis:', theta_phis)
         #print(x, y, z, theta + heading, phi + pitch, pi)
+        # plt.scatter(plt_x, plt_y)
+        # plt.show()
         if len(theta_phis) == 1:
             return theta_phis[0]
         else:
@@ -1073,7 +1089,7 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_thumb = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
+            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
                                    theta_phis_in_thumb]
 
             # for row in theta_phis_in_thumb:
@@ -1091,21 +1107,104 @@ class GSV_depthmap(object):
             cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
             heading_of_pano = radians(heading_of_pano)
             pitch_of_pano = radians(pitch_of_pano)
-            for ray in theta_phis_in_thumb:
+            dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
+            plt.imshow(dempth_image)
+            plt.show()
+
+
+            #dempth_image = scipy.ndimage.zoom(dempth_image, 4, order=3)
+            print("Shape of dempth_image: ", dempth_image.shape)
+            #print('dempth_image: ', dempth_image)
+            # plt.imshow(dempth_image)
+            # plt.show()
+
+            dm_h, dm_w = dempth_image.shape
+            print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
+
+            grid_col = np.linspace(-pi, pi, dm_w)
+            grid_row = np.linspace(-pi/2, pi/2, dm_h)
+            #gridxx = np.arange(512)
+            #gridyy = np.arange(256)
+            gridxx, gridyy = np.meshgrid(grid_col, grid_row)
+            print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
+            #print("types: gridx, dempth_image", (gridx), (dempth_image))
+            # print(gridx)
+            # print(gridy)
+            # print('dempth_image: ', dempth_image)
+
+            fig = plt.figure(figsize=(9, 6))
+            # Draw sub-graph1
+            ax = plt.subplot(1, 2, 1, projection='3d')
+            surf = ax.plot_surface(gridxx, gridyy, dempth_image, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5, antialiased=True)
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_zlabel('f(x, y)')
+            plt.colorbar(surf, shrink=0.5, aspect=5)  # 标注
+            # plt.show()
+
+            # 二维插值
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear')
+            print(interp(grid_col[0], grid_row[0]))
+            print(interp(grid_col[511], grid_row[255]))
+            print(interp(grid_col[256], grid_row[68]))
+            #distance = interp(grid_row, grid_col)
+            #print('interp(gridyy, gridxx): ', interp(grid_row, grid_col))
+            #print("fnished", gridx, gridy)
+
+
+            # 计算100*100的网格上的插值
+
+            xnew = np.linspace(-pi, pi, 512/8)
+            ynew = np.linspace(-pi/2, pi/2, 256/8)
+            fnew = interp(xnew, ynew)  # 仅仅是y值   100*100的值  np.shape(fnew) is 100*100
+            xnew, ynew = np.meshgrid(xnew, ynew)
+            ax2 = plt.subplot(1, 2, 2, projection='3d')
+            surf2 = ax2.plot_surface(xnew, ynew, fnew, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5,
+                                     antialiased=True)
+            ax2.set_xlabel('xnew')
+            ax2.set_ylabel('ynew')
+            ax2.set_zlabel('fnew(x, y)')
+            plt.colorbar(surf2, shrink=0.5, aspect=5)  # 标注
+
+            plt.show()
+
+            for idx, ray in enumerate(theta_phis_in_pano):
+                if ray[1] < 0:
+                    print('ray (degree):', ray)
 
                 theta = radians(ray[0])
                 phi = radians(ray[1])
+
+                if phi > pi:
+                    print(phi)
 
                 x = phi / pi * depthmap['width'] / 2
                 y = theta / (pi/2) * depthmap['height'] / 2
                 row = int(depthmap['height'] / 2 - y)
                 col = int(x + depthmap['width'] / 2)
-                distance = depthmap['depthMap'][depthmap['width'] * row + col]
-                pointX = cameraX + distance * cos(theta) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta)
 
-                points3D.append((pointX, pointY, pointZ, distance))
+                # x = phi / pi * dm_w / 2
+                # y = theta / (pi/2) * dm_h / 2
+                # row = int(dm_h / 2 - y)
+                # col = int(x + dm_w / 2)
+
+                #distance = interp(theta, phi)
+
+                distance = depthmap['depthMap'][depthmap['width'] * row + col]
+
+                #distance = dempth_image[row][col]
+                if idx % 1500 == 0:
+                    print('distance:', theta, phi, interp(theta, phi), interp(phi, theta))
+                    print('distance:', x, y, col, row, distance)
+                    print('distance:', dempth_image[row][col])
+
+
+                if distance > 0.5:
+                    pointX = cameraX + distance * cos(theta) * sin(phi + heading_of_pano)
+                    pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
+                    pointZ = cameraH + distance * sin(theta)
+
+                    points3D.append((pointX, pointY, pointZ, distance))
 
                 # print("distance * cos(theta):",distance * cos(theta))
                 # #

@@ -1143,7 +1143,7 @@ class GSV_depthmap(object):
             # plt.show()
 
             # 二维插值
-            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear')
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='cubic')
             # print(grid_col[0], grid_row[0], interp(grid_col[0], grid_row[0]), dempth_image[0][0])
             # print(interp(grid_col[511], grid_row[255]), dempth_image[255][511])
             # print(interp(grid_col[256], grid_row[68]), dempth_image[68][256])
@@ -1236,8 +1236,6 @@ class GSV_depthmap(object):
 
                 try:
 
-
-
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
@@ -1319,6 +1317,124 @@ class GSV_depthmap(object):
 
         except Exception as e:
             print("Error in seg_to_pointcloud():", e, seg)
+
+    def seg_to_landcover(self, seg_list, saved_path, fov):
+        try:
+            if not isinstance(seg_list, list):
+                seg_list = [seg_list]
+                print("Converted the single file into a list.")
+            #print(io.imread(seg_list[0]).shape)
+
+
+            for idx, seg in enumerate(seg_list):
+
+                try:
+
+                    predict = io.imread(seg)
+                    predict = np.array(predict)
+                    h, w = predict.shape
+                    #print("image w, h: ", w, h)
+                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
+                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    print(seg)
+
+
+                    # plt_x = [row[1] for row in sidewalk_idx]
+                    # plt_y = [row[0] for row in sidewalk_idx]
+                    # plt.scatter(plt_x, plt_y)
+                    # plt.show()
+                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    basename = os.path.basename(seg)
+                    params = basename[:-4].split('_')
+                    #print("params:", params)
+                    thumb_panoId = '_'.join(params[:(len(params) - 4)])
+                    pano_lon = params[-4]
+                    pano_lat = params[-3]
+                    if len(thumb_panoId) < 16:
+                        thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
+                        print("thumb_panoId: ",thumb_panoId)
+
+                    # if len(params) > 5:
+                    #     print("thumb_panoId:", thumb_panoId)
+                    # pano_lon = params[-4]
+                    # pano_lat = params[-3]
+                    # pano_heading = params[-4]
+                    # pano_pitch = params[-4]
+                    # pano_H = params[-4]
+                    thumb_heading = float(params[-1])
+                    thumb_pitch = float(params[-2])
+                    #print("thumb_heading:", thumb_heading)
+
+                    obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1)
+                    depthMapData = self.parse(obj_json['model']['depth_map'])
+                    #print(dm_string)
+                    header = self.parseHeader(depthMapData)
+                    # print('header:',header)
+                    dm_planes = self.parsePlanes(header, depthMapData)
+                    # print('dm_planes[indices]:', dm_planes['indices'])
+                    # print('len of dm_planes[indices]:', len(dm_planes['indices']))
+
+                    dm = self.getDepthmapfrmJson(obj_json)
+                    #print('dm[depthjMap]:', dm['depthMap'])
+
+                    # get ground pixels
+                    ground_pixels = []
+                    for y in range(dm['height']):
+                        for x in range(dm['width']):
+                            planeIdx = dm_planes['indices'][y * dm['width'] + x]
+                            if x % 10 == 0 and y % 50 == 0:
+                                print('plane: ', planeIdx)
+                                print('plane: ', dm_planes['planes'][planeIdx])
+                                print(y, x)
+
+
+
+                    if len(sidewalk_idx) > 1:
+                        # get spherial coordinates
+                        sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
+                        #print('sidewalk_sph[0]:', sidewalk_sph[0])
+
+                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
+
+                        #print(obj_json)
+                        pano_heading = obj_json["Projection"]['pano_yaw_deg']
+                        pano_heading = float(pano_heading)
+                        pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
+                        pano_pitch = float(pano_pitch)
+                        # print('pano_heading:', pano_heading)
+                        pano_lon = obj_json["Location"]['original_lng']
+                        # print('pano_lon:', pano_lon)
+                        pano_lat = obj_json["Location"]['original_lat']
+                        # print('pano_lat:', pano_lat)
+                        pano_H = obj_json["Location"]['elevation_wgs84_m']
+                        # print('pano_H:', pano_H)
+                        dm = self.getDepthmapfrmJson(obj_json)
+                        #print(dm)
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        #print(pointcloud)
+                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
+                        #print('new_file_name: ', new_file_name)
+                        plt.imshow(predict)
+                        plt.show()
+                        plt_x = [row[0] for row in pointcloud]
+                        plt_y = [row[1] for row in pointcloud]
+                        plt.scatter(plt_x, plt_y)
+                        plt.show()
+
+
+                        with open(new_file_name, 'w') as f:
+                            f.write('x,y,h,d\n')
+                            f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
+                    else:
+                        print("No point in image:", seg)
+
+                except Exception as e:
+                    print("Error in seg_to_landcover() for loop:", e, seg)
+                    continue
+
+        except Exception as e:
+            print("Error in seg_to_landcover():", e, seg)
 
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
         """

@@ -1154,8 +1154,8 @@ class GSV_depthmap(object):
 
             # 计算100*100的网格上的插值
 
-            xnew = np.linspace(-pi, pi, 512/8)
-            ynew = np.linspace(-pi/2, pi/2, 256/8)
+            xnew = np.linspace(-pi, pi, 512*6)
+            ynew = np.linspace(-pi/2, pi/2, 256*6)
             fnew = interp(xnew, ynew)  # 仅仅是y值   100*100的值  np.shape(fnew) is 100*100
             xnew, ynew = np.meshgrid(xnew, ynew)
             ax2 = plt.subplot(1, 2, 2, projection='3d')

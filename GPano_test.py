@@ -10,12 +10,31 @@ import glob
 
 class MyTestCase(unittest.TestCase):
 
+    def test_seg_to_pointcloud(self):
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+
+        seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+        seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+        seglist = [file]
+        predicts = []
+        for seg in seglist:
+            if not "color" in seg:
+                predicts.append(seg)
+        #seglist = seglist[:]
+        seglist = predicts
+        seglist.append(file)
+        print("seglist:", seglist[:2])
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
+        GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
+        print("Finished.")
+
     def test_castesian_to_shperical(self):
         #        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
         #file = r'D:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\sidewalk\\Essex_test\\jpg\\segmented_1024\\-9eYImoKzQ9iOYWIPxDaXA_-74.206696_40.793733_20.2_1.1.png'
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-        predict = io.imread(file)
 
         predict = io.imread(file)
 
@@ -126,9 +145,11 @@ class MyTestCase(unittest.TestCase):
 
     # def test_seg_to_pointcloud(self):
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
     #
     #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
     #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+    #     seglist = [file]
     #     predicts = []
     #     for seg in seglist:
     #         if not "color" in seg:

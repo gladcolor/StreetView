@@ -1108,45 +1108,46 @@ class GSV_depthmap(object):
             heading_of_pano = radians(heading_of_pano)
             pitch_of_pano = radians(pitch_of_pano)
             dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
-            plt.imshow(dempth_image)
-            plt.show()
+            # plt.imshow(dempth_image)
+            # plt.show()
 
 
             #dempth_image = scipy.ndimage.zoom(dempth_image, 4, order=3)
-            print("Shape of dempth_image: ", dempth_image.shape)
+            # print("Shape of dempth_image: ", dempth_image.shape)
             #print('dempth_image: ', dempth_image)
             # plt.imshow(dempth_image)
             # plt.show()
 
             dm_h, dm_w = dempth_image.shape
-            print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
+            # print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
 
             grid_col = np.linspace(-pi, pi, dm_w)
-            grid_row = np.linspace(-pi/2, pi/2, dm_h)
+            grid_row = np.linspace(pi/2, -pi/2, dm_h)
             #gridxx = np.arange(512)
             #gridyy = np.arange(256)
             gridxx, gridyy = np.meshgrid(grid_col, grid_row)
-            print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
+            # print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
             #print("types: gridx, dempth_image", (gridx), (dempth_image))
             # print(gridx)
             # print(gridy)
             # print('dempth_image: ', dempth_image)
 
-            fig = plt.figure(figsize=(9, 6))
+            # fig = plt.figure(figsize=(9, 6))
             # Draw sub-graph1
-            ax = plt.subplot(1, 2, 1, projection='3d')
-            surf = ax.plot_surface(gridxx, gridyy, dempth_image, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5, antialiased=True)
-            ax.set_xlabel('x')
-            ax.set_ylabel('y')
-            ax.set_zlabel('f(x, y)')
-            plt.colorbar(surf, shrink=0.5, aspect=5)  # 标注
+            # ax = plt.subplot(1, 2, 1, projection='3d')
+            # surf = ax.plot_surface(gridxx, gridyy, dempth_image, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5, antialiased=True)
+            # ax.set_xlabel('x')
+            # ax.set_ylabel('y')
+            # ax.set_zlabel('f(x, y)')
+            # plt.colorbar(surf, shrink=0.5, aspect=5)  # 标注
             # plt.show()
 
             # 二维插值
             interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear')
-            print(interp(grid_col[0], grid_row[0]))
-            print(interp(grid_col[511], grid_row[255]))
-            print(interp(grid_col[256], grid_row[68]))
+            # print(grid_col[0], grid_row[0], interp(grid_col[0], grid_row[0]), dempth_image[0][0])
+            # print(interp(grid_col[511], grid_row[255]), dempth_image[255][511])
+            # print(interp(grid_col[256], grid_row[68]), dempth_image[68][256])
+            # print(grid_col[111], grid_row[222], interp(grid_col[111], grid_row[222]), dempth_image[222][111])
             #distance = interp(grid_row, grid_col)
             #print('interp(gridyy, gridxx): ', interp(grid_row, grid_col))
             #print("fnished", gridx, gridy)
@@ -1154,23 +1155,23 @@ class GSV_depthmap(object):
 
             # 计算100*100的网格上的插值
 
-            xnew = np.linspace(-pi, pi, 512*6)
-            ynew = np.linspace(-pi/2, pi/2, 256*6)
-            fnew = interp(xnew, ynew)  # 仅仅是y值   100*100的值  np.shape(fnew) is 100*100
-            xnew, ynew = np.meshgrid(xnew, ynew)
-            ax2 = plt.subplot(1, 2, 2, projection='3d')
-            surf2 = ax2.plot_surface(xnew, ynew, fnew, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5,
-                                     antialiased=True)
-            ax2.set_xlabel('xnew')
-            ax2.set_ylabel('ynew')
-            ax2.set_zlabel('fnew(x, y)')
-            plt.colorbar(surf2, shrink=0.5, aspect=5)  # 标注
-
-            plt.show()
+            # xnew = np.linspace(-pi, pi, 512/6)
+            # ynew = np.linspace(-pi/2, pi/2, 256/6)
+            # fnew = interp(xnew, ynew)  # 仅仅是y值   100*100的值  np.shape(fnew) is 100*100
+            # xnew, ynew = np.meshgrid(xnew, ynew)
+            # ax2 = plt.subplot(1, 2, 2, projection='3d')
+            # surf2 = ax2.plot_surface(xnew, ynew, fnew, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5,
+            #                          antialiased=True)
+            # ax2.set_xlabel('xnew')
+            # ax2.set_ylabel('ynew')
+            # ax2.set_zlabel('fnew(x, y)')
+            # plt.colorbar(surf2, shrink=0.5, aspect=5)  # 标注
+            #
+            # plt.show()
 
             for idx, ray in enumerate(theta_phis_in_pano):
-                if ray[1] < 0:
-                    print('ray (degree):', ray)
+                # if ray[1] < 0:
+                #     print('ray (degree):', ray)
 
                 theta = radians(ray[0])
                 phi = radians(ray[1])
@@ -1188,15 +1189,18 @@ class GSV_depthmap(object):
                 # row = int(dm_h / 2 - y)
                 # col = int(x + dm_w / 2)
 
-                #distance = interp(theta, phi)
+                #
 
                 distance = depthmap['depthMap'][depthmap['width'] * row + col]
-
+                distance = interp(phi, theta)[0]
+                # print(type(distance))
+                # print(distance.shape)
+                # print(distance.size)
                 #distance = dempth_image[row][col]
-                if idx % 1500 == 0:
-                    print('distance:', theta, phi, interp(theta, phi), interp(phi, theta))
-                    print('distance:', x, y, col, row, distance)
-                    print('distance:', dempth_image[row][col])
+                # if idx % 1500 == 0:
+                #     print('distance:', theta, phi, interp(phi, theta))
+                #     print('distance:', x, y, col, row, distance)
+                #     print('distance:', dempth_image[row][col])
 
 
                 if distance > 0.5:
@@ -1231,12 +1235,14 @@ class GSV_depthmap(object):
             for idx, seg in enumerate(seg_list):
 
                 try:
-                    h, w = io.imread(seg).shape
-                    print("image w, h: ", w, h)
+
+
 
                     predict = io.imread(seg)
                     predict = np.array(predict)
-                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 53))  # sidewalk and path classes in ADE20k.
+                    h, w = predict.shape
+                    #print("image w, h: ", w, h)
+                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
                     sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     print(seg)
 
@@ -1293,10 +1299,13 @@ class GSV_depthmap(object):
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
                         new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
                         #print('new_file_name: ', new_file_name)
+                        plt.imshow(predict)
+                        plt.show()
                         plt_x = [row[0] for row in pointcloud]
                         plt_y = [row[1] for row in pointcloud]
                         plt.scatter(plt_x, plt_y)
                         plt.show()
+
 
                         with open(new_file_name, 'w') as f:
                             f.write('x,y,h,d\n')

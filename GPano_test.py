@@ -49,7 +49,7 @@ class MyTestCase(unittest.TestCase):
 
         print("seglist:", seglist[0])
         # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test'
         GPano.GSV_depthmap.seg_to_landcover(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
         print("seg_to landcover finished.")
 

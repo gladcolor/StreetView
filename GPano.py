@@ -56,6 +56,13 @@ Please implement all the methods. I have written some tips (not code) in the met
 
 class GPano():
     # Obtain a panomaro image from Google Street View Map
+    def getGSV_url_frm_lonlat(self, lon, lat, heading=0, tilt=90, fov=90):
+        url_part1 = r'!3m6!1e1!3m4!1s'
+        url_part2 = r'!2e0!7i16384!8i8192'
+        heading=str(heading)
+        url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
+        return url
+
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
         """
         Args:
@@ -272,6 +279,50 @@ class GPano():
 
 
     # Obtain a panomara_ID according to lon/lat.
+    def getPanoIDfrmLonlat0(self, lon:float, lat:float,) -> (str, float, float):
+        """ Obtain panomara_id from lat/lon.
+            Use selenium to obtain the new url, which contains the panomara_id
+            Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
+            New url returned by Google: https://www.google.com/maps/@39.9533227,-75.1544758,3a,90y,180h,90t/data=!3m6!1e1!3m4!1sAF1QipNWKtSlDw5M8fsZxdQnXtSw3zWOgMIY8fN_eEbv!2e10!7i5504!8i2752
+            PanoID: AF1QipNWKtSlDw5M8fsZxdQnXtSw3zWOgMIY8fN_eEbv
+            Function return the panomara_id and its lon/lon.
+        """
+        heading = 180
+        tilt = 90
+        fov = 90
+        url_part1 = r'!3m6!1e1!3m4!1s'
+        url_part2 = r'!2e0!7i16384!8i8192'
+        url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
+
+        #print(url)
+        try:
+            driver.get(url)
+            time.sleep(4)
+            new_url = driver.current_url
+            end_new_url = new_url[new_url.find("data="):]
+            #print(end_new_url)
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
+                time.sleep(2)
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
+                PanoID = 0
+                lon_pano = 0
+                lat_pano = 0
+                print("No new url for: ", url)
+
+            else:
+                lat_pano, lon_pano = new_url.split(',')[:2]
+                lat_pano = lat_pano.split("@")[1]
+                pos1 = new_url.find(url_part1)
+                #pos2 = new_url.find(url_part2)
+                pos2 = new_url.find(url_part2[:5])
+                PanoID = new_url[(pos1 + len(url_part1)):pos2]
+                print(url)
+                print(new_url)
+
+            return PanoID, lon_pano, lat_pano   # if cannot find the panomara, return (0, 0, 0)
+        except Exception as e:
+            print("Error in getPanoIDfrmLonlat()", e)
+
     # Finished!
     def getPanoIDfrmLonlat(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
@@ -800,29 +851,29 @@ class GPano():
             colrows = [colrows]
 
         theta_phis = []
-        plt_x = []
-        plt_y = []
+        #print("type of colrows:", colrows)
+        # plt_x = []
+        # plt_y = []
+        #print("len of : colrows", len(colrows))
 
         for colrow in colrows:
-            #print(colrows)
+            #print('colrow, len of colrow: ', colrow, len(colrow))
             row = colrow[0]
             col = colrow[1]
             new_rowcols = 0
+            #print('col, row:', col, row)
             x = col - w * 0.5
             y = h * 0.5 - row
             z = f
 
-            plt_x.append(x)
-
-
-            #print('y:', y)
+            #plt_x.append(x)
+            #print('x, y, z, w, h:', x, y, z, w, h)
 
            #  theta = atan(y / z)
             #print('theta:', theta)
             # if y < 0:
             #     theta = theta * -1
             #print('theta:', theta)
-
 
             #theta = atan(y / z)
 
@@ -847,7 +898,7 @@ class GPano():
             theta_phis.append((theta, phi))
 
             # print("col, row, x, y, z, theta, phi:")
-            # print(col, row, x, y, z, theta, phi)
+            #print(col, row, x, y, z, theta, phi)
         #print('theta_phis:', theta_phis)
         #print(x, y, z, theta + heading, phi + pitch, pi)
         # plt.scatter(plt_x, plt_y)
@@ -1203,12 +1254,17 @@ class GSV_depthmap(object):
                 #     print('distance:', dempth_image[row][col])
 
 
-                if distance > 0.5:
-                    pointX = cameraX + distance * cos(theta) * sin(phi + heading_of_pano)
-                    pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
-                    pointZ = cameraH + distance * sin(theta)
+                # if distance > 1:
+                pointX = cameraX + distance * cos(theta) * sin(phi + heading_of_pano)
+                pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
+                pointZ = cameraH + distance * sin(theta)
 
-                    points3D.append((pointX, pointY, pointZ, distance))
+                # else:
+                #     pointX = 0
+                #     pointY = 0
+                #     pointZ = 0
+
+                points3D.append((pointX, pointY, pointZ, distance))
 
                 # print("distance * cos(theta):",distance * cos(theta))
                 # #
@@ -1318,26 +1374,62 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_pointcloud():", e, seg)
 
-    def seg_to_landcover(self, seg_list, saved_path, fov):
+    def shperical_to_castesian(self, theta_phi_w_h):
+
+        if len(theta_phi_w_h) == 2:
+            w = 1024
+            h = 768
+        if len(theta_phi_w_h) == 4:
+            w = theta_phi_w_h[2]
+            h = theta_phi_w_h[3]
+
+        x = theta_phi_w_h[1] / pi * w / 2
+        y = theta_phi_w_h[0] / (pi / 2) * h / 2
+
+        return (x, y)   # unit: pixel
+
+    def shperical_to_dmcolrow(self, theta_phi_w_h):
+        x, y = self.shperical_to_castesian(theta_phi_w_h)
+        # row = int(h / 2 - y)
+        # col = int(x + w / 2)
+        if len(theta_phi_w_h) == 4:
+            w = theta_phi_w_h[2]
+            h = theta_phi_w_h[3]
+        if len(theta_phi_w_h) == 2:
+            w = 1024
+            h = 768
+
+        return int(x + w / 2), int(h / 2 - y)
+
+    # def getNorm_of_plane(self, theta_phis, dm):
+    #     try:
+    #         if isinstance(theta_phis, list):
+    #             theta_phis = [theta_phis]
+    #
+    #             colrows = map(self.shperical_to_dmcolrow, theta_phis)
+    #
+    #         for theta, phi in theta_phis:
+    #             planeIdx = dm_planes['indices'][y * dm['width'] + x]
+    #             plane = dm_planes['planes'][planeIdx]
+    #
+    #     return dm['depthmap']
+
+    def seg_to_landcover(self, seg_list, saved_path, fov=90):
         try:
             if not isinstance(seg_list, list):
                 seg_list = [seg_list]
                 print("Converted the single file into a list.")
             #print(io.imread(seg_list[0]).shape)
 
-
             for idx, seg in enumerate(seg_list):
-
                 try:
-
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
                     #print("image w, h: ", w, h)
-                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
-                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
-                    print(seg)
-
+                    # sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
+                    # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    print("seg files:", seg)
 
                     # plt_x = [row[1] for row in sidewalk_idx]
                     # plt_y = [row[0] for row in sidewalk_idx]
@@ -1348,19 +1440,15 @@ class GSV_depthmap(object):
                     params = basename[:-4].split('_')
                     #print("params:", params)
                     thumb_panoId = '_'.join(params[:(len(params) - 4)])
-                    pano_lon = params[-4]
-                    pano_lat = params[-3]
+                    pano_lon = float(params[-4])
+                    pano_lat = float(params[-3])
                     if len(thumb_panoId) < 16:
                         thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
                         print("thumb_panoId: ",thumb_panoId)
 
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
-                    # pano_lon = params[-4]
-                    # pano_lat = params[-3]
-                    # pano_heading = params[-4]
-                    # pano_pitch = params[-4]
-                    # pano_H = params[-4]
+
                     thumb_heading = float(params[-1])
                     thumb_pitch = float(params[-2])
                     #print("thumb_heading:", thumb_heading)
@@ -1375,24 +1463,54 @@ class GSV_depthmap(object):
                     # print('len of dm_planes[indices]:', len(dm_planes['indices']))
 
                     dm = self.getDepthmapfrmJson(obj_json)
-                    #print('dm[depthjMap]:', dm['depthMap'])
+                    print('dm[depthjMap]:', dm['depthMap'])
+
+                    url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
+                    print("Google street view URL:", url)
+
+                    sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
+                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    classes = np.where(predict > -1)
+                    #print("classes len: ", len(classes))
+
+                    print("len of sidewalk_idx:", len(sidewalk_idx))
+                    #print("sidewalk_idx:", sidewalk_idx)
 
                     # get ground pixels
                     ground_pixels = []
-                    for y in range(dm['height']):
-                        for x in range(dm['width']):
-                            planeIdx = dm_planes['indices'][y * dm['width'] + x]
-                            if x % 10 == 0 and y % 50 == 0:
-                                print('plane: ', planeIdx)
-                                print('plane: ', dm_planes['planes'][planeIdx])
-                                print(y, x)
+                    # idm = dm['depthMap'].reshape(256, 512)
 
+                    # for y in range(dm['height']):
+                    #     for x in range(dm['width']):
+                    #         planeIdx = dm_planes['indices'][y * dm['width'] + x]
+                    #         plane = dm_planes['planes'][planeIdx]
+                    #
+                    #         #if x % 10 == 0 and y % 50 == 0:
+                    #         norm = np.argmax(np.abs(plane['n']))
+                    #         if norm == 2 and planeIdx > 0:
+                    #             idm[y][x] = 100
+                    #             print('plane planeIdx: ', planeIdx)
+                    #             print('plane: ', plane)
+                    #         else:
+                    #             idm[y][x] = 10
 
+                            # if  norm == 2 and plane['n'][2] > 0:
+                            #     #print('plane planeIdx: ', planeIdx)
+                            #     print('plane: ', plane)
+                            #     print('max projection: ', norm)
+                            #
+                            #     theta, phi = GPano.castesian_to_shperical(GPano(), (x, y), w, h, fov)
+                            #     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=(phi + thumb_heading), tilt=(theta + thumb_pitch + 90))
+                            #     print("Google street view URL:", x, y, theta, phi, url)
+                            #     #print("n2: ", sum(map(lambda x: x*x, plane['n'])))
+
+                    # plt.imshow(idm)
+                    # plt.show()
 
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
                         sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
-                        #print('sidewalk_sph[0]:', sidewalk_sph[0])
+                        print('sidewalk_sph[0]:', sidewalk_sph[0])
 
                         #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
 
@@ -1415,17 +1533,20 @@ class GSV_depthmap(object):
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
                         new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
                         #print('new_file_name: ', new_file_name)
-                        plt.imshow(predict)
-                        plt.show()
-                        plt_x = [row[0] for row in pointcloud]
-                        plt_y = [row[1] for row in pointcloud]
-                        plt.scatter(plt_x, plt_y)
-                        plt.show()
+                        # plt.imshow(predict)
+                        # plt.show()
+                        # plt_x = [row[0] for row in pointcloud]
+                        # plt_y = [row[1] for row in pointcloud]
+                        # plt.scatter(plt_x, plt_y)
+                        # plt.show()
 
 
                         with open(new_file_name, 'w') as f:
-                            f.write('x,y,h,d\n')
-                            f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
+                            f.write('x,y,h,d,c\n')
+                            for idx, point in enumerate(pointcloud):
+                                f.write('%s,%s,%s,%s,'% point)
+                                f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
+
                     else:
                         print("No point in image:", seg)
 

@@ -36,7 +36,7 @@ class MyTestCase(unittest.TestCase):
         #
         # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
         seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
-
+        seglist = [file] + seglist
         # predicts = []
         # for seg in seglist:
         #     if not "color" in seg:

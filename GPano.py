@@ -1139,7 +1139,7 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
+            theta_phis_in_pano = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in
                                    theta_phis_in_thumb]
 
             # for row in theta_phis_in_thumb:
@@ -1416,33 +1416,35 @@ class GSV_depthmap(object):
     #     return dm['depthmap']
 
     def pointCloud_to_image(self, pointcloud, resolution):
+        try:
+            minX =  min(pointcloud[:, 0])
+            maxY = max(pointcloud[:, 1])
+            rangeX = max(pointcloud[:, 0]) - minX
+            rangeY = maxY - min(pointcloud[:, 1])
+            w = int(rangeX / resolution)
+            h = int(rangeY / resolution)
+            np_image = np.zeros((h, w), dtype=np.uint8)
+            # print("np_image.shape: ", np_image.shape)
+            print('rangeX, rangeY, w, h:', rangeX, rangeY, w, h)
+            # pointcloud = pointcloud[:5]
+            # print("pointcloud: ", pointcloud)
+            # np_image[int((row[0] - minX) / resolution)][int((maxY - row[1]) / resolution)] = row[4]
+            for point in pointcloud:
+                # print("point: ", point)
+                col = int((point[0] - minX) / resolution)
+                row = int((maxY - point[1]) / resolution)
+                # print("col, row : ", col, row )
+                # print("col, row, row[4]: ", col, row, point[4])
+                if row == h:
+                    row = h - 1
+                if col == w:
+                    col = w - 1
+                np_image[row][col] = point[4]
+            worldfile = [resolution, 0, 0, -resolution, minX, maxY]
 
-        minX =  min(pointcloud[:, 0])
-        maxY = max(pointcloud[:, 1])
-        rangeX = max(pointcloud[:, 0]) - minX
-        rangeY = maxY - min(pointcloud[:, 1])
-        w = int(rangeX / resolution)
-        h = int(rangeY / resolution)
-        np_image = np.zeros((h, w), dtype=np.uint8)
-        # print("np_image.shape: ", np_image.shape)
-        print('rangeX, rangeY, w, h:', rangeX, rangeY, w, h)
-        # pointcloud = pointcloud[:5]
-        # print("pointcloud: ", pointcloud)
-        # np_image[int((row[0] - minX) / resolution)][int((maxY - row[1]) / resolution)] = row[4]
-        for point in pointcloud:
-            # print("point: ", point)
-            col = int((point[0] - minX) / resolution)
-            row = int((maxY - point[1]) / resolution)
-            # print("col, row : ", col, row )
-            # print("col, row, row[4]: ", col, row, point[4])
-            if row == h:
-                row = h - 1
-            if col == w:
-                col = w - 1
-            np_image[row][col] = point[4]
-        worldfile = [resolution, 0, 0, -resolution, minX, maxY]
-
-        return np_image, worldfile
+            return np_image, worldfile
+        except Exception as e:
+            print("Error in pointCloud_to_image():", e)
 
 
     def seg_to_landcover(self, seg_list, saved_path, fov=90):
@@ -1603,6 +1605,7 @@ class GSV_depthmap(object):
                         print("worldfile:", worldfile)
                         with open(worldfile_name, 'w') as wf:
                             for line in worldfile:
+                                print(line)
                                 wf.write(str(line) + '\n')
                         # plt.imshow(im)
                         # plt.show()

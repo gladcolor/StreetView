@@ -1096,7 +1096,6 @@ class GSV_depthmap(object):
                                 + v[2] * plane["n"][2]
                         )
                     )
-
                 # original
                 #     depthMap[y * w + (w - x - 1)] = t
                 # else:
@@ -1194,7 +1193,7 @@ class GSV_depthmap(object):
             # plt.show()
 
             # 二维插值
-            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='cubic')
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear') # 'cubic' will distord the distance.
             # print(grid_col[0], grid_row[0], interp(grid_col[0], grid_row[0]), dempth_image[0][0])
             # print(interp(grid_col[511], grid_row[255]), dempth_image[255][511])
             # print(interp(grid_col[256], grid_row[68]), dempth_image[68][256])
@@ -1227,8 +1226,8 @@ class GSV_depthmap(object):
                 theta = radians(ray[0])
                 phi = radians(ray[1])
 
-                if phi > pi:
-                    print(phi)
+                # if phi > pi:
+                #     print(phi)
 
                 x = phi / pi * depthmap['width'] / 2
                 y = theta / (pi/2) * depthmap['height'] / 2
@@ -1242,8 +1241,10 @@ class GSV_depthmap(object):
 
                 #
 
-                distance = depthmap['depthMap'][depthmap['width'] * row + col]
+                distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
                 distance = interp(phi, theta)[0]
+                if distance < 0:
+                    print("distance < 0：", distance, distance0, col, row)
                 # print(type(distance))
                 # print(distance.shape)
                 # print(distance.size)
@@ -1353,12 +1354,12 @@ class GSV_depthmap(object):
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
                         new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
                         #print('new_file_name: ', new_file_name)
-                        plt.imshow(predict)
-                        plt.show()
-                        plt_x = [row[0] for row in pointcloud]
-                        plt_y = [row[1] for row in pointcloud]
-                        plt.scatter(plt_x, plt_y)
-                        plt.show()
+                        # plt.imshow(predict)
+                        # plt.show()
+                        # plt_x = [row[0] for row in pointcloud]
+                        # plt_y = [row[1] for row in pointcloud]
+                        # plt.scatter(plt_x, plt_y)
+                        # plt.show()
 
 
                         with open(new_file_name, 'w') as f:
@@ -1414,6 +1415,36 @@ class GSV_depthmap(object):
     #
     #     return dm['depthmap']
 
+    def pointCloud_to_image(self, pointcloud, resolution):
+
+        minX =  min(pointcloud[:, 0])
+        maxY = max(pointcloud[:, 1])
+        rangeX = max(pointcloud[:, 0]) - minX
+        rangeY = maxY - min(pointcloud[:, 1])
+        w = int(rangeX / resolution)
+        h = int(rangeY / resolution)
+        np_image = np.zeros((h, w), dtype=np.uint8)
+        # print("np_image.shape: ", np_image.shape)
+        print('rangeX, rangeY, w, h:', rangeX, rangeY, w, h)
+        # pointcloud = pointcloud[:5]
+        # print("pointcloud: ", pointcloud)
+        # np_image[int((row[0] - minX) / resolution)][int((maxY - row[1]) / resolution)] = row[4]
+        for point in pointcloud:
+            # print("point: ", point)
+            col = int((point[0] - minX) / resolution)
+            row = int((maxY - point[1]) / resolution)
+            # print("col, row : ", col, row )
+            # print("col, row, row[4]: ", col, row, point[4])
+            if row == h:
+                row = h - 1
+            if col == w:
+                col = w - 1
+            np_image[row][col] = point[4]
+        worldfile = [resolution, 0, 0, -resolution, minX, maxY]
+
+        return np_image, worldfile
+
+
     def seg_to_landcover(self, seg_list, saved_path, fov=90):
         try:
             if not isinstance(seg_list, list):
@@ -1449,6 +1480,7 @@ class GSV_depthmap(object):
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
 
+
                     thumb_heading = float(params[-1])
                     thumb_pitch = float(params[-2])
                     #print("thumb_heading:", thumb_heading)
@@ -1464,6 +1496,7 @@ class GSV_depthmap(object):
 
                     dm = self.getDepthmapfrmJson(obj_json)
                     print('dm[depthjMap]:', dm['depthMap'])
+                    print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
                     print("Google street view URL:", url)
@@ -1510,7 +1543,7 @@ class GSV_depthmap(object):
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
                         sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
-                        print('sidewalk_sph[0]:', sidewalk_sph[0])
+                        # print('sidewalk_sph[0]:', sidewalk_sph[0])
 
                         #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
 
@@ -1526,12 +1559,12 @@ class GSV_depthmap(object):
                         # print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
                         # print('pano_H:', pano_H)
-                        dm = self.getDepthmapfrmJson(obj_json)
+                        #dm = self.getDepthmapfrmJson(obj_json)
                         #print(dm)
                         pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
-                        #print(pointcloud)
+                        # print("pointcloud: ", pointcloud[:3], len(pointcloud))
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-                        new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
                         #print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()
@@ -1540,12 +1573,52 @@ class GSV_depthmap(object):
                         # plt.scatter(plt_x, plt_y)
                         # plt.show()
 
+                        distance_max = 20
+                        distance_min = 2
+                        pointcloud_clean = []
+                        pointcloud_np = np.array(pointcloud)
+                        all_classes = predict.reshape((predict.size,1))
+                        # print("all_classes:", all_classes[:3], all_classes.shape)
 
-                        with open(new_file_name, 'w') as f:
-                            f.write('x,y,h,d,c\n')
-                            for idx, point in enumerate(pointcloud):
-                                f.write('%s,%s,%s,%s,'% point)
-                                f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
+                        pointcloud_class = np.concatenate((pointcloud_np, all_classes), axis=1)
+                        # print("pointcloud_class len:", len(pointcloud_class))
+                        # print("pointcloud_class:", pointcloud_class[:3])
+                        # print("classes:", classes[0][:3], classes[1][:3])
+                        # print("pointcloud_np  :", pointcloud_np[:3])
+
+                        pointcloud_clean = pointcloud_class[pointcloud_class[:, 3] > distance_min]
+                        # print("pointcloud_clean len:", len(pointcloud_clean0))
+                        pointcloud_clean = pointcloud_clean[pointcloud_clean[:, 3] < distance_max]
+                        #
+                        # print("pointcloud_clean:", pointcloud_clean[:5])
+                        # print("pointcloud_clean len:", len(pointcloud_clean))
+
+                        np_image, worldfile = self.pointCloud_to_image(pointcloud_clean, resolution=0.1)
+                        # print("np_image:", np_image[:5])
+
+                        im = Image.fromarray(np_image)
+                        print("new_file_name:", new_file_name)
+                        im.save(new_file_name)
+                        worldfile_name = new_file_name.replace(".png", '.pgw')
+                        print("worldfile:", worldfile)
+                        with open(worldfile_name, 'w') as wf:
+                            for line in worldfile:
+                                wf.write(str(line) + '\n')
+                        # plt.imshow(im)
+                        # plt.show()
+
+                        # for idx, point in enumerate(pointcloud):
+                        #     if point[3] > distance_min and point[3] < distance_max:
+                        #         pointcloud_clean.append((point[0], point[0], point[0], point[0], predict[classes[0][idx], classes[1][idx]]))
+                        #
+                        # print("pointcloud_clean:", pointcloud_clean)
+                        #
+                        # with open(new_file_name, 'w') as f:
+                        #     f.write('x,y,h,d,c\n')
+                        #     for idx, point in enumerate(pointcloud):
+                        #         if point[3] > distance_min and point[3] < distance_max:
+                        #             f.write('%s,%s,%s,%s,'% point)
+                        #             f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
 
                     else:
                         print("No point in image:", seg)

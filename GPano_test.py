@@ -35,7 +35,10 @@ class MyTestCase(unittest.TestCase):
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
         #
         # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-        seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+        seglist = glob.glob(
+            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
+        seglist = glob.glob(
+            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
         seglist = [file] + seglist
         # predicts = []
         # for seg in seglist:
@@ -49,7 +52,7 @@ class MyTestCase(unittest.TestCase):
 
         print("seglist:", seglist[0])
         # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover'
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\+pitch_of_thumb'
         GPano.GSV_depthmap.seg_to_landcover(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
         print("seg_to landcover finished.")
 

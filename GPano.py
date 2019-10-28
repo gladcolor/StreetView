@@ -717,11 +717,17 @@ class GPano():
                     continue
 
 
-    def getJsonfrmPanoID(self, panoId, dm=0):
+    def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
         try:
             r = requests.get(url)
             jdata = r.json()
+            if saved_path != '':
+                try:
+                    with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
+                        json.dump(jdata, f)
+                except Exception as e:
+                    print("Error in getJsonfrmPanoID() saving json file.", e, panoId)
             return jdata
         except Exception as e:
             print("Error in getJsonfrmPanoID():", e)
@@ -1139,7 +1145,7 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_pano = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in
+            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
                                    theta_phis_in_thumb]
 
             # for row in theta_phis_in_thumb:
@@ -1242,7 +1248,7 @@ class GSV_depthmap(object):
                 #
 
                 distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
-                distance = interp(phi, theta)[0]
+                distance = interp(phi, theta - pitch_of_pano)[0]
                 if distance < 0:
                     print("distance < 0：", distance, distance0, col, row)
                 # print(type(distance))
@@ -1256,9 +1262,10 @@ class GSV_depthmap(object):
 
 
                 # if distance > 1:
-                pointX = cameraX + distance * cos(theta) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta)
+                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+                # print("pitch_of_pano:", pitch_of_pano)
 
                 # else:
                 #     pointX = 0
@@ -1487,7 +1494,7 @@ class GSV_depthmap(object):
                     thumb_pitch = float(params[-2])
                     #print("thumb_heading:", thumb_heading)
 
-                    obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1)
+                    obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1, saved_path=saved_path)
                     depthMapData = self.parse(obj_json['model']['depth_map'])
                     #print(dm_string)
                     header = self.parseHeader(depthMapData)

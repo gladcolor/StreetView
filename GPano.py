@@ -56,6 +56,14 @@ Please implement all the methods. I have written some tips (not code) in the met
 
 class GPano():
     # Obtain a panomaro image from Google Street View Map
+    def getPanoZoom0frmID(self, panoId, saved_path):
+        url = r'http://maps.google.com/cbk?output=tile&zoom=0&x=0&y=0&panoid=' + panoId
+        # print(url)
+        response = requests.get(url)
+        # print(response)
+        image = Image.open(BytesIO(response.content))
+        image.save(os.path.join(saved_path, panoId + '.jpg'))
+
     def getGSV_url_frm_lonlat(self, lon, lat, heading=0, tilt=90, fov=90):
         url_part1 = r'!3m6!1e1!3m4!1s'
         url_part2 = r'!2e0!7i16384!8i8192'
@@ -64,6 +72,7 @@ class GPano():
         return url
 
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
+
         """
         Args:
             point p1(latA, lonA)
@@ -849,12 +858,13 @@ class GPano():
         pool.join()
 
 
-    def castesian_to_shperical(self, colrows, w, h, fov): # yaw: set the heading, pitch
-        fov = radians(fov)
+
+    def castesian_to_shperical_pp(self, rowcols, w, h, fov): # yaw: set the heading, pitch
+
         f = (0.5 * w) / math.tan(fov * 0.5)
-        #print("f:", f)
-        if not isinstance(colrows, list):
-            colrows = [colrows]
+        # print("f:", f)
+        if not isinstance(rowcols, list):
+            rowcols = [rowcols]
 
         theta_phis = []
         #print("type of colrows:", colrows)
@@ -862,7 +872,55 @@ class GPano():
         # plt_y = []
         #print("len of : colrows", len(colrows))
 
-        for colrow in colrows:
+        resolution_angle = fov / w
+        print('resolution: ', resolution_angle)
+
+        for rowcol in rowcols:
+            #print('colrow, len of colrow: ', colrow, len(colrow))
+            row = rowcol[0]
+            col = rowcol[1]
+            new_rowcols = 0
+            #print('col, row:', col, row)
+            x = col - w * 0.5
+            y = h * 0.5 - row
+            z = f
+
+
+
+            phi = x * resolution_angle
+
+            theta = y * resolution_angle
+
+            theta_phis.append((theta, phi))
+
+
+
+        #print('theta_phis:', theta_phis)
+        #print(x, y, z, theta + heading, phi + pitch, pi)
+        # plt.scatter(plt_x, plt_y)
+        # plt.show()
+        print("theta_phis[0]:", theta_phis[0])
+
+
+        if len(theta_phis) == 1:
+            return theta_phis[0]
+        else:
+            return theta_phis
+
+    def castesian_to_shperical(self, rowcols, w, h, fov): # yaw: set the heading, pitch
+        fov = radians(fov)
+        f = (0.5 * w) / math.tan(fov * 0.5)
+        #print("f:", f)
+        if not isinstance(rowcols, list):
+            rowcols = [rowcols]
+
+        theta_phis = []
+        #print("type of colrows:", colrows)
+        # plt_x = []
+        # plt_y = []
+        #print("len of : colrows", len(colrows))
+
+        for colrow in rowcols:
             #print('colrow, len of colrow: ', colrow, len(colrow))
             row = colrow[0]
             col = colrow[1]
@@ -892,7 +950,9 @@ class GPano():
             #     #phi = 2 * pi - phi
             #     phi = -1 * phi
 
-            phi = atan(x / z)
+            phi = acos(z / sqrt(x * x + z * z))
+            if x < 0:
+                phi = -phi
             theta = atan(y / sqrt(x * x + z * z))
 
             # phi = atan(x / y)
@@ -1003,7 +1063,8 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
     def lonlat2WebMercator(self, lon, lat):
-        return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
+        # return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
+        return transform(Proj(init='epsg:4326'), Proj(init='epsg:2824'), lon, lat)
 
     def WebMercator2lonlat(self, X, Y):
         return transform(Proj(init='epsg:3857'), Proj(init='epsg:4326'), X, Y)
@@ -1075,7 +1136,8 @@ class GSV_depthmap(object):
         cos_phi = np.empty(w)
 
         for y in range(h):
-            theta = (h - y - 0.5) / h * np.pi
+            # theta = (h - y - 0.5) / h * np.pi   # original
+            theta = (h - y) / h * np.pi  # huan
             sin_theta[y] = np.sin(theta)
             cos_theta[y] = np.cos(theta)
 
@@ -1088,8 +1150,13 @@ class GSV_depthmap(object):
             for x in range(w):
                 planeIdx = indices[y * w + x]
 
-                v[0] = sin_theta[y] * cos_phi[x]
-                v[1] = sin_theta[y] * sin_phi[x]
+                # Origninal
+                # v[0] = sin_theta[y] * cos_phi[x]
+                # v[1] = sin_theta[y] * sin_phi[x]
+
+                # Huan
+                v[0] = sin_theta[y] * sin_phi[x]
+                v[1] = sin_theta[y] * cos_phi[x]
                 v[2] = cos_theta[y]
 
                 if planeIdx > 0:
@@ -1103,13 +1170,14 @@ class GSV_depthmap(object):
                         )
                     )
                 # original
-                #     depthMap[y * w + (w - x - 1)] = t
-                # else:
-                #     depthMap[y * w + (w - x - 1)] = 0
-                # huan
-                    depthMap[y * w + x] = t
+                    depthMap[y * w + (w - x - 1)] = t
                 else:
-                    depthMap[y * w + x] = 0
+                    depthMap[y * w + (w - x - 1)] = 0
+                #
+                # # huan
+                #     depthMap[y * w + x] = t
+                # else:
+                #     depthMap[y * w + x] = 0
 
         return {"width": w, "height": h, "depthMap": depthMap}
 
@@ -1126,14 +1194,34 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
+    def saveDepthmapImage(self, depthMap, saved_file):
+        im = depthMap["depthMap"]
+
+        # print(im)
+        im[np.where(im == max(im))[0]] = 0
+        # if min(im) < 0:
+        #     im[np.where(im < 0)[0]] = 0
+        im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
+        # display image
+        img = PIL.Image.fromarray(im)
+        # img.save(saved_file.replace(".tif", 'noflip.tif'))
+        #img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        img.save(saved_file)
+
+        # print(im)
+
     def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb,pitch_of_thumb, depthmap, cameraLon, cameraLat, cameraH, heading_of_pano, pitch_of_pano):
         try:
             # print('heading_of_thumb:', heading_of_thumb)
             # print('pitch_of_thumb:', pitch_of_thumb)
+            results = []
+
 
             if not isinstance(theta_phis_in_thumb, list):
                 theta_phis_in_thumb = [theta_phis_in_thumb]
 
+            results = np.array(theta_phis_in_thumb)
+            print('results shape: ', results.shape, results[0])
             heading_of_thumb = float(heading_of_thumb)
             pitch_of_thumb = float(pitch_of_thumb)
             cameraLon = float(cameraLon)
@@ -1141,12 +1229,19 @@ class GSV_depthmap(object):
             cameraH = float(cameraH)
             heading_of_pano = float(heading_of_pano)
             pitch_of_pano = float(pitch_of_pano)
+            print('results shape: ', results.shape, results[0])
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
             theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
                                    theta_phis_in_thumb]
+
+            results = np.array(theta_phis_in_thumb)
+            print('results shape: ', results.shape, results[0])
+            results = np.concatenate((results, np.array(theta_phis_in_pano)), axis=1)
+
+            print('results shape: ', results.shape, results[0])
 
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
@@ -1181,7 +1276,7 @@ class GSV_depthmap(object):
             grid_row = np.linspace(pi/2, -pi/2, dm_h)
             #gridxx = np.arange(512)
             #gridyy = np.arange(256)
-            gridxx, gridyy = np.meshgrid(grid_col, grid_row)
+            # gridxx, gridyy = np.meshgrid(grid_col, grid_row)
             # print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
             #print("types: gridx, dempth_image", (gridx), (dempth_image))
             # print(gridx)
@@ -1238,6 +1333,7 @@ class GSV_depthmap(object):
                 x = phi / pi * depthmap['width'] / 2
                 y = theta / (pi/2) * depthmap['height'] / 2
                 row = int(depthmap['height'] / 2 - y)
+                # row = min(row - 5, 0)
                 col = int(x + depthmap['width'] / 2)
 
                 # x = phi / pi * dm_w / 2
@@ -1248,7 +1344,11 @@ class GSV_depthmap(object):
                 #
 
                 distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
-                distance = interp(phi, theta - pitch_of_pano)[0]
+                # distance = interp(phi, theta - pitch_of_pano)[0]
+                distance = interp(phi, theta)[0]
+                # distance = interp(phi, min(theta + 0.05, 0) )[0]
+                # print("distance：", distance, distance0, col, row)
+                # distance = distance * 2
                 if distance < 0:
                     print("distance < 0：", distance, distance0, col, row)
                 # print(type(distance))
@@ -1262,11 +1362,13 @@ class GSV_depthmap(object):
 
 
                 # if distance > 1:
-                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+                # pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
                 # print("pitch_of_pano:", pitch_of_pano)
-
+                pointX = cameraX + distance * cos(theta - pitch_of_pano) * sin(phi + heading_of_pano)
+                pointY = cameraY + distance * cos(theta - pitch_of_pano) * cos(phi + heading_of_pano)
+                pointZ = cameraH + distance * sin(theta - pitch_of_pano)
                 # else:
                 #     pointX = 0
                 #     pointY = 0
@@ -1283,8 +1385,9 @@ class GSV_depthmap(object):
                 # if cnt < 3:
                 #     print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
                 # cnt += 1
-
-            return points3D
+            # results = np.concatenate((results, np.array(points3D)), axis=1)
+            print('results shape: ', results.shape, results[0])
+            return points3D  #， results
         except Exception as e:
             print("Error in getPointCloud():", e)
 
@@ -1305,7 +1408,11 @@ class GSV_depthmap(object):
                     h, w = predict.shape
                     #print("image w, h: ", w, h)
                     sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
+                    sidewalk_idx = np.argwhere((predict == 11))  # sidewalk and path classes in ADE20k.
                     sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+
+                    class_code = [11] * len(sidewalk_idx)
+                    class_code = np.array(class_code)
                     print(seg)
 
 
@@ -1335,9 +1442,13 @@ class GSV_depthmap(object):
                     thumb_pitch = float(params[-2])
                     #print("thumb_heading:", thumb_heading)
 
+                    results = []
+
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
-                        sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
+                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
+                        # sidewalk_sph = GPano.castesian_to_shperical_pp(GPano(), sidewalk_idx, w, h, fov)
+                        # results = np.array(sidewalk_sph)
                         #print('sidewalk_sph[0]:', sidewalk_sph[0])
 
                         #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
@@ -1357,9 +1468,40 @@ class GSV_depthmap(object):
                         dm = self.getDepthmapfrmJson(obj_json)
                         #print(dm)
                         pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
-                        #print(pointcloud)
+                        pointcloud = np.array(pointcloud)
+                        print("pointcloud shape:", pointcloud.shape)
+
+                        # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
+
+                        class_code = class_code.reshape((len(class_code), 1))
+                        pointcloud_class = np.concatenate((pointcloud, class_code), axis=1)
+
+                        print("pointcloud_class shape:", pointcloud_class.shape)
+                        print("pointcloud_class :", pointcloud_class[:2])
+
+                        np_image, worldfile = self.pointCloud_to_image(pointcloud_class, resolution=0.1)
+                        # print("np_image:", np_image[:5])
+
+                        im = Image.fromarray(np_image)
+
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
+
+                        print("new_file_name:", new_file_name)
+                        im.save(new_file_name)
+                        # colored = self.get_color_pallete(np_image, 'ade20k')
+                        # colored.save(new_file_name)
+                        worldfile_name = new_file_name.replace(".png", '.pgw')
+                        # results_name = new_file_name.replace(".png", '.csv')
+                        # print("worldfile:", worldfile_name)
+                        with open(worldfile_name, 'w') as wf:
+                            for line in worldfile:
+                                print(line)
+                                wf.write(str(line) + '\n')
+                        # results = np.concatenate((np.array(sidewalk_idx), results, np.array(sidewalk_sph)), axis=1)
+                        # np.savetxt(results_name, results, delimiter=",")
+
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-                        new_file_name = os.path.join(saved_path, basename[:-4] + '.csv')
+
                         #print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()
@@ -1367,11 +1509,11 @@ class GSV_depthmap(object):
                         # plt_y = [row[1] for row in pointcloud]
                         # plt.scatter(plt_x, plt_y)
                         # plt.show()
-
-
-                        with open(new_file_name, 'w') as f:
-                            f.write('x,y,h,d\n')
-                            f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
+                        #
+                        #
+                        # with open(new_file_name, 'w') as f:
+                        #     f.write('x,y,h,d\n')
+                        #     f.write('\n'.join('%s,%s,%s,%s' % x for x in pointcloud))
                     else:
                         print("No point in image:", seg)
 
@@ -1382,45 +1524,74 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_pointcloud():", e, seg)
 
-    def shperical_to_castesian(self, theta_phi_w_h):
+    def castesian_to_shperical(self, rowcols, w, h, fov): # yaw: set the heading, pitch
+        fov = radians(fov)
+        f = (0.5 * w) / math.tan(fov * 0.5)
+        print("f:", f)
+        if not isinstance(rowcols, list):
+            rowcols = [rowcols]
 
-        if len(theta_phi_w_h) == 2:
-            w = 1024
-            h = 768
-        if len(theta_phi_w_h) == 4:
-            w = theta_phi_w_h[2]
-            h = theta_phi_w_h[3]
+        theta_phis = []
+        #print("type of colrows:", colrows)
+        # plt_x = []
+        # plt_y = []
+        #print("len of : colrows", len(colrows))
 
-        x = theta_phi_w_h[1] / pi * w / 2
-        y = theta_phi_w_h[0] / (pi / 2) * h / 2
+        for colrow in rowcols:
+            #print('colrow, len of colrow: ', colrow, len(colrow))
+            row = colrow[0]
+            col = colrow[1]
+            new_rowcols = 0
+            #print('col, row:', col, row)
+            x = col - w * 0.5
+            y = h * 0.5 - row
+            z = f
 
-        return (x, y)   # unit: pixel
+            #plt_x.append(x)
+            #print('x, y, z, w, h:', x, y, z, w, h)
 
-    def shperical_to_dmcolrow(self, theta_phi_w_h):
-        x, y = self.shperical_to_castesian(theta_phi_w_h)
-        # row = int(h / 2 - y)
-        # col = int(x + w / 2)
-        if len(theta_phi_w_h) == 4:
-            w = theta_phi_w_h[2]
-            h = theta_phi_w_h[3]
-        if len(theta_phi_w_h) == 2:
-            w = 1024
-            h = 768
+           #  theta = atan(y / z)
+            #print('theta:', theta)
+            # if y < 0:
+            #     theta = theta * -1
+            #print('theta:', theta)
 
-        return int(x + w / 2), int(h / 2 - y)
+            #theta = atan(y / z)
 
-    # def getNorm_of_plane(self, theta_phis, dm):
-    #     try:
-    #         if isinstance(theta_phis, list):
-    #             theta_phis = [theta_phis]
-    #
-    #             colrows = map(self.shperical_to_dmcolrow, theta_phis)
-    #
-    #         for theta, phi in theta_phis:
-    #             planeIdx = dm_planes['indices'][y * dm['width'] + x]
-    #             plane = dm_planes['planes'][planeIdx]
-    #
-    #     return dm['depthmap']
+            # theta = acos(z / sqrt(x * x + y * y + z * z))
+            # if y < 0:
+            #     theta = -1 * theta
+
+            #phi = acos(x / sqrt(x * x + y * y))
+            # if y < 0:
+            #     #phi = 2 * pi - phi
+            #     phi = -1 * phi
+
+            phi = acos(z / sqrt(x * x + z * z))
+            if x < 0:
+                phi = -phi
+
+
+            theta = atan(y / sqrt(x * x + z * z))
+
+            # phi = atan(x / y)
+
+            theta = degrees(theta)
+            phi = degrees(phi)
+            #plt_y.append(phi)
+
+            theta_phis.append((theta, phi))
+
+            # print("col, row, x, y, z, theta, phi:")
+            #print(col, row, x, y, z, theta, phi)
+        #print('theta_phis:', theta_phis)
+        #print(x, y, z, theta + heading, phi + pitch, pi)
+        # plt.scatter(plt_x, plt_y)
+        # plt.show()
+        if len(theta_phis) == 1:
+            return theta_phis[0]
+        else:
+            return theta_phis
 
     def pointCloud_to_image(self, pointcloud, resolution):
         try:
@@ -1440,13 +1611,15 @@ class GSV_depthmap(object):
                 # print("point: ", point)
                 col = int((point[0] - minX) / resolution)
                 row = int((maxY - point[1]) / resolution)
+                # if point[4] == 11:
+                #     print("col, row, row[4]: ", col, row, point[4])
                 # print("col, row : ", col, row )
                 # print("col, row, row[4]: ", col, row, point[4])
                 if row == h:
                     row = h - 1
                 if col == w:
                     col = w - 1
-                np_image[row][col] = point[4]
+                np_image[row][col] = int(point[-1])
             worldfile = [resolution, 0, 0, -resolution, minX, maxY]
 
             return np_image, worldfile
@@ -1507,10 +1680,14 @@ class GSV_depthmap(object):
                     print('dm[depthjMap]:', dm['depthMap'])
                     print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
+                    # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
+                    # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
+
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
                     print("Google street view URL:", url)
 
-                    sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
+                    # sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
+                    sidewalk_idx = np.argwhere(predict > -1)  #
                     sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     classes = np.where(predict > -1)
                     #print("classes len: ", len(classes))
@@ -1551,7 +1728,7 @@ class GSV_depthmap(object):
 
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
-                        sidewalk_sph = GPano.castesian_to_shperical(GPano(), sidewalk_idx, w, h, fov)
+                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
                         # print('sidewalk_sph[0]:', sidewalk_sph[0])
 
                         #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
@@ -1603,11 +1780,14 @@ class GSV_depthmap(object):
                         # print("pointcloud_clean len:", len(pointcloud_clean))
 
                         np_image, worldfile = self.pointCloud_to_image(pointcloud_clean, resolution=0.1)
-                        # print("np_image:", np_image[:5])
+                        #                         # print("np_image:", np_image[:5])
 
-                        im = Image.fromarray(np_image)
+                        colored = self.get_color_pallete(np_image, 'ade20k')
+                        colored.save(new_file_name)
+                        # im.save(new_file_name)
+                        # im = Image.fromarray(colored)
                         print("new_file_name:", new_file_name)
-                        im.save(new_file_name)
+                        # im.save(new_file_name)
                         worldfile_name = new_file_name.replace(".png", '.pgw')
                         print("worldfile:", worldfile)
                         with open(worldfile_name, 'w') as wf:
@@ -1660,6 +1840,110 @@ class GSV_depthmap(object):
         brng = degrees(atan2(y, x))
         brng = (brng + 360) % 360
         return brng
+
+    def get_color_pallete(self, npimg, dataset='ade20k'):
+        # Huan changed the label 1 from 120, 120, 120 to 0, 0, 0
+        adepallete = [
+            0, 0, 0, 0, 0, 0, 180, 120, 120, 6, 230, 230, 80, 50, 50, 4, 200, 3, 120, 120, 80, 140, 140, 140, 204,
+            5, 255, 230, 230, 230, 4, 250, 7, 224, 5, 255, 235, 255, 7, 150, 5, 61, 120, 120, 70, 8, 255, 51, 255, 6,
+            82,
+            143, 255, 140, 204, 255, 4, 255, 51, 7, 204, 70, 3, 0, 102, 200, 61, 230, 250, 255, 6, 51, 11, 102, 255,
+            255,
+            7, 71, 255, 9, 224, 9, 7, 230, 220, 220, 220, 255, 9, 92, 112, 9, 255, 8, 255, 214, 7, 255, 224, 255, 184,
+            6,
+            10, 255, 71, 255, 41, 10, 7, 255, 255, 224, 255, 8, 102, 8, 255, 255, 61, 6, 255, 194, 7, 255, 122, 8, 0,
+            255,
+            20, 255, 8, 41, 255, 5, 153, 6, 51, 255, 235, 12, 255, 160, 150, 20, 0, 163, 255, 140, 140, 140, 250, 10,
+            15,
+            20, 255, 0, 31, 255, 0, 255, 31, 0, 255, 224, 0, 153, 255, 0, 0, 0, 255, 255, 71, 0, 0, 235, 255, 0, 173,
+            255,
+            31, 0, 255, 11, 200, 200, 255, 82, 0, 0, 255, 245, 0, 61, 255, 0, 255, 112, 0, 255, 133, 255, 0, 0, 255,
+            163,
+            0, 255, 102, 0, 194, 255, 0, 0, 143, 255, 51, 255, 0, 0, 82, 255, 0, 255, 41, 0, 255, 173, 10, 0, 255, 173,
+            255,
+            0, 0, 255, 153, 255, 92, 0, 255, 0, 255, 255, 0, 245, 255, 0, 102, 255, 173, 0, 255, 0, 20, 255, 184, 184,
+            0,
+            31, 255, 0, 255, 61, 0, 71, 255, 255, 0, 204, 0, 255, 194, 0, 255, 82, 0, 10, 255, 0, 112, 255, 51, 0, 255,
+            0,
+            194, 255, 0, 122, 255, 0, 255, 163, 255, 153, 0, 0, 255, 10, 255, 112, 0, 143, 255, 0, 82, 0, 255, 163, 255,
+            0, 255, 235, 0, 8, 184, 170, 133, 0, 255, 0, 255, 92, 184, 0, 255, 255, 0, 31, 0, 184, 255, 0, 214, 255,
+            255,
+            0, 112, 92, 255, 0, 0, 224, 255, 112, 224, 255, 70, 184, 160, 163, 0, 255, 153, 0, 255, 71, 255, 0, 255, 0,
+            163, 255, 204, 0, 255, 0, 143, 0, 255, 235, 133, 255, 0, 255, 0, 235, 245, 0, 255, 255, 0, 122, 255, 245, 0,
+            10, 190, 212, 214, 255, 0, 0, 204, 255, 20, 0, 255, 255, 255, 0, 0, 153, 255, 0, 41, 255, 0, 255, 204, 41,
+            0,
+            255, 41, 255, 0, 173, 0, 255, 0, 245, 255, 71, 0, 255, 122, 0, 255, 0, 255, 184, 0, 92, 255, 184, 255, 0, 0,
+            133, 255, 255, 214, 0, 25, 194, 194, 102, 255, 0, 92, 0, 255]
+
+        cityspallete = [
+            128, 64, 128,
+            244, 35, 232,
+            70, 70, 70,
+            102, 102, 156,
+            190, 153, 153,
+            153, 153, 153,
+            250, 170, 30,
+            220, 220, 0,
+            107, 142, 35,
+            152, 251, 152,
+            0, 130, 180,
+            220, 20, 60,
+            255, 0, 0,
+            0, 0, 142,
+            0, 0, 70,
+            0, 60, 100,
+            0, 80, 100,
+            0, 0, 230,
+            119, 11, 32,
+        ]
+
+        """Visualize image.
+        Parameters
+        ----------
+        npimg : numpy.ndarray
+            Single channel image with shape `H, W, 1`.
+        dataset : str, default: 'pascal_voc'
+            The dataset that model pretrained on. ('pascal_voc', 'ade20k')
+        Returns
+        -------
+        out_img : PIL.Image
+            Image with color pallete
+        """
+        # recovery boundary
+        if dataset in ('pascal_voc', 'pascal_aug'):
+            npimg[npimg == -1] = 255
+        # put colormap
+        if dataset == 'ade20k':
+            npimg = npimg + 1
+            out_img = Image.fromarray(npimg.astype('uint8'))
+            out_img.putpalette(adepallete)
+            return out_img
+        elif dataset == 'citys':
+            out_img = Image.fromarray(npimg.astype('uint8'))
+            out_img.putpalette(cityspallete)
+            return out_img
+        out_img = Image.fromarray(npimg.astype('uint8'))
+        vocpallete = self.getvocpallete(256)
+        out_img.putpalette(vocpallete)
+        return out_img
+
+    def getvocpallete(self, num_cls):
+        n = num_cls
+        pallete = [0] * (n * 3)
+        for j in range(0, n):
+            lab = j
+            pallete[j * 3 + 0] = 0
+            pallete[j * 3 + 1] = 0
+            pallete[j * 3 + 2] = 0
+            i = 0
+            while (lab > 0):
+                pallete[j * 3 + 0] |= (((lab >> 0) & 1) << (7 - i))
+                pallete[j * 3 + 1] |= (((lab >> 1) & 1) << (7 - i))
+                pallete[j * 3 + 2] |= (((lab >> 2) & 1) << (7 - i))
+                i = i + 1
+                lab >>= 3
+        return pallete
+
 
 
 if __name__ == '__main__':

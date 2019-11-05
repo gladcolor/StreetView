@@ -6,9 +6,41 @@ from skimage import io
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+import json
 
 
 class MyTestCase(unittest.TestCase):
+
+
+    # def test_saveDepthMap(self):
+    #     saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\depthmap'
+    #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\*.json')
+    #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')
+    #     print(all_files)
+    #     for file in all_files:
+    #         print(file)
+    #         with open(file, 'r') as f:
+    #
+    #             jdata = json.load(f)
+    #             basename = os.path.basename(file).replace('.json', '.tif')
+    #             # newname = os.path.join(saved_path, basename)
+    #             # depthMap = GPano.GSV_depthmap.getDepthmapfrmJson(GPano.GSV_depthmap(), jdata)
+    #             # GPano.GSV_depthmap.saveDepthmapImage(GPano.GSV_depthmap(), depthMap, newname)
+    #             GPano.GPano.getPanoZoom0frmID(GPano.GPano(), basename.replace('.tif', ''), saved_path)
+
+
+    # def test_get_color_pallete(self):
+    #     path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\+pitch_of_thumb\*.png'
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\+pitch_of_thumb\color'
+    #     all_files = glob.glob(path)
+    #     for file in all_files:
+    #         print(file)
+    #         npimg = np.array(io.imread(file))
+    #         colored = GPano.GSV_depthmap.get_color_pallete(GPano.GSV_depthmap(), npimg, 'ade20k')
+    #         basename = os.path.basename(file).replace('.png', '.png')
+    #         newfilename = os.path.join(saved_path, basename)
+    #         colored.save(newfilename)
+
 
     # def test_seg_to_pointcloud(self):
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
@@ -16,7 +48,7 @@ class MyTestCase(unittest.TestCase):
     #
     #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
     #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
-    #     seglist = [file]
+    #     # seglist = [file]
     #     predicts = []
     #     for seg in seglist:
     #         if not "color" in seg:
@@ -26,20 +58,21 @@ class MyTestCase(unittest.TestCase):
     #     seglist.append(file)
     #     print("seglist:", seglist[:2])
     #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test'
     #     GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
     #     print("Finished.")
 
     def test_seg_to_landcover(self):
         # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
         file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+        file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
         #
         # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
         seglist = glob.glob(
             r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
         seglist = glob.glob(
             r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
-        seglist = [file] + seglist
+        # seglist = [file]
         # predicts = []
         # for seg in seglist:
         #     if not "color" in seg:
@@ -52,7 +85,7 @@ class MyTestCase(unittest.TestCase):
 
         print("seglist:", seglist[0])
         # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\+pitch_of_thumb'
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test'
         GPano.GSV_depthmap.seg_to_landcover(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
         print("seg_to landcover finished.")
 
@@ -172,20 +205,24 @@ class MyTestCase(unittest.TestCase):
     # def test_seg_to_pointcloud(self):
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-    #
-    #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-    #     seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+    #     file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
+    #     #
+    #     # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+    #     seglist = glob.glob(
+    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
+    #     seglist = glob.glob(
+    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
     #     seglist = [file]
-    #     predicts = []
-    #     for seg in seglist:
-    #         if not "color" in seg:
-    #             predicts.append(seg)
-    #     #seglist = seglist[:]
-    #     seglist = predicts
-    #     seglist.append(file)
-    #     print("seglist:", seglist[:2])
+    #     # predicts = []
+    #     # for seg in seglist:
+    #     #     if not "color" in seg:
+    #     #         predicts.append(seg)
+    #     # #seglist = seglist[:]
+    #     # seglist = predicts
+    #     # seglist.append(file)
+    #     print("seglist:", seglist)
     #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test\pp'
     #     GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
     #     print("Finished.")
 

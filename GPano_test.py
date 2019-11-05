@@ -11,7 +11,13 @@ import json
 
 class MyTestCase(unittest.TestCase):
 
-
+    def test_getPanoJPGfrmPanoId(self):
+        all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\panos'
+        for file in all_files:
+            panoId = os.path.basename(file)[:-5]
+            GPano.GPano.getPanoJPGfrmPanoId(GPano.GPano(), panoId, saved_path=saved_path, zoom=5)
+            print("Finished: ", panoId)
     # def test_saveDepthMap(self):
     #     saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\depthmap'
     #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\*.json')
@@ -62,32 +68,34 @@ class MyTestCase(unittest.TestCase):
     #     GPano.GSV_depthmap.seg_to_pointcloud(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
     #     print("Finished.")
 
-    def test_seg_to_landcover(self):
-        # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
-        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-        file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
-        #
-        # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-        seglist = glob.glob(
-            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
-        seglist = glob.glob(
-            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
-        # seglist = [file]
-        # predicts = []
-        # for seg in seglist:
-        #     if not "color" in seg:
-        #         predicts.append(seg)
-        # #seglist = seglist[:]
-        # seglist = predicts
-        # seglist.append(file)
-
-        # seglist = [file]
-
-        print("seglist:", seglist[0])
-        # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test'
-        GPano.GSV_depthmap.seg_to_landcover(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
-        print("seg_to landcover finished.")
+    # def test_seg_to_landcover(self):
+    #     # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+    #     file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
+    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+    #
+    #     # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+    #     seglist = glob.glob(
+    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
+    #     seglist = glob.glob(
+    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+    #     # seglist = [file]
+    #     # predicts = []
+    #     # for seg in seglist:
+    #     #     if not "color" in seg:
+    #     #         predicts.append(seg)
+    #     # #seglist = seglist[:]
+    #     # seglist = predicts
+    #     # seglist.append(file)
+    #     seglist[0] = file
+    #
+    #     # seglist = [file]
+    #
+    #     print("seglist:", seglist[0])
+    #     # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test2'
+    #     GPano.GSV_depthmap.seg_to_landcover(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
+    #     print("seg_to landcover finished.")
 
     # def test_castesian_to_shperical(self):
     #     #        predict = Image.open(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\198793_17033785714_-76.741101_38.852598_0_288.png')

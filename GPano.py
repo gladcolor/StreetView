@@ -223,19 +223,19 @@ class GPano():
             return status
 
         print(adcode)  # Works well.
-        for x in range(30):  # test for the size of map, column, x
+        for x in range(32):  # test for the size of map, column, x
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
-                    x) + '&y=' + str(0) + '&zoom=4&nbt&fover=2'
+                    x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
                 response = requests.get(url)
                 image = Image.open(BytesIO(response.content))
             except OSError:
                 m = x
                 break
 
-        for x in range(30):   # test for the size of map, row, y
+        for x in range(32):   # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
@@ -269,6 +269,92 @@ class GPano():
             status = 1
         except Exception as e:
             print("Error in getPanoJPGfrmLonlat():", e)
+            status = 0
+
+        return status
+
+    def getPanoJPGfrmPanoId(self, panoId, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
+        """Reference:
+            https://developers.google.com/maps/documentation/javascript/streetview
+            See the part from "Providing Custom Street View Panoramas" section.
+            Get those tiles and mosaic them to a large image.
+            The url of a tile:
+            https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=CJ31ttcx7ez9qcWzoygVqA&output=tile&x=1&y=1&zoom=4&nbt&fover=2
+            Make sure randomly use geo0 - geo3 server.
+            When zoom=4, a panorama image have 6 rows, 13 cols.
+        """
+        status = 0
+        zoom = str(zoom)
+        #PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+
+        adcode = panoId
+
+        if str(adcode) == str(0):
+            print(adcode, "is not a PanoID.")
+            return status
+
+        # print(adcode)  # Works well.
+        for x in range(36):  # test for the size of map, column, x
+            try:
+                num = random.randint(0, 3)
+                url = 'https://geo' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
+                    x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
+                # print(url)
+                response = requests.get(url)
+                image = Image.open(BytesIO(response.content))
+
+            except OSError:
+                m = x
+                break
+
+        for x in range(36):   # test for the size of map, row, y
+            try:
+                num = random.randint(0, 3)
+                url = 'https://geo' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
+                    0) + '&y=' + str(x) + '&zoom=' + zoom + '&nbt&fover=2'
+                response = requests.get(url)
+                image = Image.open(BytesIO(response.content))
+            except OSError:
+                n = x
+                break
+
+        url = 'https://geo' + str(
+            num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
+            0) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
+        response = requests.get(url)
+        image = Image.open(BytesIO(response.content))
+
+        UNIT_SIZE  = 512
+
+        try:
+            target = Image.new('RGB', (UNIT_SIZE * m, UNIT_SIZE * n))  # new graph
+
+            for x in range(m):  # col
+                for y in range(n):  # row
+                    num = random.randint(0, 3)
+                    url = 'https://geo' + str(
+                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
+                        x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
+                    response = requests.get(url)
+                    image = Image.open(BytesIO(response.content))
+
+                    # print('UNIT_SIZE:', UNIT_SIZE)
+                    image = image.resize((UNIT_SIZE, UNIT_SIZE))
+                    # print('col, row:', m, n)
+                    # print('UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1):', UNIT_SIZE * x, UNIT_SIZE * y, )
+                    target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
+
+            if prefix != "":
+                prefix += '_'
+            if suffix != "":
+                suffix = '_' + suffix
+            mapname = os.path.join(saved_path, (prefix + adcode + suffix + '.jpg'))
+            target.save(mapname)
+            status = 1
+        except Exception as e:
+            print("Error in getPanoJPGfrmPanoId():", e)
             status = 0
 
         return status
@@ -369,7 +455,7 @@ class GPano():
             yaw = yaw + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}"
+              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov=90"
 
         suffix = str(suffix)
         prefix = str(prefix)
@@ -414,7 +500,7 @@ class GPano():
             yaw = yaw + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-              f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}"
+              f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}&thumbfov=90"
 
         suffix = str(suffix)
         prefix = str(prefix)
@@ -1136,13 +1222,13 @@ class GSV_depthmap(object):
         cos_phi = np.empty(w)
 
         for y in range(h):
-            # theta = (h - y - 0.5) / h * np.pi   # original
-            theta = (h - y) / h * np.pi  # huan
+            theta = (h - y) / h * np.pi   # original
+            # theta = y / h * np.pi  # huan
             sin_theta[y] = np.sin(theta)
             cos_theta[y] = np.cos(theta)
 
         for x in range(w):
-            phi = (w - x - 0.5) / w * 2 * np.pi + np.pi / 2
+            phi = x / w * 2 * np.pi #+ np.pi / 2
             sin_phi[x] = np.sin(phi)
             cos_phi[x] = np.cos(phi)
 
@@ -1161,23 +1247,19 @@ class GSV_depthmap(object):
 
                 if planeIdx > 0:
                     plane = planes[planeIdx]
-                    t = np.abs(
-                        plane["d"]
-                        / (
-                                v[0] * plane["n"][0]
-                                + v[1] * plane["n"][1]
-                                + v[2] * plane["n"][2]
-                        )
-                    )
+                    t = np.abs(plane["d"] / (v[0] * plane["n"][0] + v[1] * plane["n"][1] + v[2] * plane["n"][2]))
                 # original
-                    depthMap[y * w + (w - x - 1)] = t
-                else:
-                    depthMap[y * w + (w - x - 1)] = 0
-                #
-                # # huan
-                #     depthMap[y * w + x] = t
+                #     depthMap[y * w + (w - x - 1)] = t
                 # else:
-                #     depthMap[y * w + x] = 0
+                #     depthMap[y * w + (w - x - 1)] = 0
+
+                # huan
+                    if t < 100:
+                        depthMap[y * w + x] = t
+                    else:
+                        depthMap[y * w + x] = 0
+                else:
+                    depthMap[y * w + x] = 0
 
         return {"width": w, "height": h, "depthMap": depthMap}
 
@@ -1680,8 +1762,8 @@ class GSV_depthmap(object):
                     print('dm[depthjMap]:', dm['depthMap'])
                     print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
-                    # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
-                    # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
+                    self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
+                    GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
                     print("Google street view URL:", url)

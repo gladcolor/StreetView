@@ -10,16 +10,31 @@ import json
 
 
 class MyTestCase(unittest.TestCase):
+    gpano =  object
+    gsv = object
+    def setUp(self) -> None:
+        self.gpano = GPano.GPano()
+        self.gsv = GPano.GSV_depthmap()
 
-    def test_getPanoJPGfrmPanoId(self):
-        all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')
-        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\panos'
-        for file in all_files:
-            panoId = os.path.basename(file)[:-5]
-            GPano.GPano.getPanoJPGfrmPanoId(GPano.GPano(), panoId, saved_path=saved_path, zoom=5)
-            print("Finished: ", panoId)
+    def test_colrow_to_spherial(self):
+        theta, phi = self.gpano.colrow_to_spherial(0, 0, 1024, 768)
+        self.assertEqual((round(0.4876162427151, 9), round(-pi/4, 9)), (round(theta, 9), round(phi, 9)))
+
+        theta, phi = self.gpano.colrow_to_spherial(1024, 0, 1024, 768)
+        self.assertEqual((round(0.4876162427151, 9), round(pi/4, 9)), (round(theta, 9), round(phi, 9)))
+
+    # def test_getPanoJPGfrmPanoId(self):
+    #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')
+    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\panos'
+    #     for file in all_files:
+    #         panoId = os.path.basename(file)[:-5]
+    #         GPano.GPano.getPanoJPGfrmPanoId(GPano.GPano(), panoId, saved_path=saved_path, zoom=5)
+    #         print("Finished: ", panoId)
+
+
+
     # def test_saveDepthMap(self):
-    #     saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\depthmap'
+    #     saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\depthmap2'
     #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\landcover\*.json')
     #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')
     #     print(all_files)
@@ -29,10 +44,10 @@ class MyTestCase(unittest.TestCase):
     #
     #             jdata = json.load(f)
     #             basename = os.path.basename(file).replace('.json', '.tif')
-    #             # newname = os.path.join(saved_path, basename)
-    #             # depthMap = GPano.GSV_depthmap.getDepthmapfrmJson(GPano.GSV_depthmap(), jdata)
-    #             # GPano.GSV_depthmap.saveDepthmapImage(GPano.GSV_depthmap(), depthMap, newname)
-    #             GPano.GPano.getPanoZoom0frmID(GPano.GPano(), basename.replace('.tif', ''), saved_path)
+    #             newname = os.path.join(saved_path, basename)
+    #             depthMap = GPano.GSV_depthmap.getDepthmapfrmJson(GPano.GSV_depthmap(), jdata)
+    #             GPano.GSV_depthmap.saveDepthmapImage(GPano.GSV_depthmap(), depthMap, newname)
+                # GPano.GPano.getPanoZoom0frmID(GPano.GPano(), basename.replace('.tif', ''), saved_path)
 
 
     # def test_get_color_pallete(self):
@@ -73,7 +88,7 @@ class MyTestCase(unittest.TestCase):
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
     #     file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
     #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-    #
+    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\1BV2qdirkaTkng2bqtfOMA_ - 74.205713_40.793248_0_241.75.png'
     #     # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
     #     seglist = glob.glob(
     #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
@@ -87,9 +102,8 @@ class MyTestCase(unittest.TestCase):
     #     # #seglist = seglist[:]
     #     # seglist = predicts
     #     # seglist.append(file)
-    #     seglist[0] = file
     #
-    #     # seglist = [file]
+    #     seglist[0] = [file]
     #
     #     print("seglist:", seglist[0])
     #     # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'

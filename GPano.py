@@ -289,6 +289,8 @@ class GPano():
 
         adcode = panoId
 
+        images = []
+
         if str(adcode) == str(0):
             print(adcode, "is not a PanoID.")
             return status
@@ -303,6 +305,7 @@ class GPano():
                 # print(url)
                 response = requests.get(url)
                 image = Image.open(BytesIO(response.content))
+                # images.append(image)
 
             except OSError:
                 m = x
@@ -1060,6 +1063,34 @@ class GPano():
         else:
             return theta_phis
 
+    def clip_pano(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90): # fov < 120
+        if fov > 120:
+            fov = 120
+            print("Fov should be < 120 degree.")
+        pano_w, pano_h = np_img.shape
+
+        cols = [x for x in range(w)]
+        rows = [x for x in range(h)]
+
+        colrows = np.meshgrid(cols, rows)
+
+        theta_phis = map(self.colrow_to_spherial, colrows)
+
+        img = Image.new((w, h))
+
+        return img
+
+    def colrow_to_spherial(self, col, row, w, h, fov=90):  # fov < 120
+        x0 = w / 2
+        y0 = h / 2
+        x = col - x0
+        y = y0 - row
+        r = w/2 / tan(radians(fov/2))
+        phi = atan(x / r)
+        theta = atan(y/sqrt(x**2 + r**2))
+
+        return theta, phi
+
 
 class GSV_depthmap(object):
 
@@ -1448,9 +1479,9 @@ class GSV_depthmap(object):
                 # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
                 # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
                 # print("pitch_of_pano:", pitch_of_pano)
-                pointX = cameraX + distance * cos(theta - pitch_of_pano) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta - pitch_of_pano) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta - pitch_of_pano)
+                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
                 # else:
                 #     pointX = 0
                 #     pointY = 0
@@ -1762,8 +1793,8 @@ class GSV_depthmap(object):
                     print('dm[depthjMap]:', dm['depthMap'])
                     print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
-                    self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
-                    GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
+                    # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
+                    # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
                     print("Google street view URL:", url)

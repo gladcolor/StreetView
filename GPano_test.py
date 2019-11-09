@@ -16,12 +16,17 @@ class MyTestCase(unittest.TestCase):
         self.gpano = GPano.GPano()
         self.gsv = GPano.GSV_depthmap()
 
-    def test_colrow_to_spherial(self):
-        theta, phi = self.gpano.colrow_to_spherial(0, 0, 1024, 768)
-        self.assertEqual((round(0.4876162427151, 9), round(-pi/4, 9)), (round(theta, 9), round(phi, 9)))
+    # def test_colrow_to_spherial(self):
+    #     theta, phi = self.gpano.colrow_to_spherial(0, 0, 1024, 768)
+    #     self.assertEqual((round(0.4876162427151, 9), round(-pi/4, 9)), (round(theta, 9), round(phi, 9)))
+    #
+    #     theta, phi = self.gpano.colrow_to_spherial(1024, 0, 1024, 768)
+    #     self.assertEqual((round(0.4876162427151, 9), round(pi/4, 9)), (round(theta, 9), round(phi, 9)))
 
-        theta, phi = self.gpano.colrow_to_spherial(1024, 0, 1024, 768)
-        self.assertEqual((round(0.4876162427151, 9), round(pi/4, 9)), (round(theta, 9), round(phi, 9)))
+    def test_clip_pano(self):
+        img = Image.open(r'')
+        self.gpano.clip_pano(0, 0, 1024, 768)
+
 
     # def test_getPanoJPGfrmPanoId(self):
     #     all_files = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\json\*.json')

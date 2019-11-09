@@ -1071,10 +1071,14 @@ class GPano():
 
         cols = [x for x in range(w)]
         rows = [x for x in range(h)]
+        print('cols:', cols)
+        print('rows:', rows)
 
         colrows = np.meshgrid(cols, rows)
+        print('colrows:', colrows)
 
         theta_phis = map(self.colrow_to_spherial, colrows)
+        print('theta_phis:', theta_phis)
 
         img = Image.new((w, h))
 

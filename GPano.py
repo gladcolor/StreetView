@@ -29,7 +29,7 @@ import math
 import sys
 import base64
 import zlib
-
+import cv2
 import struct
 import matplotlib.pyplot as plt
 import PIL
@@ -69,6 +69,18 @@ class GPano():
         url_part2 = r'!2e0!7i16384!8i8192'
         heading=str(heading)
         url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
+        return url
+
+    def getGSV_url_frm_panoId(self, panoId, heading=0, tilt=90, fov=90):
+        print(panoId)
+        jdata = self.getJsonfrmPanoID(panoId)
+        print(jdata)
+        lon = jdata["Location"]["original_lng"]
+        lat = jdata["Location"]["original_lat"]
+        url_part1 = r'!3m6!1e1!3m4!1s'
+        url_part2 = r'!2e0!7i16384!8i8192'
+        heading=str(heading)
+        url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
     def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
@@ -1067,33 +1079,136 @@ class GPano():
         if fov > 120:
             fov = 120
             print("Fov should be < 120 degree.")
-        pano_w, pano_h = np_img.shape
+
+        print('np_img.shape:', np_img.shape)
+        pano_w = np_img.shape[1]
+        pano_h = np_img.shape[0]
+
+        print('pano_w, pano_h:', pano_w, pano_h)
 
         cols = [x for x in range(w)]
         rows = [x for x in range(h)]
+
         print('cols:', cols)
         print('rows:', rows)
 
-        colrows = np.meshgrid(cols, rows)
-        print('colrows:', colrows)
+        cols_mesh, rows_mesh = np.meshgrid(cols, rows)
+        print('len of cols_mesh:', len(cols_mesh))
 
-        theta_phis = map(self.colrow_to_spherial, colrows)
-        print('theta_phis:', theta_phis)
+        print('len of rows_mesh:', len(rows_mesh))
+        print('size of rows_mesh:', rows_mesh.size)
+        # print(rows_mesh[:5])
+        # print(cols_mesh[:5])
 
-        img = Image.new((w, h))
+        # zl = zip(cols_mesh, rows_mesh)
+        #
+        # print('zip of cols_mesh:', zl)
+        fl = cols_mesh.flatten()
+        print(len(fl))
+        print(len(rows_mesh.flatten()))
+        print(len([w]*w*h))
+
+        thetas_phis = map(self.colrow_to_spherial, cols_mesh.flatten(), rows_mesh.flatten(), [w]*w*h, [h]*w*h, [fov]*w*h)
+        thetas_phis = list(thetas_phis)
+        # print('theta_phis:', thetas_phis)
+        print('theta_phis:', thetas_phis[0])
+        res = pi / pano_h # angle resolution of pano
+
+        print('res: ', res)
+
+        img = Image.new('RGB', (w, h))
+        pixels = img.load()
+        np_pixels = Image.fromarray(np_img).load()
+        for r in range(h):
+            for c in range(w):
+                theta_pixel = thetas_phis[r * w + c][0] + theta
+                phi_pixel = thetas_phis[r * w + c][1] + phi
+                if phi_pixel > pi:
+                    phi_pixel = phi_pixel - 2*pi
+                if phi_pixel < -pi:
+                    phi_pixel = phi_pixel + 2*pi
+
+                # have not processed theta
+
+                p_row = int(pano_h / 2 - theta_pixel / res)
+                p_col = int(phi_pixel / res + pano_w / 2)
+                # print(p_col, p_row)
+                p_row = min(p_row, pano_h-1)
+                p_col = min(p_col, pano_w - 1)
+                pixels[c, r] = np_pixels[p_col, p_row]
+                # print(np_pixels[p_col, p_row])
+        # img.show()
 
         return img
 
-    def colrow_to_spherial(self, col, row, w, h, fov=90):  # fov < 120
+    def clip_pano2(self, theta0, phi0, fov_h, fov_v, width, img): # fov < 120
+        """
+          theta0 is pitch
+          phi0 is yaw
+          render view at (pitch, yaw) with fov_h by fov_v
+          width is the number of horizontal pixels in the view
+          """
+        m = np.dot(yrotation(phi0), xrotation(theta0))
+
+        (base_height, base_width, _) = img.shape
+
+        height = int(width * np.tan(fov_v / 2) / np.tan(fov_h / 2))
+
+        new_img = np.zeros((height, width, 3), np.uint8)
+
+        DI = np.ones((height * width, 3), np.int)
+        trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
+                          [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
+
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+
+        DI[:, 0] = xx.reshape(height * width)
+        DI[:, 1] = yy.reshape(height * width)
+
+        v = np.ones((height * width, 3), np.float)
+
+        v[:, :2] = np.dot(DI, trans.T)
+        v = np.dot(v, m.T)
+
+        diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
+        theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
+        phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi
+
+        ey = np.rint(theta * base_height / np.pi).astype(np.int)
+        ex = np.rint(phi * base_width / (2 * np.pi)).astype(np.int)
+
+        ex[ex >= base_width] = base_width - 1
+        ey[ey >= base_height] = base_height - 1
+
+        new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
+        return new_img
+
+
+def colrow_to_spherial(self, col, row, w, h, fov=90):  # fov < 120
+        # print('col:', col)
         x0 = w / 2
         y0 = h / 2
         x = col - x0
         y = y0 - row
-        r = w/2 / tan(radians(fov/2))
-        phi = atan(x / r)
-        theta = atan(y/sqrt(x**2 + r**2))
+        z = w/2 / tan(radians(fov/2))
+        # print('w: ', w)
+        # print('x: ', x)
+        # print('r: ', r)
+        phi = atan(x / z)
+        theta = atan(y/sqrt(x**2 + z**2))
+        # s = z / sqrt(x * x + y * y + z * z)
+        # print(s)
+        # theta = math.acos(s)
+        # s = x / sqrt(x * x + y * y+0.000000001)
+        # phi = math.acos(s)
+        # if (y < 0):
+        #     phi = 2 * pi - phi
 
-        return theta, phi
+        # print('theta, phi:', theta, phi)
+
+        return (theta, phi)
+
+
 
 
 class GSV_depthmap(object):
@@ -1864,6 +1979,206 @@ class GSV_depthmap(object):
                         # print('pano_H:', pano_H)
                         #dm = self.getDepthmapfrmJson(obj_json)
                         #print(dm)
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        # print("pointcloud: ", pointcloud[:3], len(pointcloud))
+                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
+                        #print('new_file_name: ', new_file_name)
+                        # plt.imshow(predict)
+                        # plt.show()
+                        # plt_x = [row[0] for row in pointcloud]
+                        # plt_y = [row[1] for row in pointcloud]
+                        # plt.scatter(plt_x, plt_y)
+                        # plt.show()
+
+                        distance_max = 20
+                        distance_min = 2
+                        pointcloud_clean = []
+                        pointcloud_np = np.array(pointcloud)
+                        all_classes = predict.reshape((predict.size,1))
+                        # print("all_classes:", all_classes[:3], all_classes.shape)
+
+                        pointcloud_class = np.concatenate((pointcloud_np, all_classes), axis=1)
+                        # print("pointcloud_class len:", len(pointcloud_class))
+                        # print("pointcloud_class:", pointcloud_class[:3])
+                        # print("classes:", classes[0][:3], classes[1][:3])
+                        # print("pointcloud_np  :", pointcloud_np[:3])
+
+                        pointcloud_clean = pointcloud_class[pointcloud_class[:, 3] > distance_min]
+                        # print("pointcloud_clean len:", len(pointcloud_clean0))
+                        pointcloud_clean = pointcloud_clean[pointcloud_clean[:, 3] < distance_max]
+                        #
+                        # print("pointcloud_clean:", pointcloud_clean[:5])
+                        # print("pointcloud_clean len:", len(pointcloud_clean))
+
+                        np_image, worldfile = self.pointCloud_to_image(pointcloud_clean, resolution=0.1)
+                        #                         # print("np_image:", np_image[:5])
+
+                        colored = self.get_color_pallete(np_image, 'ade20k')
+                        colored.save(new_file_name)
+                        # im.save(new_file_name)
+                        # im = Image.fromarray(colored)
+                        print("new_file_name:", new_file_name)
+                        # im.save(new_file_name)
+                        worldfile_name = new_file_name.replace(".png", '.pgw')
+                        print("worldfile:", worldfile)
+                        with open(worldfile_name, 'w') as wf:
+                            for line in worldfile:
+                                print(line)
+                                wf.write(str(line) + '\n')
+                        # plt.imshow(im)
+                        # plt.show()
+
+                        # for idx, point in enumerate(pointcloud):
+                        #     if point[3] > distance_min and point[3] < distance_max:
+                        #         pointcloud_clean.append((point[0], point[0], point[0], point[0], predict[classes[0][idx], classes[1][idx]]))
+                        #
+                        # print("pointcloud_clean:", pointcloud_clean)
+                        #
+                        # with open(new_file_name, 'w') as f:
+                        #     f.write('x,y,h,d,c\n')
+                        #     for idx, point in enumerate(pointcloud):
+                        #         if point[3] > distance_min and point[3] < distance_max:
+                        #             f.write('%s,%s,%s,%s,'% point)
+                        #             f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
+
+                    else:
+                        print("No point in image:", seg)
+
+                except Exception as e:
+                    print("Error in seg_to_landcover() for loop:", e, seg)
+                    continue
+
+        except Exception as e:
+            print("Error in seg_to_landcover():", e, seg)
+
+    def seg_to_landcover2(self, seg_list, saved_path, fov=90):
+        try:
+            if not isinstance(seg_list, list):
+                seg_list = [seg_list]
+                print("Converted the single file into a list.")
+            #print(io.imread(seg_list[0]).shape)
+
+            for idx, seg in enumerate(seg_list):
+                try:
+                    predict = io.imread(seg)
+                    predict = np.array(predict)
+                    h, w = predict.shape
+                    #print("image w, h: ", w, h)
+                    # sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
+                    # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    print("seg files:", seg)
+
+                    # plt_x = [row[1] for row in sidewalk_idx]
+                    # plt_y = [row[0] for row in sidewalk_idx]
+                    # plt.scatter(plt_x, plt_y)
+                    # plt.show()
+                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    basename = os.path.basename(seg)
+                    params = basename[:-4].split('_')
+                    #print("params:", params)
+                    thumb_panoId = '_'.join(params[:(len(params) - 4)])
+                    pano_lon = float(params[-4])
+                    pano_lat = float(params[-3])
+                    if len(thumb_panoId) < 16:
+                        thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
+                        print("thumb_panoId: ",thumb_panoId)
+
+                    # if len(params) > 5:
+                    #     print("thumb_panoId:", thumb_panoId)
+
+
+                    thumb_heading = float(params[-1])
+                    thumb_pitch = float(params[-2])
+                    #print("thumb_heading:", thumb_heading)
+
+                    obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1, saved_path=saved_path)
+                    depthMapData = self.parse(obj_json['model']['depth_map'])
+                    #print(dm_string)
+                    header = self.parseHeader(depthMapData)
+                    # print('header:',header)
+                    dm_planes = self.parsePlanes(header, depthMapData)
+                    # print('dm_planes[indices]:', dm_planes['indices'])
+                    # print('len of dm_planes[indices]:', len(dm_planes['indices']))
+
+
+                    dm = self.getDepthmapfrmJson(obj_json)
+
+                    np_dm = np.array(dm[dm['depthMap']]).reshape((dm["height"], dm["width"]))
+
+                    dm_clip = GPano().clip_pano2(thumb_pitch, thumb_heading - pano_heading, 90, 90, 20, np_dm)
+
+                    print('dm[depthjMap]:', dm['depthMap'])
+                    print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
+
+                    # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
+                    # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
+
+                    url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
+                    print("Google street view URL:", url)
+
+                    # sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
+                    sidewalk_idx = np.argwhere(predict > -1)  #
+                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    classes = np.where(predict > -1)
+                    #print("classes len: ", len(classes))
+
+                    print("len of sidewalk_idx:", len(sidewalk_idx))
+                    #print("sidewalk_idx:", sidewalk_idx)
+
+                    # get ground pixels
+                    ground_pixels = []
+                    # idm = dm['depthMap'].reshape(256, 512)
+
+                    # for y in range(dm['height']):
+                    #     for x in range(dm['width']):
+                    #         planeIdx = dm_planes['indices'][y * dm['width'] + x]
+                    #         plane = dm_planes['planes'][planeIdx]
+                    #
+                    #         #if x % 10 == 0 and y % 50 == 0:
+                    #         norm = np.argmax(np.abs(plane['n']))
+                    #         if norm == 2 and planeIdx > 0:
+                    #             idm[y][x] = 100
+                    #             print('plane planeIdx: ', planeIdx)
+                    #             print('plane: ', plane)
+                    #         else:
+                    #             idm[y][x] = 10
+
+                            # if  norm == 2 and plane['n'][2] > 0:
+                            #     #print('plane planeIdx: ', planeIdx)
+                            #     print('plane: ', plane)
+                            #     print('max projection: ', norm)
+                            #
+                            #     theta, phi = GPano.castesian_to_shperical(GPano(), (x, y), w, h, fov)
+                            #     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=(phi + thumb_heading), tilt=(theta + thumb_pitch + 90))
+                            #     print("Google street view URL:", x, y, theta, phi, url)
+                            #     #print("n2: ", sum(map(lambda x: x*x, plane['n'])))
+
+                    # plt.imshow(idm)
+                    # plt.show()
+
+                    if len(sidewalk_idx) > 1:
+                        # get spherial coordinates
+                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
+                        # print('sidewalk_sph[0]:', sidewalk_sph[0])
+
+                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
+
+                        #print(obj_json)
+                        pano_heading = obj_json["Projection"]['pano_yaw_deg']
+                        pano_heading = float(pano_heading)
+                        pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
+                        pano_pitch = float(pano_pitch)
+                        # print('pano_heading:', pano_heading)
+                        pano_lon = obj_json["Location"]['original_lng']
+                        # print('pano_lon:', pano_lon)
+                        pano_lat = obj_json["Location"]['original_lat']
+                        # print('pano_lat:', pano_lat)
+                        pano_H = obj_json["Location"]['elevation_wgs84_m']
+                        # print('pano_H:', pano_H)
+                        #dm = self.getDepthmapfrmJson(obj_json)
+                        #print(dm)
+
                         pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         # print("pointcloud: ", pointcloud[:3], len(pointcloud))
                         #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'

@@ -16,6 +16,35 @@ class MyTestCase(unittest.TestCase):
         self.gpano = GPano.GPano()
         self.gsv = GPano.GSV_depthmap()
 
+    def test_seg_to_landcover2(self):
+        # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+        file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+        file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\1BV2qdirkaTkng2bqtfOMA_ - 74.205713_40.793248_0_241.75.png'
+        # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+        seglist = glob.glob(
+            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
+        seglist = glob.glob(
+            r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
+        # seglist = [file]
+        # predicts = []
+        # for seg in seglist:
+        #     if not "color" in seg:
+        #         predicts.append(seg)
+        # #seglist = seglist[:]
+        # seglist = predicts
+        # seglist.append(file)
+
+        seglist[0] = [file]
+
+        print("seglist:", seglist[0])
+        # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+        saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test2'
+        GPano.GSV_depthmap.seg_to_landcover2(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
+        print("seg_to landcover finished.")
+
+
     # def test_colrow_to_spherial(self):
     #     theta, phi = self.gpano.colrow_to_spherial(0, 0, 1024, 768)
     #     self.assertEqual((round(0.4876162427151, 9), round(-pi/4, 9)), (round(theta, 9), round(phi, 9)))
@@ -23,9 +52,12 @@ class MyTestCase(unittest.TestCase):
     #     theta, phi = self.gpano.colrow_to_spherial(1024, 0, 1024, 768)
     #     self.assertEqual((round(0.4876162427151, 9), round(pi/4, 9)), (round(theta, 9), round(phi, 9)))
 
-    def test_clip_pano(self):
-        img = Image.open(r'')
-        self.gpano.clip_pano(0, 0, 1024, 768)
+    # def test_clip_pano(self):
+    #     file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\panos\Dg0LGX581Uu5ooKrLlvQGA.jpg'
+    #     img = Image.open(file)
+    #     img = np.array(img)
+    #     print(self.gpano.getGSV_url_frm_panoId(os.path.basename(file)[:-4]))
+    #     self.gpano.clip_pano(img, radians(0), pi/2, 1024, 768, fov=90)
 
 
     # def test_getPanoJPGfrmPanoId(self):

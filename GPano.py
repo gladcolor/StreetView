@@ -37,6 +37,8 @@ from shapely.geometry import Point, Polygon
 import csv
 from skimage import io
 from PIL import features
+import urllib.request
+import urllib
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -60,9 +62,8 @@ class GPano():
     def getPanoZoom0frmID(self, panoId, saved_path):
         url = r'http://maps.google.com/cbk?output=tile&zoom=0&x=0&y=0&panoid=' + panoId
         # print(url)
-        response = requests.get(url)
-        # print(response)
-        image = Image.open(BytesIO(response.content))
+        file = urllib.request.urlopen(url)
+        image = Image.open(file)
         image.save(os.path.join(saved_path, panoId + '.jpg'))
 
     def getGSV_url_frm_lonlat(self, lon, lat, heading=0, tilt=90, fov=90):
@@ -121,7 +122,12 @@ class GPano():
             print(lon, lat, row)
             prefix = row
             self.getPanoJPGfrmLonlat(lon, lat, saved_path, prefix, suffix)
+
+            # start_time = time.time()
+            # Cnt = 0
+            # Cnt_interval = 100
             Cnt += 1
+
             if Cnt % Cnt_interval == (Cnt_interval - 1):
                 print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
         return statuses
@@ -144,7 +150,10 @@ class GPano():
         return Polygon(coords)
 
     def point_in_polygon(self, point, polygon):
-        return point.within(polygon)
+        try:
+            return point.within(polygon)
+        except Exception as e:
+            print("Error in point_in_polygon():", e)
 
     def getPanoJPGfrmLonlat0(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
         """Reference:
@@ -172,8 +181,8 @@ class GPano():
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=4&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
             except OSError:
                 m = x
                 break
@@ -184,8 +193,8 @@ class GPano():
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
             except OSError:
                 n = x
                 break
@@ -200,8 +209,8 @@ class GPano():
                     url = 'https://geo' + str(
                         num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                         x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
-                    response = requests.get(url)
-                    image = Image.open(BytesIO(response.content))
+                    file = urllib.request.urlopen(url)
+                    image = Image.open(file)
                     target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
             if prefix != "":
                 prefix += '_'
@@ -236,26 +245,28 @@ class GPano():
             return status
 
         print(adcode)  # Works well.
-        for x in range(32):  # test for the size of map, column, x
+        for x in range(36):  # test for the size of map, column, x
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
             except OSError:
                 m = x
                 break
 
-        for x in range(32):   # test for the size of map, row, y
+        for x in range(36):   # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                # response = requests.get(url)
+                # image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
             except OSError:
                 n = x
                 break
@@ -270,8 +281,8 @@ class GPano():
                     url = 'https://geo' + str(
                         num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
                         x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
-                    response = requests.get(url)
-                    image = Image.open(BytesIO(response.content))
+                    file = urllib.request.urlopen(url)
+                    image = Image.open(file)
                     target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
             if prefix != "":
                 prefix += '_'
@@ -316,8 +327,8 @@ class GPano():
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
                 # print(url)
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
                 # images.append(image)
 
             except OSError:
@@ -330,8 +341,8 @@ class GPano():
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=' + zoom + '&nbt&fover=2'
-                response = requests.get(url)
-                image = Image.open(BytesIO(response.content))
+                file = urllib.request.urlopen(url)
+                image = Image.open(file)
             except OSError:
                 n = x
                 break
@@ -339,8 +350,8 @@ class GPano():
         url = 'https://geo' + str(
             num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
             0) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
-        response = requests.get(url)
-        image = Image.open(BytesIO(response.content))
+        file = urllib.request.urlopen(url)
+        image = Image.open(file)
 
         UNIT_SIZE  = 512
 
@@ -353,8 +364,8 @@ class GPano():
                     url = 'https://geo' + str(
                         num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode + '&output=tile&x=' + str(
                         x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                    response = requests.get(url)
-                    image = Image.open(BytesIO(response.content))
+                    file = urllib.request.urlopen(url)
+                    image = Image.open(file)
 
                     # print('UNIT_SIZE:', UNIT_SIZE)
                     image = image.resize((UNIT_SIZE, UNIT_SIZE))
@@ -440,6 +451,8 @@ class GPano():
         #print(url)
         r = requests.get(url)
         data = self.getPanoJsonfrmLonat(lon, lat)
+        if data == 0:
+            return 0, 0, 0
         if 'Location' in data:
             return (data['Location']['panoId'], data['Location']['original_lng'], data['Location']['original_lat'])
         else:
@@ -482,8 +495,8 @@ class GPano():
             suffix = '_' + suffix
 
         try:
-            response = requests.get(url1)
-            image = Image.open(BytesIO(response.content))
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
 
             jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
                                                  str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
@@ -527,8 +540,8 @@ class GPano():
             suffix = '_' + suffix
 
         try:
-            response = requests.get(url1)
-            image = Image.open(BytesIO(response.content))
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
 
             jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
                                                  str(int(yaw)) + suffix + '.jpg'))
@@ -586,7 +599,7 @@ class GPano():
             #print(idx, diff)
             panoId = links[idx]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
             #print("getNextJson: ", panoId, pre_panoId)
-            if panoId == pre_panoId and len(links) > 1:
+            if (panoId == pre_panoId) and (len(links) > 1):
                 diff.pop(idx)
                 links.pop(idx)
                 idx = diff.index(min(diff))
@@ -601,8 +614,8 @@ class GPano():
 
         except Exception as e:
             print("Error in getNextJson(): ", e)
-            print(links)
-            return "Error"
+            print("panoId: ", panoId)
+            return 0
 
     def fileExists(self, path_list, basename):
 
@@ -630,7 +643,7 @@ class GPano():
             #print(idx, diff)
             panoId = links[idx]['panoId']  # Warning: Not necessarily the second link node is the next panorama.
 
-            if panoId == pre_panoId and len(links) > 1:
+            if (panoId == pre_panoId) and (len(links) > 1):
                 #print("getNextJson: ", panoId, pre_panoId)
                 #print("idx: ", idx)
                 diff.pop(idx)
@@ -648,7 +661,7 @@ class GPano():
                 return self.getJsonfrmPanoID(panoId)
 
         except Exception as e:
-            print("Error in getNextJson(): ", e)
+            print("Error in getLastJson(): ", e)
             print(links)
             return "Error"
 
@@ -666,13 +679,14 @@ class GPano():
                 pitch_list = [pitch_list]
 
             for yaw in yaw_list:
-                for pitch in pitch_list:
-                    self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch, yaw=yaw + heading)
+                if yaw.isnumeric():
+                    for pitch in pitch_list:
+                        self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch, yaw=yaw + heading)
 
         except Exception as e:
             print("Error in getImageclipsfrmJson():", e)
 
-    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None):
+    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, zoom=5):
         lon = float(lon)
         lat = float(lat)
         if not isinstance(yaw_list, list):
@@ -687,82 +701,136 @@ class GPano():
 
         step_cnt = 0
         next_pt = (lon, lat)
+        lonlats = []
         next_panoId = self.getPanoIDfrmLonlat(lon, lat)[0]
+        if next_panoId == 0:
+            return lonlats
+
         pre_panoId = ""
 
-        lonlats = []
+
         pt_lon = lon
         pt_lat = lat
 
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 10
+
+        try:
+            while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
+
+                try:
+
+                    jdata = self.getJsonfrmPanoID(next_panoId)
+                    # print('jdata: ', jdata)
+                    pt_lon = float(jdata["Location"]["original_lng"])
+                    pt_lat = float(jdata["Location"]["original_lat"])
+                    lonlats.append((pt_lon, pt_lat))
+                    panoId = jdata["Location"]["panoId"]
+                    heading = float(jdata["Projection"]["pano_yaw_deg"])
+                    # print('yaw_list: ', yaw_list)
+                    # print('Processing: ', panoId)
+                    hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
+
+                    if yaw_list[0] == 'json_only':
+                        hasDownloaded = self.fileExists(saved_path, panoId + ".json")
+
+                    if hasDownloaded:
+                        print("File exists in forward(): ", saved_path, panoId + ".json")
+                        return lonlats
+                        # next_Json = self.getNextJson(jdata, pre_panoId)
+                        # next_lon = next_Json["Location"]["original_lng"]
+                        # next_lat = next_Json["Location"]["original_lat"]
+                        # next_panoId = next_Json["Location"]["panoId"]
+                        # step_cnt += 1
+                        # next_pt = (next_lon, next_lat)
+                        # pre_panoId = panoId
+                        # print('step_cnt: ', step_cnt)
+                        # continue
+
+                    try:
+                        json_name = os.path.join(saved_path, panoId + '.json')
+                        if not self.fileExists(saved_path, panoId + ".json"):
+                            with open(json_name, 'w') as f:
+                                json.dump(jdata, f)
+                    except Exception as e:
+                        print("Error in go_along_road_forward() saving json file.", e, panoId)
+
+                    print('Processing: ', panoId)
+
+                    if yaw_list[0] == None:
+                        # print('yaw_list : None', yaw_list)
+                        self.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=zoom)
+                    elif yaw_list[0] == 'json_only':
+                        # print("yaw_list: ", yaw_list)
+                        pass
+                    else:
+                        # print("yaw_list: ", yaw_list)
+                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
+
+                    #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                    #print(pt_lat, pt_lon)
 
 
-        while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
-
-            try:
-
-                jdata = self.getJsonfrmPanoID(next_panoId)
-                # print('jdata: ', jdata)
-                pt_lon = float(jdata["Location"]["original_lng"])
-                pt_lat = float(jdata["Location"]["original_lat"])
-                lonlats.append((pt_lon, pt_lat))
-                panoId = jdata["Location"]["panoId"]
-                heading = float(jdata["Projection"]["pano_yaw_deg"])
-                # print('yaw_list: ', yaw_list)
-                print('Processing: ', panoId)
-                hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
-                # print(hasDownloaded)
-
-                if hasDownloaded:
-                    return
                     next_Json = self.getNextJson(jdata, pre_panoId)
+                    #print("next_Json: ", next_Json)
+
+                    if next_Json == 0:
+                        print("The road is dead end in Google Stree Map.")
+                        return lonlats
+                    else:
+                        next_lon = next_Json["Location"]["original_lng"]
+                        next_lat = next_Json["Location"]["original_lat"]
+                        next_panoId = next_Json["Location"]["panoId"]
+
+                        next_pt  = (next_lon, next_lat)
+
+                    step_cnt += 1
+
+                    pre_panoId = panoId
+
+                        # start_time = time.time()
+                        # Cnt = 0
+                        # Cnt_interval = 100
+
+                    Cnt += 1
+                    if Cnt % Cnt_interval == (Cnt_interval - 1):
+                        print(
+                            "Processing speed: {} steps / hour in forward(), pid: {}.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
+
+                except Exception as e:
+                    print("Error in go_along_road_forward(), pid:", e, os.getpid())
+                    print("Waiting for 5 seconds...")
+                    time.sleep(5)
+                    next_Json = self.getNextJson(jdata, pre_panoId)
+                    if next_Json == 0:
+                        return lonlats
+
                     next_lon = next_Json["Location"]["original_lng"]
                     next_lat = next_Json["Location"]["original_lat"]
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
+                    if panoId == 0:
+                        return lonlats
                     pre_panoId = panoId
                     print('step_cnt: ', step_cnt)
                     continue
-
-                if yaw_list == [None]:
-                    # print('yaw_list : None', yaw_list)
-                    self.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
-                else:
-                    self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
-
-                #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                #print(pt_lat, pt_lon)
-
-                next_Json = self.getNextJson(jdata, pre_panoId)
-                #print("next_Json: ", next_Json)
-
-                if next_Json == 0:
-                    print("The road is dead end in Google Stree Map.")
-                    break
-                else:
-                    next_lon = next_Json["Location"]["original_lng"]
-                    next_lat = next_Json["Location"]["original_lat"]
-                    next_panoId = next_Json["Location"]["panoId"]
-
-                    next_pt  = (next_lon, next_lat)
-
-                    step_cnt += 1
-
-                    pre_panoId = panoId
-
-            except Exception as e:
-                print("Error in go_along_road_forward():", e)
-                print("Waiting for 5 seconds...")
-                time.sleep(5)
-                continue
+        except Exception as e:
+            print("Error in go_along_road_forwakd(), function will restart.", e, os.getpid())
+            self.go_along_road_forward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
+                               zoom)
         return lonlats
 
-    def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None):
+    def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None, zoom=5):
         lon = float(lon)
         lat = float(lat)
         if not self.point_in_polygon(Point((lon, lat)), polygon):
             print("Starting point is not in the polygon.")
             return
+
+        if not isinstance(yaw_list, list):
+            yaw_list = [yaw_list]
 
         step_cnt = 0
         next_pt = (lon, lat)
@@ -773,88 +841,181 @@ class GPano():
         pt_lon = lon
         pt_lat = lat
 
-        while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
+        if next_panoId == 0:
+            return lonlats
 
-            try:
-                #print(panoId)
-                jdata = self.getJsonfrmPanoID(next_panoId)
-                # print('jdata: ', jdata)
-                pt_lon = float(jdata["Location"]["original_lng"])
-                pt_lat = float(jdata["Location"]["original_lat"])
-                lonlats.append((pt_lon, pt_lat))
-                panoId = jdata["Location"]["panoId"]
-                heading = float(jdata["Projection"]["pano_yaw_deg"])
-                #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                #print(pt_lat, pt_lon)
-                print('Processing: ', panoId)
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 10
 
-                hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
+        try:
 
-                if hasDownloaded:
-                    return
+            while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
+
+                try:
+                    #print(panoId)
+                    jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path)
+
+                    # print('jdata: ', jdata)
+                    pt_lon = float(jdata["Location"]["original_lng"])
+                    pt_lat = float(jdata["Location"]["original_lat"])
+                    lonlats.append((pt_lon, pt_lat))
+                    panoId = jdata["Location"]["panoId"]
+                    heading = float(jdata["Projection"]["pano_yaw_deg"])
+                    # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                    #print(pt_lat, pt_lon)
+
+
+                    hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
+                    # print('yaw_list : None', yaw_list)
+                    if yaw_list[0] == 'json_only':
+                        hasDownloaded = self.fileExists(saved_path, panoId + ".json")
+                        # print(yaw_list)
+
+                    if hasDownloaded:
+                        print("File exists in backward: ", os.path.join(saved_path, panoId + ".json"))
+                        return lonlats
+                        # print('yaw_list : None', yaw_list)
+                        # next_Json = self.getLastJson(jdata, pre_panoId)
+                        # next_lon = next_Json["Location"]["original_lng"]
+                        # next_lat = next_Json["Location"]["original_lat"]
+                        # next_panoId = next_Json["Location"]["panoId"]
+                        # step_cnt += 1
+                        # next_pt = (next_lon, next_lat)
+                        # pre_panoId = panoId
+                        # print('step_cnt: ', step_cnt)
+                        # continue
+
+
+                    try:
+                        json_name = os.path.join(saved_path, panoId + '.json')
+                        if not self.fileExists(saved_path, panoId + ".json"):
+                            with open(json_name, 'w') as f:
+                                json.dump(jdata, f)
+                        else:
+                            next_Json = self.getLastJson(jdata, pre_panoId)
+                            next_lon = next_Json["Location"]["original_lng"]
+                            next_lat = next_Json["Location"]["original_lat"]
+                            next_panoId = next_Json["Location"]["panoId"]
+
+                            next_pt = (next_lon, next_lat)
+
+                            step_cnt += 1
+
+                            pre_panoId = panoId
+
+                    except Exception as e:
+                        print("Error in go_along_road_backward() saving json file.", e, panoId)
+
+                    print('Processing: ', panoId)
+
+                    if yaw_list[0] == None:
+                        self.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=zoom)
+                    elif yaw_list[0] == 'json_only':
+                        pass
+                    else:
+
+                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
+
+
                     next_Json = self.getLastJson(jdata, pre_panoId)
+                    #print("next_Json: ", next_Json)
+
+                    if next_Json == 0:
+                        print("The road is dead end in Google Stree Map.")
+                        return lonlats
+                    else:
+                        next_lon = next_Json["Location"]["original_lng"]
+                        next_lat = next_Json["Location"]["original_lat"]
+                        next_panoId = next_Json["Location"]["panoId"]
+
+                        next_pt  = (next_lon, next_lat)
+
+                    step_cnt += 1
+
+                    pre_panoId = panoId
+
+                    if step_cnt % 100 == 0:
+                        print("Step count:", step_cnt)
+
+                        # start_time = time.time()
+                        # Cnt = 0
+                        # Cnt_interval = 100
+
+                    Cnt += 1
+                    if Cnt % Cnt_interval == (Cnt_interval - 1):
+                        print(
+                            "Processing speed: {} steps / hour in backward(), pid: {}".format(int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
+
+
+                except Exception as e:
+                    print("Error in go_along_road_backward(), pid:", e, os.getpid())
+                    print("Waiting for 5 seconds...")
+                    time.sleep(5)
+                    next_Json = self.getLastJson(jdata, pre_panoId)
+                    if next_Json == 0:
+                        return lonlats
                     next_lon = next_Json["Location"]["original_lng"]
                     next_lat = next_Json["Location"]["original_lat"]
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
+                    if panoId == 0:
+                        return lonlats
                     pre_panoId = panoId
                     print('step_cnt: ', step_cnt)
                     continue
+        except Exception as e:
+            print("Error in go_along_road_backwakd(), function will restart.", e, os.getpid())
+            self.go_along_road_backward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
+                               zoom)
 
-                if yaw_list == [None]:
-                    self.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
-                else:
-                    self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
-
-
-                next_Json = self.getLastJson(jdata, pre_panoId)
-                #print("next_Json: ", next_Json)
-
-                if next_Json == 0:
-                    print("The road is dead end in Google Stree Map.")
-                    break
-                else:
-                    next_lon = next_Json["Location"]["original_lng"]
-                    next_lat = next_Json["Location"]["original_lat"]
-                    next_panoId = next_Json["Location"]["panoId"]
-
-                    next_pt  = (next_lon, next_lat)
-
-                    step_cnt += 1
-
-                    pre_panoId = panoId
-
-                if step_cnt % 100 == 0:
-                    print("Step count:", step_cnt)
-
-            except Exception as e:
-                print("Error in go_along_road_forward():", e)
-                print("Waiting for 5 seconds...")
-                time.sleep(5)
-                continue
         return lonlats
 
-    def getPanoJPGfrmArea(self, seed_pts, saved_path, boundary_vert):
+    def getPanoJPGfrmArea(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4):
         polygon = self.formPolygon(boundary_vert)
         print(polygon)
         lonlats = []
-        while len(seed_pts) > 0:
-            pt = seed_pts.pop(0)
-            print(pt)
-            lonlats += (self.go_along_road_forward(pt[0], pt[1],
-                                                          saved_path,
-                                                          yaw_list=None, pitch_list=0,
-                                                          steps=1000000, polygon=polygon))
-            lonlats += (self.go_along_road_backward(pt[0], pt[1],
-                                                           saved_path,
-                                                           yaw_list=None, pitch_list=0,
-                                                           steps=1000000,
-                                                           polygon=polygon))
-            print("len(lonlats): ", len(lonlats))
+        pts_cnt = len(seed_pts)
+
+        start_time = time.time()
+        Cnt = 0
+        Cnt_interval = 1
+
+        try:
+            while len(seed_pts) > 0:
+                try:
+                    pt = seed_pts.pop(0)
+                    print(pt)
+                    lonlats += (self.go_along_road_forward(pt[0], pt[1],
+                                                                  saved_path,
+                                                                  yaw_list=yaw_list, pitch_list=0,
+                                                                  steps=10000000000, polygon=polygon, zoom=zoom))
+
+                    lonlats += (self.go_along_road_backward(pt[0], pt[1],
+                                                                   saved_path,
+                                                                   yaw_list=yaw_list, pitch_list=0,
+                                                                   steps=10000000000,
+                                                                   polygon=polygon, zoom=zoom))
+                    print("Processed {} points, {} left.".format(pts_cnt - len(seed_pts), len(seed_pts)))
+                    print("len(lonlats): ", len(lonlats))
+
+                    # start_time = time.time()
+                    # Cnt = 0
+                    # Cnt_interval = 100
+
+                    Cnt += 1
+                    if Cnt % Cnt_interval == (Cnt_interval - 1):
+                        print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
+                except Exception as e:
+                    print("Error in getPanoJPGfrmArea() loop:", e)
+                    continue
+        except Exception as e:
+            print("Error in getPanoFrmArea(), will restart: ", e, os.getpid())
+            self.getPanoJPGfrmArea(yaw_list, seed_pts, saved_path, boundary_vert)
 
 
-    def getPanoJPGfrmArea_mp(self, seed_pts, saved_path, boundary_vert, Process_cnt=4):
+    def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4, Process_cnt=4):
         seed_pts_mp = mp.Manager().list()
         for seed in seed_pts:
             seed_pts_mp.append(seed)
@@ -863,7 +1024,7 @@ class GPano():
         pool = mp.Pool(processes=Process_cnt)
 
         for i in range(Process_cnt):
-            pool.apply_async(self.getPanoJPGfrmArea, args=(seed_pts_mp, saved_path, boundary_vert))
+            pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, zoom))
         pool.close()
         pool.join()
 
@@ -2465,7 +2626,7 @@ class GSV_depthmap(object):
                 pallete[j * 3 + 2] |= (((lab >> 2) & 1) << (7 - i))
                 i = i + 1
                 lab >>= 3
-        return pallete
+         return pallete
 
 
 

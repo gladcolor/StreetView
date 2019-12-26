@@ -327,6 +327,7 @@ class MyTestCase(unittest.TestCase):
     """
 
     def test_getPanoJPGfrmArea(self):
+        print('started! ')
         pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
                                                r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_county\road_seeds.csv')
         # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
@@ -337,7 +338,7 @@ class MyTestCase(unittest.TestCase):
         random.shuffle(pts)
 
         # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
-        self.gpano.getPanoJPGfrmArea_mp(pts, saved_path, coords, Process_cnt=8)
+        self.gpano.getPanoJPGfrmArea_mp(pts, saved_path, coords, Process_cnt=10)
 
         # print(polygon)
         # lonlats = []

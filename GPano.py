@@ -703,6 +703,7 @@ class GPano():
         next_pt = (lon, lat)
         lonlats = []
         next_panoId = self.getPanoIDfrmLonlat(lon, lat)[0]
+
         if next_panoId == 0:
             return lonlats
 
@@ -720,8 +721,32 @@ class GPano():
             while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
 
                 try:
+                    try:
 
-                    jdata = self.getJsonfrmPanoID(next_panoId)
+                        jdata = self.getJsonfrmPanoID(next_panoId)
+                    except Exception as e:
+                        print("Error in getJsonfrmPanoID in  go_along_road_forward():", e)
+                        print("Waiting for 5 seconds...")
+                        time.sleep(5)
+                        next_Json = self.getNextJson(jdata, pre_panoId)
+                        if next_Json == 0:
+                            return lonlats
+
+                        next_lon = next_Json["Location"]["original_lng"]
+                        next_lat = next_Json["Location"]["original_lat"]
+                        next_panoId = next_Json["Location"]["panoId"]
+                        pre_panoId = panoId
+
+                        step_cnt += 1
+                        next_pt = (next_lon, next_lat)
+                        if len(pre_panoId) < 10:
+                            return lonlats
+                        if panoId == 0:
+                            return lonlats
+
+                        print('step_cnt: ', step_cnt)
+                        continue
+
                     # print('jdata: ', jdata)
                     pt_lon = float(jdata["Location"]["original_lng"])
                     pt_lat = float(jdata["Location"]["original_lat"])
@@ -802,6 +827,8 @@ class GPano():
                     print("Error in go_along_road_forward(), pid:", e, os.getpid())
                     print("Waiting for 5 seconds...")
                     time.sleep(5)
+                    if len(pre_panoId) < 10:
+                        return lonlats
                     next_Json = self.getNextJson(jdata, pre_panoId)
                     if next_Json == 0:
                         return lonlats
@@ -904,6 +931,9 @@ class GPano():
 
                             pre_panoId = panoId
 
+                            if len(pre_panoId) < 10:
+                                return lonlats
+
                     except Exception as e:
                         print("Error in go_along_road_backward() saving json file.", e, panoId)
 
@@ -935,6 +965,9 @@ class GPano():
 
                     pre_panoId = panoId
 
+                    if len(pre_panoId) < 10:
+                        return lonlats
+
                     if step_cnt % 100 == 0:
                         print("Step count:", step_cnt)
 
@@ -960,9 +993,16 @@ class GPano():
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
+                    if len(pre_panoId) < 10:
+                        return lonlats
+
                     if panoId == 0:
                         return lonlats
                     pre_panoId = panoId
+
+                    if len(pre_panoId) < 10:
+                        return lonlats
+
                     print('step_cnt: ', step_cnt)
                     continue
         except Exception as e:
@@ -973,10 +1013,12 @@ class GPano():
         return lonlats
 
     def getPanoJPGfrmArea(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4):
+
+        pts_cnt = len(seed_pts)
         polygon = self.formPolygon(boundary_vert)
         print(polygon)
         lonlats = []
-        pts_cnt = len(seed_pts)
+
 
         start_time = time.time()
         Cnt = 0
@@ -1019,7 +1061,6 @@ class GPano():
         seed_pts_mp = mp.Manager().list()
         for seed in seed_pts:
             seed_pts_mp.append(seed)
-
 
         pool = mp.Pool(processes=Process_cnt)
 
@@ -2626,7 +2667,7 @@ class GSV_depthmap(object):
                 pallete[j * 3 + 2] |= (((lab >> 2) & 1) << (7 - i))
                 i = i + 1
                 lab >>= 3
-         return pallete
+        return pallete
 
 
 

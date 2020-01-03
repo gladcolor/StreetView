@@ -7,16 +7,18 @@ import shutil
 import time
 
 class MyTestCase(unittest.TestCase):
-    util = Utilities()
-    def test_something(self):
-        self.assertEqual(True, False)
+    download_files = Utilities.Download_files()
+
     file1 = r'G:\My Drive\Sidewalk_extraction\Essex\panos\IJfUXDE9hSi1lX5eTLRRmA.jpg'
     file2 = r'G:\My Drive\Sidewalk_extraction\Essex\panos\JSAarKXRO_ecO3sJIFTkFw.jpg'
-    file_list = ['file_list']
-    def test_download_from_list(self, file_list=file_list, saved_path, report_cnt = 10):
-        util.download_from_list("")
-        new_file_name
-        self.assertEqual(True, os.path.exists(new_file_name))
+    saved_path = r'O:\Essex'
+    file_list = [file1, file2]
+    def test_download_from_list(self, file_list=file_list, saved_path=saved_path, report_cnt = 4):
+        self.download_files.download_from_list(file_list, saved_path)
+        new_file_names = [os.path.join(saved_path, os.path.basename(file)) for file in file_list]
+        for file in new_file_names:
+            self.assertEqual(True, os.path.exists(file))
+            shutil.
 
 
 

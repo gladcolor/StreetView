@@ -13,6 +13,7 @@ class MyTestCase(unittest.TestCase):
     file1 = r'G:\My Drive\Sidewalk_extraction\Essex\panos\IJfUXDE9hSi1lX5eTLRRmA.jpg'
     file2 = r'G:\My Drive\Sidewalk_extraction\Essex\panos\JSAarKXRO_ecO3sJIFTkFw.jpg'
     file_list = ['file_list']
+    saved_path = r'J:\temp'
     def test_download_from_list(self, file_list=file_list, saved_path, report_cnt = 10):
         util.download_from_list("")
         new_file_name

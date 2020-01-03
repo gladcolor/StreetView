@@ -605,16 +605,16 @@ class GPano():
                 idx = diff.index(min(diff))
 
                 panoId = links[idx]['panoId']
-                return self.getJsonfrmPanoID(panoId)
+                return self.getJsonfrmPanoID(panoId, dm=0)
 
             if len(links) == 1:
                 return 0
             else:
-                return self.getJsonfrmPanoID(panoId)
+                return self.getJsonfrmPanoID(panoId, dm=0)
 
         except Exception as e:
             print("Error in getNextJson(): ", e)
-            print("panoId: ", panoId)
+            print("panoId: ", pre_panoId)
             return 0
 
     def fileExists(self, path_list, basename):
@@ -653,12 +653,12 @@ class GPano():
                 panoId = links[idx]['panoId']
                 #print("links: ", links)
                 #print("getNextJson: ", panoId, pre_panoId)
-                return self.getJsonfrmPanoID(panoId)
+                return self.getJsonfrmPanoID(panoId, dm=0)
 
             if len(links) == 1:
                 return 0
             else:
-                return self.getJsonfrmPanoID(panoId)
+                return self.getJsonfrmPanoID(panoId, dm=0)
 
         except Exception as e:
             print("Error in getLastJson(): ", e)
@@ -723,7 +723,7 @@ class GPano():
                 try:
                     try:
 
-                        jdata = self.getJsonfrmPanoID(next_panoId)
+                        jdata = self.getJsonfrmPanoID(next_panoId, dm=1)
                     except Exception as e:
                         print("Error in getJsonfrmPanoID in  go_along_road_forward():", e)
                         print("Waiting for 5 seconds...")
@@ -881,7 +881,7 @@ class GPano():
 
                 try:
                     #print(panoId)
-                    jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path)
+                    jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path, dm=1)
 
                     # print('jdata: ', jdata)
                     pt_lon = float(jdata["Location"]["original_lng"])

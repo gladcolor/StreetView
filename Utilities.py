@@ -5,7 +5,7 @@ import shutil
 import time
 
 class Download_files():
-    def download_from_list(self, list_files, saved_path, report_cnt = 10):
+    def download_from_list(self, list_files, saved_path, report_cnt=10):
         pro_id = os.getpid()
         start_time = time.time()
         total_cnt = len(list_files)
@@ -17,9 +17,6 @@ class Download_files():
             basename = os.path.basename(file)
             new_file_name = os.path.join(saved_path, basename)
             shutil.copyfile(file, new_file_name)
-
-
-
 
             if processed_cnt % report_cnt == 0:
                 used_time = time.time() - start_time

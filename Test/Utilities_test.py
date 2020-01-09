@@ -14,11 +14,16 @@ class MyTestCase(unittest.TestCase):
     saved_path = r'O:\Essex'
     file_list = [file1, file2]
     def test_download_from_list(self, file_list=file_list, saved_path=saved_path, report_cnt = 4):
+        print(file_list)
         self.download_files.download_from_list(file_list, saved_path)
         new_file_names = [os.path.join(saved_path, os.path.basename(file)) for file in file_list]
+        print(new_file_names)
         for file in new_file_names:
+            print(file)
             self.assertEqual(True, os.path.exists(file))
-            shutil.
+            os.remove(file)
+            print(file)
+
 
 
 

@@ -95,11 +95,16 @@ class GPano():
             bearing between the two GPS points,
             default: the basis of heading direction is north
             https://blog.csdn.net/zhuqiuhui/article/details/53180395
+
+            This article shows the similar method
+            Bearing from point A to B,
+
+            https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
         """
-        radLatA = math.radians(latA)
-        radLonA = math.radians(lonA)
-        radLatB = math.radians(latB)
-        radLonB = math.radians(lonB)
+        radLatA = math.radians(float(latA))
+        radLonA = math.radians(float(lonA))
+        radLatB = math.radians(float(latB))
+        radLonB = math.radians(float(lonB))
         dLon = radLonB - radLonA
         y = math.sin(dLon) * cos(radLatB)
         x = cos(radLatA) * sin(radLatB) - sin(radLatA) * cos(radLatB) * cos(dLon)
@@ -1069,6 +1074,17 @@ class GPano():
         pool.close()
         pool.join()
 
+    def getPanoJPGfrmGap_mp(self, bearing_list, dangle_pair_pts, saved_path, step_nums=10, Process_cnt=4):
+        seed_pts_mp = mp.Manager().list()
+        for seed in seed_pts:
+            seed_pts_mp.append(seed)
+
+        pool = mp.Pool(processes=Process_cnt)
+
+        for i in range(Process_cnt):
+            pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, zoom))
+        pool.close()
+        pool.join()
 
     def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
 

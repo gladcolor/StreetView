@@ -39,15 +39,17 @@ from skimage import io
 from PIL import features
 import urllib.request
 import urllib
+
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
-import  sqlite3
+import sqlite3
+
 web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
-#driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
-#Process_cnt = 10
+# driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+# Process_cnt = 10
 
 """
 Read Me 
@@ -56,6 +58,7 @@ The current objective of GPano class is to download the panorama image from Goog
 Main workflow: get panorama image ID based on lon/lat -> according to the panorama id, get tiles of a Panorama image and then mosaic them 
 Please implement all the methods. I have written some tips (not code) in the method body to assist you. -- Huan
 """
+
 
 class GPano():
     # Obtain a panomaro image from Google Street View Map
@@ -69,7 +72,7 @@ class GPano():
     def getGSV_url_frm_lonlat(self, lon, lat, heading=0, tilt=90, fov=90):
         url_part1 = r'!3m6!1e1!3m4!1s'
         url_part2 = r'!2e0!7i16384!8i8192'
-        heading=str(heading)
+        heading = str(heading)
         url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
@@ -81,7 +84,7 @@ class GPano():
         lat = jdata["Location"]["original_lat"]
         url_part1 = r'!3m6!1e1!3m4!1s'
         url_part2 = r'!2e0!7i16384!8i8192'
-        heading=str(heading)
+        heading = str(heading)
         url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
@@ -116,8 +119,8 @@ class GPano():
         """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
         """
-        statuses = []      # succeeded: 1; failed: 0
-        #print(list_lonlat.pop(0))
+        statuses = []  # succeeded: 1; failed: 0
+        # print(list_lonlat.pop(0))
         start_time = time.time()
         Cnt = 0
         Cnt_interval = 100
@@ -134,7 +137,7 @@ class GPano():
             Cnt += 1
 
             if Cnt % Cnt_interval == (Cnt_interval - 1):
-                print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
+                print("Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
         return statuses
 
     def readCoords_csv(self, file_path):
@@ -150,7 +153,6 @@ class GPano():
         #     #for line in lines:
         #         #print(line)
 
-
     def formPolygon(self, coords):
         return Polygon(coords)
 
@@ -160,7 +162,8 @@ class GPano():
         except Exception as e:
             print("Error in point_in_polygon():", e)
 
-    def getPanoJPGfrmLonlat0(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
+    def getPanoJPGfrmLonlat0(self, lon: float, lat: float, saved_path: str, prefix="", suffix="",
+                             zoom: int = 4) -> bool:
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
@@ -171,7 +174,7 @@ class GPano():
             When zoom=4, a panorama image have 6 rows, 13 cols.
         """
         status = 0
-        #PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+        # PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
 
         adcode = self.getPanoIDfrmLonlat(lon, lat)
 
@@ -184,7 +187,8 @@ class GPano():
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                          0] + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=4&nbt&fover=2'
                 file = urllib.request.urlopen(url)
                 image = Image.open(file)
@@ -192,11 +196,12 @@ class GPano():
                 m = x
                 break
 
-        for x in range(30):   # test for the size of map, row, y
+        for x in range(30):  # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                          0] + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
                 file = urllib.request.urlopen(url)
                 image = Image.open(file)
@@ -212,7 +217,8 @@ class GPano():
                 for y in range(n):  # row
                     num = random.randint(0, 3)
                     url = 'https://geo' + str(
-                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                              0] + '&output=tile&x=' + str(
                         x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
                     file = urllib.request.urlopen(url)
                     image = Image.open(file)
@@ -221,7 +227,8 @@ class GPano():
                 prefix += '_'
             if suffix != "":
                 suffix = '_' + suffix
-            mapname = os.path.join(saved_path, (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
+            mapname = os.path.join(saved_path,
+                                   (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
             target.save(mapname)
             status = 1
         except Exception as e:
@@ -241,7 +248,7 @@ class GPano():
             When zoom=4, a panorama image have 6 rows, 13 cols.
         """
         status = 0
-        #PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+        # PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
 
         adcode = self.getPanoIDfrmLonlat(lon, lat)
 
@@ -254,7 +261,8 @@ class GPano():
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                          0] + '&output=tile&x=' + str(
                     x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
                 file = urllib.request.urlopen(url)
                 image = Image.open(file)
@@ -262,11 +270,12 @@ class GPano():
                 m = x
                 break
 
-        for x in range(36):   # test for the size of map, row, y
+        for x in range(36):  # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
-                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                    num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                          0] + '&output=tile&x=' + str(
                     0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
                 # response = requests.get(url)
                 # image = Image.open(BytesIO(response.content))
@@ -284,7 +293,8 @@ class GPano():
                 for y in range(n):  # row
                     num = random.randint(0, 3)
                     url = 'https://geo' + str(
-                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[0] + '&output=tile&x=' + str(
+                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
+                              0] + '&output=tile&x=' + str(
                         x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
                     file = urllib.request.urlopen(url)
                     image = Image.open(file)
@@ -293,7 +303,8 @@ class GPano():
                 prefix += '_'
             if suffix != "":
                 suffix = '_' + suffix
-            mapname = os.path.join(saved_path, (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
+            mapname = os.path.join(saved_path,
+                                   (prefix + adcode[1] + '_' + adcode[2] + '_' + adcode[0] + suffix + '.jpg'))
             target.save(mapname)
             status = 1
         except Exception as e:
@@ -314,7 +325,7 @@ class GPano():
         """
         status = 0
         zoom = str(zoom)
-        #PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
+        # PanoID, lon_pano, lat_pano = self.getPanoIDfrmLonlat(lat, lon, zoom=4)
 
         adcode = panoId
 
@@ -340,7 +351,7 @@ class GPano():
                 m = x
                 break
 
-        for x in range(36):   # test for the size of map, row, y
+        for x in range(36):  # test for the size of map, row, y
             try:
                 num = random.randint(0, 3)
                 url = 'https://geo' + str(
@@ -358,7 +369,7 @@ class GPano():
         file = urllib.request.urlopen(url)
         image = Image.open(file)
 
-        UNIT_SIZE  = 512
+        UNIT_SIZE = 512
 
         try:
             target = Image.new('RGB', (UNIT_SIZE * m, UNIT_SIZE * n))  # new graph
@@ -391,22 +402,20 @@ class GPano():
 
         return status
 
-
     def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=4, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
             Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
 
         """
-        statuses = []      # succeeded: 1; failed: 0
+        statuses = []  # succeeded: 1; failed: 0
         pool = mp.Pool(processes=Process_cnt)
         for i in range(Process_cnt):
             pool.apply_async(self.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
         pool.close()
         pool.join()
 
-
     # Obtain a panomara_ID according to lon/lat.
-    def getPanoIDfrmLonlat0(self, lon:float, lat:float,) -> (str, float, float):
+    def getPanoIDfrmLonlat0(self, lon: float, lat: float, ) -> (str, float, float):
         """ Obtain panomara_id from lat/lon.
             Use selenium to obtain the new url, which contains the panomara_id
             Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
@@ -421,16 +430,16 @@ class GPano():
         url_part2 = r'!2e0!7i16384!8i8192'
         url = f"https://www.google.com/maps/@{round(lat, 7)},{round(lon, 7)},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
 
-        #print(url)
+        # print(url)
         try:
             driver.get(url)
             time.sleep(4)
             new_url = driver.current_url
             end_new_url = new_url[new_url.find("data="):]
-            #print(end_new_url)
-            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
+            # print(end_new_url)
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'):  # fail to get the PanoID
                 time.sleep(2)
-            if len(end_new_url) < len(f'data={url_part1}{url_part2}'): # fail to get the PanoID
+            if len(end_new_url) < len(f'data={url_part1}{url_part2}'):  # fail to get the PanoID
                 PanoID = 0
                 lon_pano = 0
                 lat_pano = 0
@@ -440,20 +449,20 @@ class GPano():
                 lat_pano, lon_pano = new_url.split(',')[:2]
                 lat_pano = lat_pano.split("@")[1]
                 pos1 = new_url.find(url_part1)
-                #pos2 = new_url.find(url_part2)
+                # pos2 = new_url.find(url_part2)
                 pos2 = new_url.find(url_part2[:5])
                 PanoID = new_url[(pos1 + len(url_part1)):pos2]
                 print(url)
                 print(new_url)
 
-            return PanoID, lon_pano, lat_pano   # if cannot find the panomara, return (0, 0, 0)
+            return PanoID, lon_pano, lat_pano  # if cannot find the panomara, return (0, 0, 0)
         except Exception as e:
             print("Error in getPanoIDfrmLonlat()", e)
 
     # Finished!
     def getPanoIDfrmLonlat(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
-        #print(url)
+        # print(url)
         r = requests.get(url)
         data = self.getPanoJsonfrmLonat(lon, lat)
         if data == 0:
@@ -473,7 +482,8 @@ class GPano():
             print("Error in getPanoJsonfrmLonnat():", e)
             return 0
 
-    def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+    def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
+                         pitch=0, yaw=0):
         # w maximum: 1024
         # h maximum: 768
         server_num = random.randint(0, 3)
@@ -489,12 +499,12 @@ class GPano():
             yaw = yaw + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-              f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov=90"
+               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov=90"
 
         suffix = str(suffix)
         prefix = str(prefix)
         if prefix != "":
-            #print('prefix:', prefix)
+            # print('prefix:', prefix)
             prefix = prefix + '_'
         if suffix != "":
             suffix = '_' + suffix
@@ -511,7 +521,7 @@ class GPano():
                     return 1
                 else:
                     return image
-            #print(url2)
+            # print(url2)
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
@@ -534,12 +544,12 @@ class GPano():
             yaw = yaw + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-              f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}&thumbfov=90"
+               f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}&thumbfov=90"
 
         suffix = str(suffix)
         prefix = str(prefix)
         if prefix != "":
-            #print('prefix:', prefix)
+            # print('prefix:', prefix)
             prefix = prefix + '_'
         if suffix != "":
             suffix = '_' + suffix
@@ -556,13 +566,14 @@ class GPano():
                     return 1
                 else:
                     return image
-            #print(url2)
+            # print(url2)
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
             return 0
 
-    def getImagesfrmAngles(self, lonlat_list, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+    def getImagesfrmAngles(self, lonlat_list, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0,
+                           yaw=0):
         # w maximum: 1024
         # h maximum: 768
         start_time = time.time()
@@ -574,12 +585,14 @@ class GPano():
                 self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix, yaw=yaw)
                 Cnt += 1
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
-                    print("Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+                    print(
+                        "Process speed: {} points / hour.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600)))
 
             except Exception as e:
                 print("Error in getImagesfrmAngles():", e)
 
-    def getImagesfrmAngles_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt=4, prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
+    def getImagesfrmAngles_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt=4, prefix='', suffix='', width=1024,
+                              height=768, pitch=0, yaw=0):
         pool = mp.Pool(processes=Process_cnt)
         for i in range(Process_cnt):
             pool.apply_async(self.getPanoJPGsfrmLonlats, args=(list_lonlat_mp, saved_path))
@@ -594,16 +607,16 @@ class GPano():
         try:
             yaw = float(jdata['Projection']['pano_yaw_deg'])
             links = jdata["Links"]
-            #print("jdata[Links]: ", jdata["Links"])
+            # print("jdata[Links]: ", jdata["Links"])
             yaw_in_links = [float(link['yawDeg']) for link in links]
-            #yaw_in_links = [float(link['yawDeg']) for link in links]
-            #print("yaw_in_links: ", yaw_in_links)
+            # yaw_in_links = [float(link['yawDeg']) for link in links]
+            # print("yaw_in_links: ", yaw_in_links)
 
             diff = [abs(yawDeg - yaw) for yawDeg in yaw_in_links]
             idx = diff.index(min(diff))
-            #print(idx, diff)
-            panoId = links[idx]['panoId']   # Warning: Not necessarily the second link node is the next panorama.
-            #print("getNextJson: ", panoId, pre_panoId)
+            # print(idx, diff)
+            panoId = links[idx]['panoId']  # Warning: Not necessarily the second link node is the next panorama.
+            # print("getNextJson: ", panoId, pre_panoId)
             if (panoId == pre_panoId) and (len(links) > 1):
                 diff.pop(idx)
                 links.pop(idx)
@@ -632,8 +645,6 @@ class GPano():
                 return True
         return False
 
-
-
     def getLastJson(self, jdata, pre_panoId=""):
         try:
             yaw = float(jdata['Projection']['pano_yaw_deg'])
@@ -645,19 +656,19 @@ class GPano():
 
             diff = [abs(yawDeg - yaw) for yawDeg in yaw_in_links]
             idx = diff.index(max(diff))
-            #print(idx, diff)
+            # print(idx, diff)
             panoId = links[idx]['panoId']  # Warning: Not necessarily the second link node is the next panorama.
 
             if (panoId == pre_panoId) and (len(links) > 1):
-                #print("getNextJson: ", panoId, pre_panoId)
-                #print("idx: ", idx)
+                # print("getNextJson: ", panoId, pre_panoId)
+                # print("idx: ", idx)
                 diff.pop(idx)
                 links.pop(idx)
                 idx = diff.index(max(diff))
-                #print("idx: ", idx)
+                # print("idx: ", idx)
                 panoId = links[idx]['panoId']
-                #print("links: ", links)
-                #print("getNextJson: ", panoId, pre_panoId)
+                # print("links: ", links)
+                # print("getNextJson: ", panoId, pre_panoId)
                 return self.getJsonfrmPanoID(panoId, dm=0)
 
             if len(links) == 1:
@@ -686,7 +697,8 @@ class GPano():
             for yaw in yaw_list:
                 if yaw.isnumeric():
                     for pitch in pitch_list:
-                        self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch, yaw=yaw + heading)
+                        self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch,
+                                              yaw=yaw + heading)
 
         except Exception as e:
             print("Error in getImageclipsfrmJson():", e)
@@ -713,7 +725,6 @@ class GPano():
             return lonlats
 
         pre_panoId = ""
-
 
         pt_lon = lon
         pt_lat = lat
@@ -796,14 +807,14 @@ class GPano():
                         pass
                     else:
                         # print("yaw_list: ", yaw_list)
-                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
+                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list,
+                                                  saved_path=saved_path)
 
-                    #print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                    #print(pt_lat, pt_lon)
-
+                    # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                    # print(pt_lat, pt_lon)
 
                     next_Json = self.getNextJson(jdata, pre_panoId)
-                    #print("next_Json: ", next_Json)
+                    # print("next_Json: ", next_Json)
 
                     if next_Json == 0:
                         print("The road is dead end in Google Stree Map.")
@@ -813,20 +824,21 @@ class GPano():
                         next_lat = next_Json["Location"]["original_lat"]
                         next_panoId = next_Json["Location"]["panoId"]
 
-                        next_pt  = (next_lon, next_lat)
+                        next_pt = (next_lon, next_lat)
 
                     step_cnt += 1
 
                     pre_panoId = panoId
 
-                        # start_time = time.time()
-                        # Cnt = 0
-                        # Cnt_interval = 100
+                    # start_time = time.time()
+                    # Cnt = 0
+                    # Cnt_interval = 100
 
                     Cnt += 1
                     if Cnt % Cnt_interval == (Cnt_interval - 1):
                         print(
-                            "Processing speed: {} steps / hour in forward(), pid: {}.".format(int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
+                            "Processing speed: {} steps / hour in forward(), pid: {}.".format(
+                                int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
 
                 except Exception as e:
                     print("Error in go_along_road_forward(), pid:", e, os.getpid())
@@ -851,7 +863,7 @@ class GPano():
         except Exception as e:
             print("Error in go_along_road_forwakd(), function will restart.", e, os.getpid())
             self.go_along_road_forward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
-                               zoom)
+                                       zoom)
         return lonlats
 
     def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None, zoom=5):
@@ -885,7 +897,7 @@ class GPano():
             while step_cnt < steps and self.point_in_polygon(Point(pt_lon, pt_lat), polygon):
 
                 try:
-                    #print(panoId)
+                    # print(panoId)
                     jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path, dm=1)
 
                     # print('jdata: ', jdata)
@@ -895,8 +907,7 @@ class GPano():
                     panoId = jdata["Location"]["panoId"]
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
                     # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
-                    #print(pt_lat, pt_lon)
-
+                    # print(pt_lat, pt_lon)
 
                     hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
                     # print('yaw_list : None', yaw_list)
@@ -917,7 +928,6 @@ class GPano():
                         # pre_panoId = panoId
                         # print('step_cnt: ', step_cnt)
                         # continue
-
 
                     try:
                         json_name = os.path.join(saved_path, panoId + '.json')
@@ -950,11 +960,11 @@ class GPano():
                         pass
                     else:
 
-                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list, saved_path=saved_path)
-
+                        self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list,
+                                                  saved_path=saved_path)
 
                     next_Json = self.getLastJson(jdata, pre_panoId)
-                    #print("next_Json: ", next_Json)
+                    # print("next_Json: ", next_Json)
 
                     if next_Json == 0:
                         print("The road is dead end in Google Stree Map.")
@@ -964,7 +974,7 @@ class GPano():
                         next_lat = next_Json["Location"]["original_lat"]
                         next_panoId = next_Json["Location"]["panoId"]
 
-                        next_pt  = (next_lon, next_lat)
+                        next_pt = (next_lon, next_lat)
 
                     step_cnt += 1
 
@@ -983,7 +993,8 @@ class GPano():
                     Cnt += 1
                     if Cnt % Cnt_interval == (Cnt_interval - 1):
                         print(
-                            "Processing speed: {} steps / hour in backward(), pid: {}".format(int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
+                            "Processing speed: {} steps / hour in backward(), pid: {}".format(
+                                int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
 
 
                 except Exception as e:
@@ -1013,7 +1024,7 @@ class GPano():
         except Exception as e:
             print("Error in go_along_road_backwakd(), function will restart.", e, os.getpid())
             self.go_along_road_backward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
-                               zoom)
+                                        zoom)
 
         return lonlats
 
@@ -1023,7 +1034,6 @@ class GPano():
         polygon = self.formPolygon(boundary_vert)
         print(polygon)
         lonlats = []
-
 
         start_time = time.time()
         Cnt = 0
@@ -1035,15 +1045,15 @@ class GPano():
                     pt = seed_pts.pop(0)
                     print(pt)
                     lonlats += (self.go_along_road_forward(pt[0], pt[1],
-                                                                  saved_path,
-                                                                  yaw_list=yaw_list, pitch_list=0,
-                                                                  steps=10000000000, polygon=polygon, zoom=zoom))
+                                                           saved_path,
+                                                           yaw_list=yaw_list, pitch_list=0,
+                                                           steps=10000000000, polygon=polygon, zoom=zoom))
 
                     lonlats += (self.go_along_road_backward(pt[0], pt[1],
-                                                                   saved_path,
-                                                                   yaw_list=yaw_list, pitch_list=0,
-                                                                   steps=10000000000,
-                                                                   polygon=polygon, zoom=zoom))
+                                                            saved_path,
+                                                            yaw_list=yaw_list, pitch_list=0,
+                                                            steps=10000000000,
+                                                            polygon=polygon, zoom=zoom))
                     print("Processed {} points, {} left.".format(pts_cnt - len(seed_pts), len(seed_pts)))
                     print("len(lonlats): ", len(lonlats))
 
@@ -1053,14 +1063,14 @@ class GPano():
 
                     Cnt += 1
                     if Cnt % Cnt_interval == (Cnt_interval - 1):
-                        print("Process speed: {} points / hour.".format(int(Cnt/(time.time() - start_time + 0.001) * 3600)))
+                        print("Process speed: {} points / hour.".format(
+                            int(Cnt / (time.time() - start_time + 0.001) * 3600)))
                 except Exception as e:
                     print("Error in getPanoJPGfrmArea() loop:", e)
                     continue
         except Exception as e:
             print("Error in getPanoFrmArea(), will restart: ", e, os.getpid())
             self.getPanoJPGfrmArea(yaw_list, seed_pts, saved_path, boundary_vert)
-
 
     def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4, Process_cnt=4):
         seed_pts_mp = mp.Manager().list()
@@ -1088,7 +1098,7 @@ class GPano():
 
     def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
 
-        #panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
+        # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
         jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
         if 'Location' in jdata:
             panoid = jdata['Location']['panoId']
@@ -1104,13 +1114,13 @@ class GPano():
         lon = float(lon)
         lat = float(lat)
 
-        #print('lon/lat in panorama:', lon, lat)
+        # print('lon/lat in panorama:', lon, lat)
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
-        #print(idx, 'Heading angle between tree and panorama:', heading)
-        #f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
+        # print(idx, 'Heading angle between tree and panorama:', heading)
+        # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
         self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
-                               pitch=pitch, yaw=heading)
+                              pitch=pitch, yaw=heading)
         if views == 3:
             try:
                 links = jdata["Links"]
@@ -1120,10 +1130,10 @@ class GPano():
 
             for link in links:
                 try:
-                    #print("link:", link)
+                    # print("link:", link)
                     panoId1 = link['panoId']
                     jdata1 = self.getJsonfrmPanoID(panoId1)
-                    #print("jdata1: ", jdata1['Location']['panoId'])
+                    # print("jdata1: ", jdata1['Location']['panoId'])
                     lon = jdata1['Location']['original_lng']
                     lat = jdata1['Location']['original_lat']
                     lon = float(lon)
@@ -1134,7 +1144,6 @@ class GPano():
                 except Exception as e:
                     print("Error in processing links in shootLonlat():", e)
                     continue
-
 
     def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
@@ -1161,25 +1170,29 @@ class GPano():
         while len(ori_lonlats) > 0:
             ori_lon, ori_lat, prefix = ori_lonlats.pop(0)
             try:
-                self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, views=views, prefix=prefix, width=width, height=height, pitch=0)
+                self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, views=views, prefix=prefix, width=width,
+                                 height=height, pitch=0)
                 # calculate processing speed
                 Cnt += 1
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     speed_pt_hour = int((ini_len - len(ori_lonlats)) / (time.time() - start_time + 0.001) * 3600)
                     print("Process speed: {} points / hour by all processes.".format(speed_pt_hour))
-                    print("Processed {} / {},  {:.2%}, {:.2f} hours left.".format(ini_len - len(ori_lonlats), ini_len, (ini_len - len(ori_lonlats))/ini_len, (len(ori_lonlats)/speed_pt_hour)))
+                    print("Processed {} / {},  {:.2%}, {:.2f} hours left.".format(ini_len - len(ori_lonlats), ini_len, (
+                                ini_len - len(ori_lonlats)) / ini_len, (len(ori_lonlats) / speed_pt_hour)))
 
             except Exception as e:
                 print("Error in shootLonlats():", e, ori_lon, ori_lat, prefix)
 
-    def shootLonlats_mp(self, ori_lonlats_mp, saved_path, Process_cnt=4, views=1, suffix='', width=1024, height=768, pitch=0):
+    def shootLonlats_mp(self, ori_lonlats_mp, saved_path, Process_cnt=4, views=1, suffix='', width=1024, height=768,
+                        pitch=0):
         pool = mp.Pool(processes=Process_cnt)
         for i in range(Process_cnt):
             pool.apply_async(self.shootLonlats, args=(ori_lonlats_mp, saved_path, views))
         pool.close()
         pool.join()
 
-    def getImageCirclefrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0, interval=90):
+    def getImageCirclefrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024,
+                                height=768, pitch=0, road_compassA=0, interval=90):
         # w maximum: 1024
         # h maximum: 768
         # FOV should be 90, cannot be changed
@@ -1187,12 +1200,13 @@ class GPano():
         interval = abs(interval)
         interval = max(interval, 1)
 
-        img_cnt = math.ceil(360/interval)
+        img_cnt = math.ceil(360 / interval)
         for i in range(img_cnt):
             yaw = road_compassA + i * interval
             self.getImagefrmAngle(lon, lat, saved_path, prefix, suffix, width, height, pitch, yaw)
 
-    def getImage4DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+    def getImage4DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024,
+                                    height=768, pitch=0, road_compassA=0):
         # w maximum: 1024
         # h maximum: 768
         # FOV should be 90, cannot be changed
@@ -1201,9 +1215,9 @@ class GPano():
         if suffix != '':
             suffix = '_' + suffix
 
-        #img_cnt = math.ceil(360/interval)
+        # img_cnt = math.ceil(360/interval)
         names = ['F', 'R', 'B', 'L']  # forward, backward, left, right
-        #interval = math.ceil(360 / len(names))
+        # interval = math.ceil(360 / len(names))
         for idx, name in enumerate(names):
             yaw = road_compassA + idx * 90
             # print('idx: ', idx)
@@ -1211,7 +1225,8 @@ class GPano():
             # print('yaw: ', yaw)
             self.getImagefrmAngle(lon, lat, saved_path, prefix, name + suffix, width, height, pitch, yaw)
 
-    def getImage8DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
+    def getImage8DirectionfrmLonlat(self, lon: float, lat: float, saved_path='Panos', prefix='', suffix='', width=1024,
+                                    height=768, pitch=0, road_compassA=0):
         # w maximum: 1024
         # h maximum: 768
         # FOV should be 90, cannot be changed
@@ -1220,8 +1235,8 @@ class GPano():
         if suffix != '':
             suffix = '_' + suffix
 
-        #img_cnt = math.ceil(360/interval)
-        #names = ['F', 'R', 'B', 'L']  # forward, backward, left, right
+        # img_cnt = math.ceil(360/interval)
+        # names = ['F', 'R', 'B', 'L']  # forward, backward, left, right
         names = ['F', 'FR', 'R', 'RB', 'B', 'BL', 'L', 'LF']  # forward, backward, left, right
         interval = math.ceil(360 / len(names))
         for idx, name in enumerate(names):
@@ -1231,9 +1246,9 @@ class GPano():
             # print('yaw: ', yaw)
             self.getImagefrmAngle(lon, lat, saved_path, prefix, name + suffix, width, height, pitch, yaw)
 
-    def getImage4DirectionfrmLonlats(self, list_lonlat, saved_path='Panos', prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
-        #print(len(list_lonlat))
-
+    def getImage4DirectionfrmLonlats(self, list_lonlat, saved_path='Panos', prefix='', suffix='', width=1024,
+                                     height=768, pitch=0, road_compassA=0):
+        # print(len(list_lonlat))
 
         start_time = time.time()
         Cnt = 0
@@ -1242,34 +1257,36 @@ class GPano():
 
         while len(list_lonlat) > 0:
             try:
-                #print(list_lonlat.pop(0))
+                # print(list_lonlat.pop(0))
                 lon, lat, id, prefix, road_compassA = list_lonlat.pop(0)
                 prefix = str(id)
 
                 print('Current row :', id)
-                self.getImage8DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch, road_compassA)
+                self.getImage8DirectionfrmLonlat(lon, lat, saved_path, prefix, suffix, width, height, pitch,
+                                                 road_compassA)
                 current_len = len(list_lonlat)
                 Cnt = origin_len - current_len
                 if Cnt % Cnt_interval == (Cnt_interval - 1):
                     print(
-                        "Prcessed {} / {} items. Processing speed: {} points / hour.".format(Cnt, origin_len, int(Cnt / (time.time() - start_time + 0.001) * 3600)))
+                        "Prcessed {} / {} items. Processing speed: {} points / hour.".format(Cnt, origin_len, int(
+                            Cnt / (time.time() - start_time + 0.001) * 3600)))
             except Exception as e:
                 print("Error in getImage4DirectionfrmLonlats(): ", e, id)
                 current_len = len(list_lonlat)
                 continue
 
-    def getImage4DirectionfrmLonlats_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt = 6, prefix='', suffix='', width=1024, height=768, pitch=0, road_compassA=0):
-        #statuses = []      # succeeded: 1; failed: 0
+    def getImage4DirectionfrmLonlats_mp(self, list_lonlat_mp, saved_path='Panos', Process_cnt=6, prefix='', suffix='',
+                                        width=1024, height=768, pitch=0, road_compassA=0):
+        # statuses = []      # succeeded: 1; failed: 0
         pool = mp.Pool(processes=Process_cnt)
 
         for i in range(Process_cnt):
-            pool.apply_async(self.getImage4DirectionfrmLonlats, args=(list_lonlat_mp, saved_path, prefix, suffix, width, height, pitch, road_compassA))
+            pool.apply_async(self.getImage4DirectionfrmLonlats,
+                             args=(list_lonlat_mp, saved_path, prefix, suffix, width, height, pitch, road_compassA))
         pool.close()
         pool.join()
 
-
-
-    def castesian_to_shperical_pp(self, rowcols, w, h, fov): # yaw: set the heading, pitch
+    def castesian_to_shperical_pp(self, rowcols, w, h, fov):  # yaw: set the heading, pitch
 
         f = (0.5 * w) / math.tan(fov * 0.5)
         # print("f:", f)
@@ -1277,25 +1294,23 @@ class GPano():
             rowcols = [rowcols]
 
         theta_phis = []
-        #print("type of colrows:", colrows)
+        # print("type of colrows:", colrows)
         # plt_x = []
         # plt_y = []
-        #print("len of : colrows", len(colrows))
+        # print("len of : colrows", len(colrows))
 
         resolution_angle = fov / w
         print('resolution: ', resolution_angle)
 
         for rowcol in rowcols:
-            #print('colrow, len of colrow: ', colrow, len(colrow))
+            # print('colrow, len of colrow: ', colrow, len(colrow))
             row = rowcol[0]
             col = rowcol[1]
             new_rowcols = 0
-            #print('col, row:', col, row)
+            # print('col, row:', col, row)
             x = col - w * 0.5
             y = h * 0.5 - row
             z = f
-
-
 
             phi = x * resolution_angle
 
@@ -1303,59 +1318,56 @@ class GPano():
 
             theta_phis.append((theta, phi))
 
-
-
-        #print('theta_phis:', theta_phis)
-        #print(x, y, z, theta + heading, phi + pitch, pi)
+        # print('theta_phis:', theta_phis)
+        # print(x, y, z, theta + heading, phi + pitch, pi)
         # plt.scatter(plt_x, plt_y)
         # plt.show()
         print("theta_phis[0]:", theta_phis[0])
-
 
         if len(theta_phis) == 1:
             return theta_phis[0]
         else:
             return theta_phis
 
-    def castesian_to_shperical(self, rowcols, w, h, fov): # yaw: set the heading, pitch
+    def castesian_to_shperical0(self, rowcols, w, h, fov):  # yaw: set the heading, pitch
         fov = radians(fov)
         f = (0.5 * w) / math.tan(fov * 0.5)
-        #print("f:", f)
+        # print("f:", f)
         if not isinstance(rowcols, list):
             rowcols = [rowcols]
 
         theta_phis = []
-        #print("type of colrows:", colrows)
+        # print("type of colrows:", colrows)
         # plt_x = []
         # plt_y = []
-        #print("len of : colrows", len(colrows))
+        # print("len of : colrows", len(colrows))
 
         for colrow in rowcols:
-            #print('colrow, len of colrow: ', colrow, len(colrow))
+            # print('colrow, len of colrow: ', colrow, len(colrow))
             row = colrow[0]
             col = colrow[1]
             new_rowcols = 0
-            #print('col, row:', col, row)
+            # print('col, row:', col, row)
             x = col - w * 0.5
             y = h * 0.5 - row
             z = f
 
-            #plt_x.append(x)
-            #print('x, y, z, w, h:', x, y, z, w, h)
+            # plt_x.append(x)
+            # print('x, y, z, w, h:', x, y, z, w, h)
 
-           #  theta = atan(y / z)
-            #print('theta:', theta)
+            #  theta = atan(y / z)
+            # print('theta:', theta)
             # if y < 0:
             #     theta = theta * -1
-            #print('theta:', theta)
+            # print('theta:', theta)
 
-            #theta = atan(y / z)
+            # theta = atan(y / z)
 
             # theta = acos(z / sqrt(x * x + y * y + z * z))
             # if y < 0:
             #     theta = -1 * theta
 
-            #phi = acos(x / sqrt(x * x + y * y))
+            # phi = acos(x / sqrt(x * x + y * y))
             # if y < 0:
             #     #phi = 2 * pi - phi
             #     phi = -1 * phi
@@ -1369,14 +1381,14 @@ class GPano():
 
             theta = degrees(theta)
             phi = degrees(phi)
-            #plt_y.append(phi)
+            # plt_y.append(phi)
 
             theta_phis.append((theta, phi))
 
             # print("col, row, x, y, z, theta, phi:")
-            #print(col, row, x, y, z, theta, phi)
-        #print('theta_phis:', theta_phis)
-        #print(x, y, z, theta + heading, phi + pitch, pi)
+            # print(col, row, x, y, z, theta, phi)
+        # print('theta_phis:', theta_phis)
+        # print(x, y, z, theta + heading, phi + pitch, pi)
         # plt.scatter(plt_x, plt_y)
         # plt.show()
         if len(theta_phis) == 1:
@@ -1384,7 +1396,7 @@ class GPano():
         else:
             return theta_phis
 
-    def clip_pano(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90): # fov < 120
+    def clip_pano(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90):  # fov < 120
         if fov > 120:
             fov = 120
             print("Fov should be < 120 degree.")
@@ -1415,13 +1427,14 @@ class GPano():
         fl = cols_mesh.flatten()
         print(len(fl))
         print(len(rows_mesh.flatten()))
-        print(len([w]*w*h))
+        print(len([w] * w * h))
 
-        thetas_phis = map(self.colrow_to_spherial, cols_mesh.flatten(), rows_mesh.flatten(), [w]*w*h, [h]*w*h, [fov]*w*h)
+        thetas_phis = map(self.colrow_to_spherial, cols_mesh.flatten(), rows_mesh.flatten(), [w] * w * h, [h] * w * h,
+                          [fov] * w * h)
         thetas_phis = list(thetas_phis)
         # print('theta_phis:', thetas_phis)
         print('theta_phis:', thetas_phis[0])
-        res = pi / pano_h # angle resolution of pano
+        res = pi / pano_h  # angle resolution of pano
 
         print('res: ', res)
 
@@ -1433,16 +1446,16 @@ class GPano():
                 theta_pixel = thetas_phis[r * w + c][0] + theta
                 phi_pixel = thetas_phis[r * w + c][1] + phi
                 if phi_pixel > pi:
-                    phi_pixel = phi_pixel - 2*pi
+                    phi_pixel = phi_pixel - 2 * pi
                 if phi_pixel < -pi:
-                    phi_pixel = phi_pixel + 2*pi
+                    phi_pixel = phi_pixel + 2 * pi
 
                 # have not processed theta
 
                 p_row = int(pano_h / 2 - theta_pixel / res)
                 p_col = int(phi_pixel / res + pano_w / 2)
                 # print(p_col, p_row)
-                p_row = min(p_row, pano_h-1)
+                p_row = min(p_row, pano_h - 1)
                 p_col = min(p_col, pano_w - 1)
                 pixels[c, r] = np_pixels[p_col, p_row]
                 # print(np_pixels[p_col, p_row])
@@ -1450,7 +1463,7 @@ class GPano():
 
         return img
 
-    def clip_pano2(self, theta0, phi0, fov_h, fov_v, width, img): # fov < 120
+    def clip_pano2(self, theta0, phi0, fov_h, fov_v, width, img):  # fov < 120
         """
           theta0 is pitch
           phi0 is yaw
@@ -1491,31 +1504,6 @@ class GPano():
 
         new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
         return new_img
-
-
-def colrow_to_spherial(self, col, row, w, h, fov=90):  # fov < 120
-        # print('col:', col)
-        x0 = w / 2
-        y0 = h / 2
-        x = col - x0
-        y = y0 - row
-        z = w/2 / tan(radians(fov/2))
-        # print('w: ', w)
-        # print('x: ', x)
-        # print('r: ', r)
-        phi = atan(x / z)
-        theta = atan(y/sqrt(x**2 + z**2))
-        # s = z / sqrt(x * x + y * y + z * z)
-        # print(s)
-        # theta = math.acos(s)
-        # s = x / sqrt(x * x + y * y+0.000000001)
-        # phi = math.acos(s)
-        # if (y < 0):
-        #     phi = 2 * pi - phi
-
-        # print('theta, phi:', theta, phi)
-
-        return (theta, phi)
 
 
 
@@ -1607,6 +1595,7 @@ class GSV_depthmap(object):
 
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
+
     def lonlat2WebMercator(self, lon, lat):
         # return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
         return transform(Proj(init='epsg:4326'), Proj(init='epsg:2824'), lon, lat)
@@ -1681,13 +1670,13 @@ class GSV_depthmap(object):
         cos_phi = np.empty(w)
 
         for y in range(h):
-            theta = (h - y) / h * np.pi   # original
+            theta = (h - y) / h * np.pi  # original
             # theta = y / h * np.pi  # huan
             sin_theta[y] = np.sin(theta)
             cos_theta[y] = np.cos(theta)
 
         for x in range(w):
-            phi = x / w * 2 * np.pi #+ np.pi / 2
+            phi = x / w * 2 * np.pi  # + np.pi / 2
             sin_phi[x] = np.sin(phi)
             cos_phi[x] = np.cos(phi)
 
@@ -1707,12 +1696,12 @@ class GSV_depthmap(object):
                 if planeIdx > 0:
                     plane = planes[planeIdx]
                     t = np.abs(plane["d"] / (v[0] * plane["n"][0] + v[1] * plane["n"][1] + v[2] * plane["n"][2]))
-                # original
-                #     depthMap[y * w + (w - x - 1)] = t
-                # else:
-                #     depthMap[y * w + (w - x - 1)] = 0
+                    # original
+                    #     depthMap[y * w + (w - x - 1)] = t
+                    # else:
+                    #     depthMap[y * w + (w - x - 1)] = 0
 
-                # huan
+                    # huan
                     if t < 100:
                         depthMap[y * w + x] = t
                     else:
@@ -1746,17 +1735,18 @@ class GSV_depthmap(object):
         # display image
         img = PIL.Image.fromarray(im)
         # img.save(saved_file.replace(".tif", 'noflip.tif'))
-        #img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        # img = img.transpose(Image.FLIP_LEFT_RIGHT)
         img.save(saved_file)
 
         # print(im)
 
-    def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb,pitch_of_thumb, depthmap, cameraLon, cameraLat, cameraH, heading_of_pano, pitch_of_pano):
+    def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb, pitch_of_thumb, \
+                      depthmap, cameraLon, cameraLat,
+                      cameraH, heading_of_pano, pitch_of_pano):
         try:
-            # print('heading_of_thumb:', heading_of_thumb)
-            # print('pitch_of_thumb:', pitch_of_thumb)
+            print('heading_of_thumb:', math.degrees(heading_of_thumb))
+            print('pitch_of_thumb:', math.degrees(pitch_of_thumb))
             results = []
-
 
             if not isinstance(theta_phis_in_thumb, list):
                 theta_phis_in_thumb = [theta_phis_in_thumb]
@@ -1774,9 +1764,8 @@ class GSV_depthmap(object):
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
-            #theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
-                                   theta_phis_in_thumb]
+            # theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
+            theta_phis_in_pano = theta_phis_in_thumb
 
             results = np.array(theta_phis_in_thumb)
             print('results shape: ', results.shape, results[0])
@@ -1790,36 +1779,36 @@ class GSV_depthmap(object):
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
 
-            #print("row: ", row)
+            # print("row: ", row)
             points3D = []
-            # print('depthmap[width]: ', depthmap['width'])
-            # print('depthmap[height]:', depthmap['height'])
-            # print('theta_phis_in_thumb： ', theta_phis_in_thumb)
+            print('depthmap[width]: ', depthmap['width'])
+            print('depthmap[height]:', depthmap['height'])
+            print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
             cnt = 0
             cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
-            heading_of_pano = radians(heading_of_pano)
-            pitch_of_pano = radians(pitch_of_pano)
+            print('cameraX, cameraY:', cameraX, cameraY)
+            # heading_of_pano = radians(heading_of_pano)
+            # pitch_of_pano = radians(pitch_of_pano)
             dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
             # plt.imshow(dempth_image)
             # plt.show()
 
-
-            #dempth_image = scipy.ndimage.zoom(dempth_image, 4, order=3)
+            # dempth_image = scipy.ndimage.zoom(dempth_image, 4, order=3)
             # print("Shape of dempth_image: ", dempth_image.shape)
-            #print('dempth_image: ', dempth_image)
+            # print('dempth_image: ', dempth_image)
             # plt.imshow(dempth_image)
             # plt.show()
 
             dm_h, dm_w = dempth_image.shape
-            # print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
+            print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
 
             grid_col = np.linspace(-pi, pi, dm_w)
-            grid_row = np.linspace(pi/2, -pi/2, dm_h)
-            #gridxx = np.arange(512)
-            #gridyy = np.arange(256)
+            grid_row = np.linspace(pi / 2, -pi / 2, dm_h)
+            # gridxx = np.arange(512)
+            # gridyy = np.arange(256)
             # gridxx, gridyy = np.meshgrid(grid_col, grid_row)
             # print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
-            #print("types: gridx, dempth_image", (gridx), (dempth_image))
+            # print("types: gridx, dempth_image", (gridx), (dempth_image))
             # print(gridx)
             # print(gridy)
             # print('dempth_image: ', dempth_image)
@@ -1835,15 +1824,175 @@ class GSV_depthmap(object):
             # plt.show()
 
             # 二维插值
-            interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear') # 'cubic' will distord the distance.
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+                                          kind='linear')  # 'cubic' will distord the distance.
+            print('theta_phis_in_pano[0]: ', theta_phis_in_pano[0])
+            distances = interp(theta_phis_in_pano[:, 0], theta_phis_in_pano[:, 1])
+            print('distances[0]: ', distances[0])
+
+            for idx, ray in enumerate(theta_phis_in_pano):
+                # if ray[1] < 0:
+                #     print('ray (degree):', ray)
+
+                theta = ray[0]
+                phi = ray[1]
+
+                if phi > pi:
+                    phi = phi - pi
+
+                x = phi / pi * depthmap['width'] / 2
+                y = theta / (pi / 2) * depthmap['height'] / 2
+                row = int(depthmap['height'] / 2 - y)
+                # row = min(row - 5, 0)
+                col = int(x + depthmap['width'] / 2)
+
+                # x = phi / pi * dm_w / 2
+                # y = theta / (pi/2) * dm_h / 2
+                # row = int(dm_h / 2 - y)
+                # col = int(x + dm_w / 2)
+
+                #
+
+                distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
+                # distance = interp(phi, theta - pitch_of_pano)[0]
+                distance = interp(phi, theta)[0]
+                # distance = interp(phi, min(theta + 0.05, 0) )[0]
+                # if distance > 2 or distance0 > 2:
+                #     print("distance：", idx, ray, distance, distance0, col, row)
+                # distance = distance * 2
+                if distance < 0:
+                    print("distance < 0：", distance, distance0, col, row)
+                # print(type(distance))
+                # print(distance.shape)
+                # print(distance.size)
+                # distance = dempth_image[row][col]
+                # if idx % 1500 == 0:
+                #     print('distance:', theta, phi, interp(phi, theta))
+                #     print('distance:', x, y, col, row, distance)
+                #     print('distance:', dempth_image[row][col])
+
+                # if distance > 1:
+                # pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+                # print("pitch_of_pano:", pitch_of_pano)
+                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+                # else:
+                #     pointX = 0
+                #     pointY = 0
+                #     pointZ = 0
+
+                points3D.append((pointX, pointY, pointZ, distance))
+
+                # print("distance * cos(theta):",distance * cos(theta))
+                # #
+                #
+                # print('point_lat, point_lon: ', self.WebMercator2lonlat(pointX, pointY))
+                # print("pointX, pointY, pointZ, distance: ", pointX, pointY, pointZ, distance)
+                # print("d_pointX, d_pointY, d_pointZ: ", distance * cos(theta) * sin(phi + heading_of_pano), distance * cos(theta) * cos(phi + heading_of_pano), distance * sin(theta))
+                # if cnt < 3:
+                #     print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
+                # cnt += 1
+            # results = np.concatenate((results, np.array(points3D)), axis=1)
+            print('final points3D shape : ', points3D[0:5], len(points3D))
+            return points3D  # ， results
+        except Exception as e:
+            print("Error in getPointCloud():", e)
+
+    def getPointCloud2(self, theta_phis_in_thumb, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
+                       cameraH, heading_of_pano, pitch_of_pano):
+        try:
+            # print('heading_of_thumb:', heading_of_thumb)
+            # print('pitch_of_thumb:', pitch_of_thumb)
+            results = []
+
+            if not isinstance(theta_phis_in_thumb, list):
+                theta_phis_in_thumb = [theta_phis_in_thumb]
+
+            results = np.array(theta_phis_in_thumb)
+            print('results shape: ', results.shape, results[0])
+            heading_of_thumb = float(heading_of_thumb)
+            pitch_of_thumb = float(pitch_of_thumb)
+            cameraLon = float(cameraLon)
+            cameraLat = float(cameraLat)
+            cameraH = float(cameraH)
+            heading_of_pano = float(heading_of_pano)
+            pitch_of_pano = float(pitch_of_pano)
+            print('results shape: ', results.shape, results[0])
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
+
+            # theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
+            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
+                                  theta_phis_in_thumb]
+
+            results = np.array(theta_phis_in_thumb)
+            print('results shape: ', results.shape, results[0])
+            results = np.concatenate((results, np.array(theta_phis_in_pano)), axis=1)
+
+            print('results shape: ', results.shape, results[0])
+
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
+            #
+            # for row in theta_phis_in_thumb:
+            #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
+
+            # print("row: ", row)
+            points3D = []
+            # print('depthmap[width]: ', depthmap['width'])
+            # print('depthmap[height]:', depthmap['height'])
+            # print('theta_phis_in_thumb： ', theta_phis_in_thumb)
+            cnt = 0
+            cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
+            heading_of_pano = radians(heading_of_pano)
+            pitch_of_pano = radians(pitch_of_pano)
+            dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
+            # plt.imshow(dempth_image)
+            # plt.show()
+
+            # dempth_image = scipy.ndimage.zoom(dempth_image, 4, order=3)
+            # print("Shape of dempth_image: ", dempth_image.shape)
+            # print('dempth_image: ', dempth_image)
+            # plt.imshow(dempth_image)
+            # plt.show()
+
+            dm_h, dm_w = dempth_image.shape
+            # print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
+
+            grid_col = np.linspace(-pi, pi, dm_w)
+            grid_row = np.linspace(pi / 2, -pi / 2, dm_h)
+            # gridxx = np.arange(512)
+            # gridyy = np.arange(256)
+            # gridxx, gridyy = np.meshgrid(grid_col, grid_row)
+            # print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
+            # print("types: gridx, dempth_image", (gridx), (dempth_image))
+            # print(gridx)
+            # print(gridy)
+            # print('dempth_image: ', dempth_image)
+
+            # fig = plt.figure(figsize=(9, 6))
+            # Draw sub-graph1
+            # ax = plt.subplot(1, 2, 1, projection='3d')
+            # surf = ax.plot_surface(gridxx, gridyy, dempth_image, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5, antialiased=True)
+            # ax.set_xlabel('x')
+            # ax.set_ylabel('y')
+            # ax.set_zlabel('f(x, y)')
+            # plt.colorbar(surf, shrink=0.5, aspect=5)  # 标注
+            # plt.show()
+
+            # 二维插值
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+                                          kind='linear')  # 'cubic' will distord the distance.
             # print(grid_col[0], grid_row[0], interp(grid_col[0], grid_row[0]), dempth_image[0][0])
             # print(interp(grid_col[511], grid_row[255]), dempth_image[255][511])
             # print(interp(grid_col[256], grid_row[68]), dempth_image[68][256])
             # print(grid_col[111], grid_row[222], interp(grid_col[111], grid_row[222]), dempth_image[222][111])
-            #distance = interp(grid_row, grid_col)
-            #print('interp(gridyy, gridxx): ', interp(grid_row, grid_col))
-            #print("fnished", gridx, gridy)
-
+            # distance = interp(grid_row, grid_col)
+            # print('interp(gridyy, gridxx): ', interp(grid_row, grid_col))
+            # print("fnished", gridx, gridy)
 
             # 计算100*100的网格上的插值
 
@@ -1872,7 +2021,7 @@ class GSV_depthmap(object):
                 #     print(phi)
 
                 x = phi / pi * depthmap['width'] / 2
-                y = theta / (pi/2) * depthmap['height'] / 2
+                y = theta / (pi / 2) * depthmap['height'] / 2
                 row = int(depthmap['height'] / 2 - y)
                 # row = min(row - 5, 0)
                 col = int(x + depthmap['width'] / 2)
@@ -1895,12 +2044,11 @@ class GSV_depthmap(object):
                 # print(type(distance))
                 # print(distance.shape)
                 # print(distance.size)
-                #distance = dempth_image[row][col]
+                # distance = dempth_image[row][col]
                 # if idx % 1500 == 0:
                 #     print('distance:', theta, phi, interp(phi, theta))
                 #     print('distance:', x, y, col, row, distance)
                 #     print('distance:', dempth_image[row][col])
-
 
                 # if distance > 1:
                 # pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
@@ -1928,7 +2076,7 @@ class GSV_depthmap(object):
                 # cnt += 1
             # results = np.concatenate((results, np.array(points3D)), axis=1)
             print('results shape: ', results.shape, results[0])
-            return points3D  #， results
+            return points3D  # ， results
         except Exception as e:
             print("Error in getPointCloud():", e)
 
@@ -1937,8 +2085,7 @@ class GSV_depthmap(object):
             if not isinstance(seg_list, list):
                 seg_list = [seg_list]
                 print("Converted the single file into a list.")
-            #print(io.imread(seg_list[0]).shape)
-
+            # print(io.imread(seg_list[0]).shape)
 
             for idx, seg in enumerate(seg_list):
 
@@ -1947,8 +2094,9 @@ class GSV_depthmap(object):
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
-                    #print("image w, h: ", w, h)
-                    sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
+                    # print("image w, h: ", w, h)
+                    sidewalk_idx = np.argwhere(
+                        (predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
                     sidewalk_idx = np.argwhere((predict == 11))  # sidewalk and path classes in ADE20k.
                     sidewalk_idx = [tuple(row) for row in sidewalk_idx]
 
@@ -1956,21 +2104,20 @@ class GSV_depthmap(object):
                     class_code = np.array(class_code)
                     print(seg)
 
-
                     # plt_x = [row[1] for row in sidewalk_idx]
                     # plt_y = [row[0] for row in sidewalk_idx]
                     # plt.scatter(plt_x, plt_y)
                     # plt.show()
-                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    # print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
                     basename = os.path.basename(seg)
                     params = basename[:-4].split('_')
-                    #print("params:", params)
+                    # print("params:", params)
                     thumb_panoId = '_'.join(params[:(len(params) - 4)])
                     pano_lon = params[-4]
                     pano_lat = params[-3]
                     if len(thumb_panoId) < 16:
                         thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
-                        print("thumb_panoId: ",thumb_panoId)
+                        print("thumb_panoId: ", thumb_panoId)
 
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
@@ -1981,7 +2128,7 @@ class GSV_depthmap(object):
                     # pano_H = params[-4]
                     thumb_heading = float(params[-1])
                     thumb_pitch = float(params[-2])
-                    #print("thumb_heading:", thumb_heading)
+                    # print("thumb_heading:", thumb_heading)
 
                     results = []
 
@@ -1990,11 +2137,11 @@ class GSV_depthmap(object):
                         sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
                         # sidewalk_sph = GPano.castesian_to_shperical_pp(GPano(), sidewalk_idx, w, h, fov)
                         # results = np.array(sidewalk_sph)
-                        #print('sidewalk_sph[0]:', sidewalk_sph[0])
+                        # print('sidewalk_sph[0]:', sidewalk_sph[0])
 
-                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
+                        # obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
                         obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1)
-                        #print(obj_json)
+                        # print(obj_json)
                         pano_heading = obj_json["Projection"]['pano_yaw_deg']
                         pano_heading = float(pano_heading)
                         pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
@@ -2007,8 +2154,9 @@ class GSV_depthmap(object):
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
                         # print('pano_H:', pano_H)
                         dm = self.getDepthmapfrmJson(obj_json)
-                        #print(dm)
-                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        # print(dm)
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm,
+                                                        pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         pointcloud = np.array(pointcloud)
                         print("pointcloud shape:", pointcloud.shape)
 
@@ -2041,9 +2189,9 @@ class GSV_depthmap(object):
                         # results = np.concatenate((np.array(sidewalk_idx), results, np.array(sidewalk_sph)), axis=1)
                         # np.savetxt(results_name, results, delimiter=",")
 
-                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        # saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
 
-                        #print('new_file_name: ', new_file_name)
+                        # print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()
                         # plt_x = [row[0] for row in pointcloud]
@@ -2065,78 +2213,95 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_pointcloud():", e, seg)
 
-    def castesian_to_shperical(self, rowcols, w, h, fov): # yaw: set the heading, pitch
-        fov = radians(fov)
-        f = (0.5 * w) / math.tan(fov * 0.5)
-        print("f:", f)
-        if not isinstance(rowcols, list):
-            rowcols = [rowcols]
+    def rotate_x(self,pitch):
+        #picth is degree
+        r_x = np.array([[1.0,0.0,0.0],
+                        [0.0,math.cos(pitch*math.pi/180.0),-1*math.sin(pitch*math.pi/180.0)],
+                        [0.0,math.sin(pitch*math.pi/180.0),math.cos(pitch*math.pi/180.0)]])
+        return r_x
 
-        theta_phis = []
-        #print("type of colrows:", colrows)
-        # plt_x = []
-        # plt_y = []
-        #print("len of : colrows", len(colrows))
+    def rotate_y(self,yaw):
+        #
+        r_y = np.array([[math.cos(yaw*math.pi/180.0),0.0,math.sin(yaw*math.pi/180.0)],
+                        [0.0,1.0,0.0],
+                        [-1*math.sin(yaw*math.pi/180.0),0.0,math.cos(yaw*math.pi/180.0)]])
+        return r_y
 
-        for colrow in rowcols:
-            #print('colrow, len of colrow: ', colrow, len(colrow))
-            row = colrow[0]
-            col = colrow[1]
-            new_rowcols = 0
-            #print('col, row:', col, row)
-            x = col - w * 0.5
-            y = h * 0.5 - row
-            z = f
-
-            #plt_x.append(x)
-            #print('x, y, z, w, h:', x, y, z, w, h)
-
-           #  theta = atan(y / z)
-            #print('theta:', theta)
-            # if y < 0:
-            #     theta = theta * -1
-            #print('theta:', theta)
-
-            #theta = atan(y / z)
-
-            # theta = acos(z / sqrt(x * x + y * y + z * z))
-            # if y < 0:
-            #     theta = -1 * theta
-
-            #phi = acos(x / sqrt(x * x + y * y))
-            # if y < 0:
-            #     #phi = 2 * pi - phi
-            #     phi = -1 * phi
-
-            phi = acos(z / sqrt(x * x + z * z))
-            if x < 0:
-                phi = -phi
+    def rotate_z(self,roll):
+        #
+        r_z = np.array([[math.cos(roll*math.pi/180.0),-1*math.sin(roll*math.pi/180.0),0.0],
+                        [math.sin(roll*math.pi/180.0),math.cos(roll*math.pi/180.0),0.0],
+                        [0.0,0.0,1.0]])
+        return r_z
 
 
-            theta = atan(y / sqrt(x * x + z * z))
+    def castesian_to_shperical(self, rowcols, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
+        """
+        Convert the row, col to the original spherical coordinates which can be used as the
+         coordinates of the depthmap to look up distance.
+        :param rowcols:
+        :param theta0:
+        :param phi0:
+        :param tilt_pitch:
+        :param tilt_yaw:
+        :param fov_h:
+        :param height:
+        :param width:
+        :return:
+        """
+        m = self.rotate_y(phi0).dot(self.rotate_x(theta0 - tilt_pitch))
+        print("m: ", m)
 
-            # phi = atan(x / y)
+        print("theta0, phi0, tilt_pitch, tilt_yaw:", math.degrees(theta0), math.degrees(phi0), math.degrees(tilt_pitch), math.degrees(tilt_yaw) )
 
-            theta = degrees(theta)
-            phi = degrees(phi)
-            #plt_y.append(phi)
+        # height = int(math.ceil(width * np.tan(fov_v / 2) / np.tan(fov_h / 2)))
+        width = int(width)
 
-            theta_phis.append((theta, phi))
+        fov_v = atan((height * tan((fov_h / 2)) / width)) * 2
 
-            # print("col, row, x, y, z, theta, phi:")
-            #print(col, row, x, y, z, theta, phi)
-        #print('theta_phis:', theta_phis)
-        #print(x, y, z, theta + heading, phi + pitch, pi)
+        print("height, width, fov_v, fov_h", height, width, fov_v, fov_h)
+        print("height, width, fov_v, fov_h", height, width, math.degrees(fov_v), math.degrees(fov_h))
+
+        DI = np.ones((int(height * width), 3), np.int)
+
+        trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
+                          [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
+
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+
+        DI[:, 0] = xx.reshape(height * width)
+        DI[:, 1] = yy.reshape(height * width)
+
+        v = np.ones((height * width, 3), np.float)
+
+        v[:, :2] = np.dot(DI, trans.T)
+
+        print("trans.T:", trans.T)
+
+        v = np.dot(v, m.T)
+        print("v: ", v)
+
+        diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
+        # theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
+        # phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi
+
+        theta = np.arctan2(v[:, 1], diag) + theta0
+        phi = np.arctan2(v[:, 0], v[:, 2]) + phi0
+
+        print("len of diag, theta, phi", len(diag), len(theta), len(phi))
+
+        result = [x for x in zip(theta, phi)]
+        print("result in castesian_to_shperical():", math.degrees(result[0][0]), math.degrees(result[0][1]))
+        # plt_x = [math.degrees(x) for x in phi]
+        # plt_y =  [math.degrees(x) for x in theta]
         # plt.scatter(plt_x, plt_y)
         # plt.show()
-        if len(theta_phis) == 1:
-            return theta_phis[0]
-        else:
-            return theta_phis
+        return result
+
 
     def pointCloud_to_image(self, pointcloud, resolution):
         try:
-            minX =  min(pointcloud[:, 0])
+            minX = min(pointcloud[:, 0])
             maxY = max(pointcloud[:, 1])
             rangeX = max(pointcloud[:, 0]) - minX
             rangeY = maxY - min(pointcloud[:, 1])
@@ -2167,20 +2332,19 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in pointCloud_to_image():", e)
 
-
     def seg_to_landcover(self, seg_list, saved_path, fov=90):
         try:
             if not isinstance(seg_list, list):
                 seg_list = [seg_list]
                 print("Converted the single file into a list.")
-            #print(io.imread(seg_list[0]).shape)
+            # print(io.imread(seg_list[0]).shape)
 
             for idx, seg in enumerate(seg_list):
                 try:
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
-                    #print("image w, h: ", w, h)
+                    # print("image w, h: ", w, h)
                     # sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
                     # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     print("seg files:", seg)
@@ -2189,28 +2353,27 @@ class GSV_depthmap(object):
                     # plt_y = [row[0] for row in sidewalk_idx]
                     # plt.scatter(plt_x, plt_y)
                     # plt.show()
-                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    # print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
                     basename = os.path.basename(seg)
                     params = basename[:-4].split('_')
-                    #print("params:", params)
+                    # print("params:", params)
                     thumb_panoId = '_'.join(params[:(len(params) - 4)])
                     pano_lon = float(params[-4])
                     pano_lat = float(params[-3])
                     if len(thumb_panoId) < 16:
                         thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
-                        print("thumb_panoId: ",thumb_panoId)
+                        print("thumb_panoId: ", thumb_panoId)
 
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
 
-
                     thumb_heading = float(params[-1])
                     thumb_pitch = float(params[-2])
-                    #print("thumb_heading:", thumb_heading)
+                    # print("thumb_heading:", thumb_heading)
 
                     obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1, saved_path=saved_path)
                     depthMapData = self.parse(obj_json['model']['depth_map'])
-                    #print(dm_string)
+                    # print(dm_string)
                     header = self.parseHeader(depthMapData)
                     # print('header:',header)
                     dm_planes = self.parsePlanes(header, depthMapData)
@@ -2231,10 +2394,10 @@ class GSV_depthmap(object):
                     sidewalk_idx = np.argwhere(predict > -1)  #
                     sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     classes = np.where(predict > -1)
-                    #print("classes len: ", len(classes))
+                    # print("classes len: ", len(classes))
 
                     print("len of sidewalk_idx:", len(sidewalk_idx))
-                    #print("sidewalk_idx:", sidewalk_idx)
+                    # print("sidewalk_idx:", sidewalk_idx)
 
                     # get ground pixels
                     ground_pixels = []
@@ -2254,27 +2417,27 @@ class GSV_depthmap(object):
                     #         else:
                     #             idm[y][x] = 10
 
-                            # if  norm == 2 and plane['n'][2] > 0:
-                            #     #print('plane planeIdx: ', planeIdx)
-                            #     print('plane: ', plane)
-                            #     print('max projection: ', norm)
-                            #
-                            #     theta, phi = GPano.castesian_to_shperical(GPano(), (x, y), w, h, fov)
-                            #     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=(phi + thumb_heading), tilt=(theta + thumb_pitch + 90))
-                            #     print("Google street view URL:", x, y, theta, phi, url)
-                            #     #print("n2: ", sum(map(lambda x: x*x, plane['n'])))
+                    # if  norm == 2 and plane['n'][2] > 0:
+                    #     #print('plane planeIdx: ', planeIdx)
+                    #     print('plane: ', plane)
+                    #     print('max projection: ', norm)
+                    #
+                    #     theta, phi = GPano.castesian_to_shperical(GPano(), (x, y), w, h, fov)
+                    #     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=(phi + thumb_heading), tilt=(theta + thumb_pitch + 90))
+                    #     print("Google street view URL:", x, y, theta, phi, url)
+                    #     #print("n2: ", sum(map(lambda x: x*x, plane['n'])))
 
                     # plt.imshow(idm)
                     # plt.show()
 
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
-                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
+                        # sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
                         # print('sidewalk_sph[0]:', sidewalk_sph[0])
 
-                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
+                        # obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
 
-                        #print(obj_json)
+                        # print(obj_json)
                         pano_heading = obj_json["Projection"]['pano_yaw_deg']
                         pano_heading = float(pano_heading)
                         pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
@@ -2286,13 +2449,14 @@ class GSV_depthmap(object):
                         # print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
                         # print('pano_H:', pano_H)
-                        #dm = self.getDepthmapfrmJson(obj_json)
-                        #print(dm)
-                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        # dm = self.getDepthmapfrmJson(obj_json)
+                        # print(dm)
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm,
+                                                        pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         # print("pointcloud: ", pointcloud[:3], len(pointcloud))
-                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        # saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
                         new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
-                        #print('new_file_name: ', new_file_name)
+                        # print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()
                         # plt_x = [row[0] for row in pointcloud]
@@ -2304,7 +2468,7 @@ class GSV_depthmap(object):
                         distance_min = 2
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
-                        all_classes = predict.reshape((predict.size,1))
+                        all_classes = predict.reshape((predict.size, 1))
                         # print("all_classes:", all_classes[:3], all_classes.shape)
 
                         pointcloud_class = np.concatenate((pointcloud_np, all_classes), axis=1)
@@ -2361,19 +2525,19 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_landcover():", e, seg)
 
-    def seg_to_landcover2(self, seg_list, saved_path, fov=90):
+    def seg_to_landcover2(self, seg_list, saved_path, fov=math.radians(90)):
         try:
             if not isinstance(seg_list, list):
                 seg_list = [seg_list]
                 print("Converted the single file into a list.")
-            #print(io.imread(seg_list[0]).shape)
+            # print(io.imread(seg_list[0]).shape)
 
             for idx, seg in enumerate(seg_list):
                 try:
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
-                    #print("image w, h: ", w, h)
+                    print("image w, h: ", w, h)
                     # sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
                     # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     print("seg files:", seg)
@@ -2382,117 +2546,99 @@ class GSV_depthmap(object):
                     # plt_y = [row[0] for row in sidewalk_idx]
                     # plt.scatter(plt_x, plt_y)
                     # plt.show()
-                    #print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
+                    # print("len of sidewalks pixels: ", len(sidewalk_idx), seg)
                     basename = os.path.basename(seg)
                     params = basename[:-4].split('_')
-                    #print("params:", params)
+                    print("params:", params)
                     thumb_panoId = '_'.join(params[:(len(params) - 4)])
                     pano_lon = float(params[-4])
                     pano_lat = float(params[-3])
                     if len(thumb_panoId) < 16:
+                        print("thumb_panoId: ", thumb_panoId)
                         thumb_panoId, pano_lon, pano_lat = GPano.getPanoIDfrmLonlat(GPano(), pano_lon, pano_lat)
-                        print("thumb_panoId: ",thumb_panoId)
+
 
                     # if len(params) > 5:
                     #     print("thumb_panoId:", thumb_panoId)
 
+                    thumb_heading = math.radians(float(params[-1]))
 
-                    thumb_heading = float(params[-1])
-                    thumb_pitch = float(params[-2])
-                    #print("thumb_heading:", thumb_heading)
-
+                    thumb_theta0 = math.radians(float(params[-2]))
+                    # print("thumb_heading:", thumb_heading)
+                    # print("thumb_panoId: ", thumb_panoId)
                     obj_json = GPano.getJsonfrmPanoID(GPano(), thumb_panoId, dm=1, saved_path=saved_path)
                     depthMapData = self.parse(obj_json['model']['depth_map'])
-                    #print(dm_string)
+                    # print(dm_string)
                     header = self.parseHeader(depthMapData)
                     # print('header:',header)
                     dm_planes = self.parsePlanes(header, depthMapData)
                     # print('dm_planes[indices]:', dm_planes['indices'])
                     # print('len of dm_planes[indices]:', len(dm_planes['indices']))
 
-
                     dm = self.getDepthmapfrmJson(obj_json)
 
-                    np_dm = np.array(dm[dm['depthMap']]).reshape((dm["height"], dm["width"]))
+                    # print("dm:", dm)
 
-                    dm_clip = GPano().clip_pano2(thumb_pitch, thumb_heading - pano_heading, 90, 90, 20, np_dm)
 
                     print('dm[depthjMap]:', dm['depthMap'])
                     print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
-                    # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
-                    # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
                     print("Google street view URL:", url)
 
                     # sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
                     sidewalk_idx = np.argwhere(predict > -1)  #
-                    sidewalk_idx = [tuple(row) for row in sidewalk_idx]
-                    classes = np.where(predict > -1)
-                    #print("classes len: ", len(classes))
+                    print('sidewalk_idx:', sidewalk_idx)
+                    # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
+                    print('sidewalk_idx:', sidewalk_idx)
+                    classes = np.where(predict == -1)
+                    # print("classes len: ", len(classes))
 
-                    print("len of sidewalk_idx:", len(sidewalk_idx))
-                    #print("sidewalk_idx:", sidewalk_idx)
+                    # print("len of sidewalk_idx:", len(sidewalk_idx))
+                    # print("sidewalk_idx:", sidewalk_idx)
 
-                    # get ground pixels
-                    ground_pixels = []
-                    # idm = dm['depthMap'].reshape(256, 512)
-
-                    # for y in range(dm['height']):
-                    #     for x in range(dm['width']):
-                    #         planeIdx = dm_planes['indices'][y * dm['width'] + x]
-                    #         plane = dm_planes['planes'][planeIdx]
-                    #
-                    #         #if x % 10 == 0 and y % 50 == 0:
-                    #         norm = np.argmax(np.abs(plane['n']))
-                    #         if norm == 2 and planeIdx > 0:
-                    #             idm[y][x] = 100
-                    #             print('plane planeIdx: ', planeIdx)
-                    #             print('plane: ', plane)
-                    #         else:
-                    #             idm[y][x] = 10
-
-                            # if  norm == 2 and plane['n'][2] > 0:
-                            #     #print('plane planeIdx: ', planeIdx)
-                            #     print('plane: ', plane)
-                            #     print('max projection: ', norm)
-                            #
-                            #     theta, phi = GPano.castesian_to_shperical(GPano(), (x, y), w, h, fov)
-                            #     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=(phi + thumb_heading), tilt=(theta + thumb_pitch + 90))
-                            #     print("Google street view URL:", x, y, theta, phi, url)
-                            #     #print("n2: ", sum(map(lambda x: x*x, plane['n'])))
-
-                    # plt.imshow(idm)
-                    # plt.show()
 
                     if len(sidewalk_idx) > 1:
                         # get spherial coordinates
-                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, w, h, fov)
-                        # print('sidewalk_sph[0]:', sidewalk_sph[0])
 
-                        #obj_json = GSV_depthmap.getJsonDepthmapfrmLonlat(GPano(), lon, lat)
-
-                        #print(obj_json)
                         pano_heading = obj_json["Projection"]['pano_yaw_deg']
-                        pano_heading = float(pano_heading)
+                        pano_heading = math.radians(float(pano_heading))
                         pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
-                        pano_pitch = float(pano_pitch)
+                        pano_pitch = math.radians(float(pano_pitch))
+                        pano_tilt_yaw = obj_json["Projection"]['tilt_yaw_deg']
+                        pano_tilt_yaw = math.radians(float(pano_tilt_yaw))
                         # print('pano_heading:', pano_heading)
-                        pano_lon = obj_json["Location"]['original_lng']
-                        # print('pano_lon:', pano_lon)
-                        pano_lat = obj_json["Location"]['original_lat']
-                        # print('pano_lat:', pano_lat)
+                        pano_lon = float(obj_json["Location"]['lng'])
+                        print('pano_lon:', pano_lon)
+                        pano_lat = float(obj_json["Location"]['lat'])
+                        print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
-                        # print('pano_H:', pano_H)
-                        #dm = self.getDepthmapfrmJson(obj_json)
-                        #print(dm)
 
-                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading - pano_heading, thumb_pitch, dm, pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+                        thumb_phi0 = thumb_heading - pano_heading
+                        # print('pano_H:', pano_H)
+                        # dm = self.getDepthmapfrmJson(obj_json)
+                        # print(dm)
+                        fov_h = fov
+                        fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
+
+                        print('fov_h, fov_v:', fov_h, fov_v)
+
+                        print("len of sidewalk_idx:", len(sidewalk_idx))
+
+                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, thumb_theta0, \
+                                                                   thumb_phi0, pano_pitch, \
+                                                                   pano_tilt_yaw, fov_h, h, w)
+
+                        print('len of sidewalk_sph :', len(sidewalk_sph))
+                        print('sidewalk_sph[0]:', sidewalk_sph[0])
+
+                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading, thumb_theta0, dm,
+                                                        pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         # print("pointcloud: ", pointcloud[:3], len(pointcloud))
-                        #saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+                        # saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
                         new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
-                        #print('new_file_name: ', new_file_name)
+                        # print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()
                         # plt_x = [row[0] for row in pointcloud]
@@ -2504,7 +2650,7 @@ class GSV_depthmap(object):
                         distance_min = 2
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
-                        all_classes = predict.reshape((predict.size,1))
+                        all_classes = predict.reshape((predict.size, 1))
                         # print("all_classes:", all_classes[:3], all_classes.shape)
 
                         pointcloud_class = np.concatenate((pointcloud_np, all_classes), axis=1)
@@ -2685,18 +2831,104 @@ class GSV_depthmap(object):
                 lab >>= 3
         return pallete
 
+    # def constructRawPointsCloud2(self, np_img, fov_h, theta0, phi0, w_thumb, h_thumb, depthmap, pano_yaw_deg, pano_tilt_pitch):
+    #     # assert (self.c_panorama.pano_location_prop['panoId'] == self.c_depthmap.panoid)
+    #
+    #     dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
+    #     raw_pointsCloud = []
+    #
+    #     fov_v = math.atan((h_thumb * math.tan((math.radians(fov_h) / 2)) / w_thumb)) * 2
+    #     fov_v = math.degrees(fov_v)
+    #
+    #     depth_height, depth_width = dempth_image.shape
+    #
+    #     pano_width, pano_height = self.c_panorama.panorama.size
+    #
+    #     theta = theta0  # -self.c_panorama.pano_proj_prop['tilt_pitch_deg']
+    #     phi = phi0 - pano_yaw_deg
+    #
+    #     # ndepthmap = np.array(self.c_depthmap.depthmap).reshape(depth_height, depth_width)
+    #     #
+    #
+    #     np_img, pano_thetas, pano_phis = self.clip_pano2(theta, phi, 0, 0, math.radians(fov_h), math.radians(fov_v),
+    #     #                                                  w_thumb, self.c_panorama.panorama)
+    #     # img = Image.fromarray(nImage)
+    #
+    #     h_thumb, w_thumb = pano_phis.shape
+    #     # ndepthmap_clip = self.clip_pano2(theta, phi, 0, 0, math.radians(fov_h), math.radians(fov_v),
+    #     #                                  depth_width * fov_h / 360, ndepthmap.tolist())
+    #     # ndepthmap_clip = np.array(ndepthmap_clip)
+    #
+    #     imgfile_name = r'D:\2019\njit learning\201909\streetView\StreetView\Pano_Depthmap\test1.png'
+    #     # img.save(imgfile_name)
+    #     colored = self.get_color_pallete(nImage, 'ade20k')
+    #     colored.save(imgfile_name)
+    #
+    #
+    #     grid_col = np.linspace(-math.pi, math.pi, depth_width)
+    #     grid_row = np.linspace(math.pi, 0, depth_height)
+    #
+    #     # depthmap_data = np.array(self.c_depthmap.depthmap).reshape(self.c_depthmap.depthmap_height,
+    #     #                                                            self.c_depthmap.depthmap_width)
+    #     interp = interpolate.interp2d(grid_col, grid_row, dempth_image, kind='linear')
+    #
+    #     try:
+    #         count = 0
+    #         k = 0
+    #         start_time = time.time()
+    #         for y in range(h_thumb):
+    #
+    #             k = k + 1
+    #             for x in range(w_thumb):
+    #
+    #                 lat1 = pano_thetas[y, x]
+    #                 lat = lat1 - math.pi / 2
+    #
+    #                 lng1 = pano_phis[y, x] - math.pi
+    #                 lng = lng1 - math.radians(phi)
+    #
+    #                 if lng > math.pi:
+    #                     lng = lng - math.pi * 2.0
+    #                 elif lng < -math.pi:
+    #                     lng = lng + math.pi * 2.0
+    #
+    #                 depth = interp(lng1, lat1)[0]
+    #                 r = math.cos(lat)
+    #
+    #                 color_value = img.getpixel((x, h_thumb - y - 1))
+    #                 if depth > 0.0005 and depth < 20.0:  # and color_value ==6
+    #
+    #                     pnt_x = r * math.sin(lng) * depth
+    #                     pnt_y = r * math.cos(lng) * depth
+    #                     pnt_z = math.sin(lat) * depth
+    #
+    #                     if type(color_value) is tuple:
+    #                         color_value = list(color_value)
+    #                     else:
+    #                         color_value = [color_value]
+    #                     raw_pointsCloud.append([pnt_x, pnt_y, pnt_z] + list(color_value))
+    #
+    #                 if count % 100000 == 0:
+    #                     t_100000 = time.time()
+    #                     dt = t_100000 - start_time
+    #
+    #                     print("slapse:" + str(dt))
+    #                 count = count + 1
+    #     except Exception as e:
+    #         print("Error in constructRawPointsCloud2():", e)
+    #
+    #     return raw_pointsCloud  # ,pointsColor
 
 
 if __name__ == '__main__':
-
     print("Started to test...")
     gpano = GPano()
 
     #### Test for getPanoIDfrmLonlat()
-    #print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
+    # print(gpano.getPanoIDfrmLonlat(-74.24756, 40.689524))  # Works well.
 
     # Using multi_processing to download panorama images from a list
-    #list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
+    # list_lonlat = pd.read_csv(r'Morris_county\Morris_10m_points.csv')
     # print(sys.getfilesystemencoding())
     # print(sys.getdefaultencoding())
     # #list_lonlat = pd.read_csv(r'J:\Sidewalk\google_street_view\Qiong_peng\000_Residential_ready_regression_control_wait_street_quality2.csv', quoting=csv.QUOTE_ALL, engine="python", encoding='utf-8')
@@ -2717,8 +2949,7 @@ if __name__ == '__main__':
     # #gpano.getPanosfrmLonlats_mp(mp_lonlat, saved_path=r'G:\My Drive\Sidewalk_extraction\Morris_jpg', Process_cnt=1)
     # gpano.getImage4DirectionfrmLonlats_mp(mp_lonlat, saved_path=r'D:\Essex_jpg', Process_cnt=30)
     #
-#------------------------------------
-
+    # ------------------------------------
 
     '''
     Test for getJsonlink()
@@ -2778,8 +3009,7 @@ if __name__ == '__main__':
     # gpano.shootLonlats_mp(ori_lonlats_mp, Process_cnt=10, saved_path=saved_path, views=3)
     # print("Finished.")
 
-#------------------------------------
-
+    # ------------------------------------
 
     '''
     Test for computeDepthMap()
@@ -2789,7 +3019,7 @@ if __name__ == '__main__':
     s = "eJzt2gt0FNUdx_FsQtgEFJIQiAlvQglBILzktTOZ2YitloKKD6qAFjy2KD5ABTlqMxUsqICcVqqC1VoUqS34TkMhydjaorYCStXSKkeEihQoICpUFOzuJruZO4_dmdmZe2fY3_cc4RCS-L_z-c_sguaNy8rKzgrkZSGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBCbgsFgB9YzIFYFo_wdsAAZWbC5DliATCwYVPhjATKsYNC0f5s2baiNhagUDFrzb47aeMjVgkF7_liC06JgWv7YAX-n1rfjjx3wbVp-m_5YAV_mpH-bPGpjI4dy1h8L4Lcc9scC-Cyn_bEA_sq6vzF_zB8b4Ktc8McC-Cg3_LEAvkmH3wF_LIBfcskfC-CTHH37r_DHAvgj1_yxAL7IPX8sgB9y0R8L4IPc9McCeD9X_bEAns9dfyyA13PZHwvg8Rz11_LnFVI7SVZWO2UU_71-7jTybwd_67nuT28B4G8j-Gd2LvsXFtJbAPjbyLq_MT_8_RcFf1oLAH8bwd9fFRQUOPr9aPhTWoDT378glqPfEv4-qSCRo98W_v6owM_-dBYA_jaCvz_ytz-VBYC_jeDvsfprP1SeRd0_yVfA39W0_uV0_R393z_gbzX42w3-1rP-8g9_d9P4D4C_yeBvOfhTr7Q06W_D33Z-8Y-l-ABBrvYf4B9_LX_Cf6iTQxsFf8vBn3qp_FULAH_T-cq_dQHgr1v37t0tfgX8LUfJf6hp_-7KLB4G_paj5W96IL_5d9Yp-VeY9j839qPX_I35k_zxT9d_2LDmn3v06NH6wdPBP_kCkP4jR44s7T8y1pCWRkeL_2JI1L9Xr14K_16tpT0-e_8ePUj_jq2d3v6juUhRxNL-vZIV8Q-Hwwr_0YO02R2fhf-w-M8a_45kp4l_GVncv8xs5eWRHxT-0Y_1S6T8TOvjwz_NdP1LkhXDN_zdLjqVR_5R-Ot9ijZz48PffmdF0_XvZjtDTl3_Ir3OUhcZtahrJL0z0PIfWl1dPSqWrv-YWB70P6O1Tt9qqahoYLwuXXT9E5e-p8V0QWMp_I2cI3VqLqv5M7oqa9tWcZb48QJG_n2jFTdX0ru1qip7_pWVY6OFolVWVtacE68y5h_5UKUgCGr_wZr68Txf0jpQ_BwjonOS_n365ChqTxbIVpZzpiLlZYoVCASIX8eucGIXdP31bmA9LnVdOnXS0YwX91d9WCT2RGUejTwLmZF_RUVFbl9FxfFK7PkrX-IqiWL-Le9lVP6xz-5NVBVpRLRiorMj5eYS_sb47SPnJv1ziA04k7xmigun3YNOhLvunTtQ8bRIUSfDRN1vrSVvqyiZeyr_6GWraC43Wusm2PJXvcnppyjm3wxbpfKvimsXG9TMHq1Pczk66ehr_VUroLmAqquoswjKWl8p3MjI2wK7Kf9EFcpNsOOv8z63Kn5Hx_xbPFX-KdUT8HruSfR1_bUPgRRLYGIR9NfC9F4kdTZUN8Ge0j83d7je1YwsgQ1_o9tXk7E_YZ7ihk_ysp9I199gA1IugY1V0C0lcnr3ujX_WDpLYN1f9Q7CvD8pbsU9hb6hf47ey4ClLdDZBbPLQIncir_OElj11zFsKXFvJz6i8rfJnlo_mb_xQ8DyFljcCPe1tRn4a7ESS2DRn3jvoLsAirtc7W8d3QC_vfrcyfxzkj4E0toCz2Xi9lctgSX_FErq76_ytwOvp69z7hT-KR8CBlvguzWw5h_Ngn9Kp-bv2PprZ_xT65vwzzHzEPD_08DAP3JR0vW3I-eEvxl9c_5mHwJ-fh4Y-xttgCl-W3IO-JvDD5j1t7MCvtqE_Pwk_vorkNrfJn6stPxN61vwz7H0OmB2GbyyDfn5mg0g_HU2IIW_7l8bWci2vwX8gDV_-w8BK1HxVhf1z49cAWN_zQYk9Vd-4nCbq2DL35q-VX8aK0BBW1vcP1bCP1tdUn-jN4o6mVsJy_5W8QM2_F1fAbepdSP8m5dAq0-sgFXyVCXbADv6Jg9ux9_VFXCV2TCtv3EOoqfyzzHtbws_YNvfvRVwzzhZVvzdWQGjy2zG38ZzP559f_UKOLQDbgknz6K_GyuQZAGs6Fs8eFr-mh3IIH_HV8D4EifzTws_4IC_egXS3QHnbc1ky9_ZFbBx4dO0j-aEv2YHMsffwRVIx94mfsA5f8d2wEFUC6Xh79QK2MZP6-BO-mt2wMYSOORptfT8HdkBW_bp4Qec99cuQYb4p70D1vGdOLgr_tolML0FTpzJRs74p7cDVuwdO7h7_va2wLGDWcs5f_s7QJs-ltv-eluQbA2cPZ3pnPW3twS06WPR8TfcBM0quHBEM7ngb3kJktC7d3Da_qly76RJc8vfyha0XgQK7vHIQdm5x3P_xLq5ym9yD3JoeGuCfzQ6_im2gcnJ4R-Nhb8mJicnJmCtD3_qEROw1oc_9YgJWOvDn3rEBKz14U89YgLW-vCnHjEBa334U4-YgLU-_KlHTMBaH_7UIyZgrc_K392__jcbk6MTE7DWhz_1iAlY68OfesQErPXhTz1iAtb68KceMQFrffhTj5iAtT78qUdMwFof_tQjJmCtD3_qEROw1oc_9YgJWOvDn3rEBKz14U89YgLW-vCnHjEBa334U48cgTU_Q3825srYnJ0YgTU__KlHjMCaH_7UI0ZgzQ9_6hEjsOaHP_WIEVjzw596xAis-eFPPWIE1vxs_L3xx3_4w59BxAis-eFPPWIE1vzwpx4xAmt--FOPGIE1P_ypR4zAmh_-1CNGYM0Pf-oRI7Dmhz_1yBky1p8NORGTs3vsAcDkCsA_EfzZxeTs8Ie_okzkh39rmejvkbf_8Ic_i4gZ4M8uJoeHP_wVwZ9dTA4P_0z399ICMDm_R_jhD38mEUPAn1lMDh_IeH-vvPzDH_5MIoaAP7NYHD4aMQT8mcXi8NHIKTLSnw24KhaHj0VMAX9WsTh8LGKKTPP3zOMf_vBnEzEF_FnF4PDNkWNkoD8bb3UMDt8SMQb8GcXg8C0RY2SWv3ce__CHP6PIOTLOnw23JvqHT0TMAX820T98ImKOTPL30OPfM_4MF4D6wT3Ez9LfKw8A2sf20u0Pf_izi5gko_wZaWujfXgiYpJM8ffU7c_W3xsLQPfI3uJn7O-JBaB7Ym_xw5-yv8duf9b-XlgAmsf1Gj9zfw8sAMXDeo6fvT_7BaB3VO_xe8Cf-QZQO6f39L3hz3gBKB3Sgzd_tkf8mW4AnQN6U98z_gz_ayCNw3kUP9tD_gFWK-D6sbyLn-0t_2jkdL7397R9NFdPbztiRH_ye_UFX5Vbx3coYlY_-PuEvTWHz-9q5OQe4fcbuKr0L4CnUp0uTX6f25qKCos3Y33pvRNrCfqxvuIeKUvVBQ0jQy8dv5C7_YQk140qE4-83eepF-Z-wT24W5KXc2XigpsnbdxVvzm0-ZQkDy_sJRZ1v1n4a93vmy5ecTs3ZG_X8M79k0PrF3UNzftGkis79BVnnXw-9P6Yu7l_H5Pk54RuYtuCvsLaBePkg8d3b1pQf1CcW1Ar5F57lN8-OJc__itZvGPKkL6XjNvCn6qrlee8Wyqurb5OXpW_vemSPuWNt71WUBN8f0moYO_chuD_JPny1eXi2ZMWhW6pq-BrX5fknPMGidftnh5aOvylhkOHJXluTkfxH5-WC7vHjxM6S8P5rhUrxQtH1cqzO-1r_OxnbRqrpn5P3DbuDuHXt11affmCjvzkSavDnz8_T5i0eHH1-Y915jeWXCRW1LXhpq96gbvlkCQLh7qIQnZJaOs5O7hv9knyd0b1jcw_ivt0wmBueGSeV7qVicOO3yEf2XF-de23X2zo0P7l8DfTa7i3nsjj978nyVPaDxWv--JYqG7UWu6uI5J84vVssfc7S7gfHdjDf_fqWrlnzzXiwH43yBc98Jdq4doZDbMW7ArnPXkF94fupfz1b0ry2qfGiOUFU7mTg5bxA6-S5Jo3ponbP-rIHdh4Fv_xNknu-dYocdn6WfKkvZub_jOxd2P9_iPhpaHb5SfvW9j0xtbixp-ce1icemxE6Muc5dyrX0jyhyfyxPlPZ_GLd57kBr0iySsmni3-MHsPd2LgyYZ7XpPkZy6bL55x_ZpN0z7N4St2SnL_2lzxq9_dKry54ZdN78jLuKpFi8Rrjrbnp67b1rhpca28_IKnxaG_HTj2uaPjG_ZH9mdhzUcCt6eSG_O3eu6rA5HzF58SpoXncdMmzGl8dZEk3_f0LeJD22bLby1ZX716xIKGrEVbw48-_CB39d7_chv-KcmPbn1PuC1vjsBNXNc0uHAh9_gnPcWmLl0aTn18H79wpiSPLXpC-NOPV4cOX5zVUHVSklcW7xBKtrfj31-6heeX18qXzd0nHp5ZyAtlsxpXXC_JM2pfFIuXLOS4wjHcVZ9J8rEzy8Qb7_6aO1BXyq9_UZLnyJeLj7w0R9jz0Nrq-9_syn__vZlC0Q2z5WObn21a1K174_3zDof3DPhNw_qartWTv75LLlp-hfBo2XNjz7t3PP_1s5K8ZcXjQocr53NjpD3c0A8j86z5l9D5gUF8Xtk6vtfOWnnSlQPCo_94KdfuyM9Db38pyatu3iB-_uS73Auz2_HhP0vyzG4jxKcmb-Rq9q0MTYrsW1Hdw-K-D-7hz19X3zj-xlp5SoUY3lA_ketdsJM7GLkfHzv3A-Guv-fzB7aM5JetjJxv-kLx6ISXN065cwI_a70kZxVdKVx7sIo_OKy0cfUvJPnWxmvCcu-e_FUzahse3yzJ9bPXiHN2_GTTK5_Mb_xBxOPolEeqZxQIPBd4g__kzlo5f9op8YwdS7mbJr7LleyS5HvXfSnsWjVHvrXgmeqbLvxpw6G9H4n_Bz8_xLw"
     s = 'eJzt2nl4FPUdx_FskMASSEg2kIsYIBAMaiJgICS7mVlEDUf1QWupVqh3qQJaLFceYIqgRYvWthJFKq0glKsez2MVzSyjlKMiVGirxqMPrVoVtHg-FQrSzm6OvWaPmZ35zW_9fl5_8ORiMzvvz87uk2d7ejIyMjMcPTMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-JTlZ_dBgG2yguw-FLBBVgS7jwfYiuyPCdCi0R8TIES7f5wFnBGtB8PjBXPF6h-5AI3swf4qe44eUhZ7AB0LiFc-2B8LSFNx-mdlJW4f7I8FpCUT-2MAacjM_lhA-jG3PxaQbszujwGkF9P7YwFpxYL-WEAasaQ_BpA2rOmPAaQLi_pjAGkC_YlLfQDon87QnzaLngDsvluQJPSnDf1pQ3_a0J829KfAGfM76P_N53SiP11OJ_rT5XSiP11OJ_rT5XSiP11OJ_rT5XQm1z_uAIz3P5PdPQUNTvQnLLK-0ScA9E9LGvmtfAGA_pxBf9p46F_I8P5COPSnDf1pQ3_a0J829KcN_WlDf9rQnzb0pw39aUN_2tCfNsb9tQZwZiEGYB89_a15Awj62wn9aTPtCQD90xL604b-tKE_behPm2n9Df8BCP3thP60Jeifnx_6w9z0z_FL9a5DRoL--fnc9c_O6WLWKSAtTv_8fA76Z2cHPwpAf1PF7p9ve_9sLehvqpj981n176HdXzM--puNy_6x2qO_6fjrHy8--puNs_4J4qO_2XjqX5K4PvqbjJv-JSr0Z46L_iUd0J-5hP1DB4D-3wTDQz_hqn8yA0D_FJ1lvH_qbwBg2b-iIKC8vHyYqScwjQ1RhfeP-QbgtOnvcrmK_DIDiipUroJg-j59-obrmVhmtwAmSZgK9D9L_WB4VdXo9i_FugDw3_-881x-7dmL_OH9n4alN9BerZ_Z0T8C81qq3E55pR3690_h5kL7V7V_iYf-LteIEfr7dzzoO8OHlA-kj4yfVPue7VcRzf5M9tCrQ-9cLXl5ITvQv4Tq9v7V1RnD1QHU1NRkaPevrT3__K7-I0fWnR0w9tx6y_q7XA3tZ15H_8CjvqgoWL6gq3xk_OTad9ZPsn8nR_dwRnJr6q2KsYLgEPq3KxsYxyAto0b5_3Vr9T9X1dX_nIABqspKi_oXBbk6Je4fdsEPTW-sfbC-3v6OyAUkEre6xgg0Z5DXKXwI_i34DVYNDRgQl1Z_f-p2av_K9ltx-FnUv9gVpfP1XNQFoSt_1zU_tHxE_OTbh9bX31_3AoxsIMEMupbQP0xZuMGRtPo7YrGqvyozWlGoqP6dF_0Y7fWkD49vqL-BBegbQe8QCWbQNYX-msL24OClf2ABRRoqIi8NgeqB_upF34T2UfWN9Te2AOMj0NxB5AyCY9DegoOj_qo41UNe5kVf8_sYb69R32h_wwtIaQRaQ9CeQeggOvOb1z-pASToX6zxSiA8fFT5kPb602vXN94_pQnoGYHGBjSXEHcFgePlrH_YBArCRIUPyW8ofYz4qfVPbQHmjEBjDDHq89C_OEpBRHjN7p3xDaaPUz_F_ikvwOQVRC0ipD4P_ft1iVhAnO4h133T46fe35QF6FqBrhH07h1ypDz1D5VMeyse-ub0N28CVqwg9DB57R9zAqmmTxjfpP5mLkDfDnTU56G__4aTXECq5ZOrb1Z_8xegawfJ1GfdX2sAEb8jxgRSD59sfBP7WzYBXVOIU197Abb2j9LPjPB66pva3-oFJDsI_zdjH2Nq_YM_YKB_otOnYhvf7P6sJxBTgoPU1T_eDenon8S582Ma34L-XCwgmcNM1D-5XH5J9E_-xlIbgM74lvR32D6B5E927P56xemv85YYxreqv8PWCeg832aK7m_gRtjFt7C_w7YJGDjjJuvqb_D_M4tvbX97FmDwnHOFUXvdAzBwV5DfCFbxre_vh_z6MWnPqL-D2QTMO_-2Y9GeXX8HkwmYdOr5wKA90_5-qK-D5enZ9_dD_mSxyM--fwDyJ8Xa9Db290P-xKwsb3f_dsgfj9X1Lf4DYNKQXhuV_p3QPRy1_pGo9Y5EvT916E8b-tOG_rShP23oTxv604b-tKE_behPG_rThv60oT9t6E8b-tOG_rShP23oTxv602Z9f9vfAA5xoD9t6E8bZ_0xAMbQnzb0pw39aUN_2tCfNvSnDf1pQ3_a0J829KcN_WlDf9rQnzb0pw39aWPQHwPgGPrThv60oT9t6E8b-tOG_rShP23oTxv604b-tHHXHwNgikV_XAD4hf60oT9t6E8b-tOG_rTx1x8DYAn9aWPSH08A3EJ_2tCfNg77YwDssMmP_rxi1B9PAJxCf9q47I8BMIP-tLHqjycAPvHZHwNgBf1pY9YfTwBc4rQ_BsAI-tPGrj8GwCOG_TEADqE_bSz7YwD8YdofA-AN2_wYAG9Y99c5ACzAYsz7YwBcYd8fC-CJHf11LwATsIo9-TEBXtjX38AEsAHT2dofI7Cb3fGDdM8AQ0id3dFjMLAFzEE_uzMbYGwZ2Eg0u0tyzO40FrP79H4j2B1RW-r3KyPCox9WbNxfeqR16mlJOWdIiXjLO6_Ls5uekt99Q1LuP9lPdB4dstH52-W-2-ZJyoxfFosfDe4r3O69XBm9cYznrs8Oi7dm5jWsnXhMHvCepEz5IF_88oNLhM_k_kKvpq9bj6_u5r1hRbMwpvqyxvkH69yHTjwlXru6p2-e1CiXvS4p294oFPcvWiSMOVy54wdNbe6_bP6rePxoN8_pxUM98zZJSs1sr-gcXa7cNKNJ-dXda91b5lzv_ezvxfK9ayY37DslKW8cGyA-fKrOt-r4Uvnw05Lyi8WF4pdLuiu3XHmVsvKaPe7XXvyp96uCbM-dE6Z47lsuKXOLp4u_eeeVhr7Nl_iu3iop6-oaxE3fa5E_WTPVPeETSXlvfrm4atEIYcKwOuXx7ed5Zi50eytrjsiz2j6Qa16WlBfHDhSXrHT7Nu3-nbx7m6SM31kgPlnZ1nrxt951T_2XpNQO7C5OPrlPbmv7rrvifUnZf6hYrDp2i_Dt7Xsa55aOaLjwxAHxw0UH5XWNB-WWVyXlhy3l4sgy-fmfXzCwwfc_Sfn8wX7iUFep8tzaScoL0ze4b236iTd37G3unetrPFtlScl87CrxVN0VcuHgLN9k__n7zh-FpZ88KRde0Vq_4VNJ-TgnV3zz_Xrh7A-rhekjpspvPrK-ceSkHr5lu3r4ardLyhOXjRBfernZc2rBPE9OjqQsyM7xHl9-QM7u9rm868_q-a59UHh6zHzZ9acMefl_JGXPtl5imXCv7_X_XlR_7Hq1_817hJcevVF4a8o7jQ-ffmDM8F5t4-onLJAvXLpFvvioen8WHBGePVnuWftQX0_ZBknZPmOV-G6zKFTNHaRMe378jibnLO9DT8wRtg5dt-PshzI9C6sc4-S9JUrzg5OEywtG-z4te9S78pn5wjODljb--6N-7p9Ne3zcjopq99a6ia2nTkrK1lX3iB9nXu_-8ZI5rReckJRhpZPEhl9_2Tr7wlJf3iuSUv-PXULD4y75kRVCQ-7Xaq9z3ha_OnDAs_lKr-dvNy9RbvzisHd3n-t8dxxZ03rNGkn5onalcOenpfKM4YN8F--TlJK8ZeJVd7_tPmN6jXuJuueLHjgkNmU-4PnRyWc9X0xcIuTedo-4tlxw_3NTD3mS-vsnT_uDOOeOFs_i5466D4ySlFdH3uCtPHx8x6iZ3xeyGsf65m4eMO7SvfW-uRUbW089LynLnsgQW7askH_fXO6r3q32fOt-4bXbD7k_yvG5y9THW8-mneJq6Wr3tQeHyC-o53_XrAniTY9d6l5YdZ1vZ4uknP_wenF88W75q5mDfMXq7d23d7Twf54XJuY'
     s = 'eJzt23twVOUdxvENyyWsuQCBgAQMAUISJIkRIcRzNnsWtO000k7RVsRxWpnUglq8YOsF9DgoWBGl2inDZRputmKlVhGtuJucyKglIoKXdixKFVNEp4JKFSlQ7NlbspvdbM7unvf83pP3-f7DkAB5z_t5SEgmZM9wOPo4srIdCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEkCj16S7qgyGGdauOKfTuUoPHDHpPmchjBfbOLHtswH6ZbY8N2CdW9tiADWKNr9evH_VDosRZgB_0xwI4zBr8sD8GwFmW6Yf9sQC-st4fA-ApAn8sgKco_DEAfiLxxwK4icgfA-AkKn8MgI-o-DEAPqLzxwJ4iNIfA6CP1B8DII_WHwOgjtgfAyCO2h8DoI3cHwMgjd4fA6AM_mLHgT8GQBgP_hgAXVz4YwBk8eGPAVAFf7HjxB8DIIoXf14H0Dcm6tOYHzf-HA2gr7Goj2lK8I_OoHwvmgE__sQDSIe-F4yAI3_aAWTmb9sRwD-cCf523ABP_qQDMMnfbhvgyn8U3T0MNtHfThPgib8X-dtmAvAPZb6_PSYA_1BM_G0wAfiHYuXP-wTgH4qhP9cLgH-wwUz9OZ4A_IMx9-d1AfAPZoE_nwuAfzBL_HlcAPyDwR_-8BfWfzD84Q9_-As3APgHEtM_JydnIPwDCeefE7APBP9AYvlH7OEfSRz_nJycaH74BxosjH8O_BMEf6H9XQL4Dxo0KPAD3_40V-MSxD8Q_OODv9D-LviL7O-CP_zhL6q_C_7c-BN8-ueCP_zhbzv_oUNNuRUX_O3qb8oA4G9ffxMG4IK_jf0zHoCr9_sPC9U7_TNdgDj-HQOAf2cu-MPf_v4jQiV-pY39i4qSPLQR__z8_GSvdsGfc_8kA-jJPz9UkmtzwZ97_24GUFpamtQ_v6Mk1wZ_G_h7R-t1fabx3fgPD-RwTMg34u8S038Qkb8R_gT-o-P8x-sl858wAf5R2ct_ZLDw0Zn6u-DPuX8R_I0lhn-JnsdhxD8f_p3Z0T8nePIo_5JwtSUl8I8L_uHgH58t_SsDdfpXwj9Zhvzr6-EfXS_yd0T5n6dX3ZEkSRF_t9tG_oG6-lfo1cqynJJ_93fW-_zPjem8cBH_6mqb-Sud_gH6ippwIf6If0VUvdX_rHMSdHaSJkXSdxDSDyzCZv4Vsf41FwSbMiXWvyo6u_qfZbyuMxgbLNkYOtZgM_9pQf8yvWnTpuiVxRb2j3lZvH9ZWXl5-eRAeVFNnTq1P5X_kNhSoE82hbExJd6BzfzLI9XV1QVw8_Imd7xI9wz7R7Pmxft3gPfvGif-JuwgegtjEzYumL38p5d3KS-2BPwJ_OPYx0TizN-kHUTW0KnemR3847y6TcePe1m3_mM6i2yFyr-nAWS6g67q4XJzc3uXf4KGx_vHmoeaGIjs_b9B_9SGkJtCXPt3eSefd-GFF2bkH-c-MfKLyfyzYstoCqm429I_qijoBO_OOz7858X5x7D3580_ebED6HhxOu6BBuhx7Z_U13jd__uvmxlY6D8gWEoriC1N95g49U8mZQi-8--6Qf9wlvt3xk4_Tj1BtvdP_N49MgGj_v3p_FMZgynkXbKLfzoZ9i_gxD_pLjKEFtDfqL6eRf7muZmV8P4FBRb5FxdTWydKcP-QfoGTrb9TrzgcNXiXhPaP6Osx8nd2ibcVFHLkn9mXfzPBZ-HfVT7RCqhnUFgorH-svqn-yeR52kFhIWf-50eyXF8vc_eOz9OND4BwCUH9rCye_JNdEFv8DDaQ8Cs1aSwg8RwY7aEwrC-gf_f6CTOizWIBcZmtHz6nWP4FKerrZYczLM9oAkz0xfJPHd-Zib-5C2CBL5J_WvjOzPzNnAATfa78kz4-Db4zY3_TJsACnyv_5I9PpG-GvzkLYIHPkX9Pj0-D7zTH34wJsMDnx7_HxyexD2SSf8YTYIHPjX_Pj0-D7zTTP7MNsMDnxd_A49PgBzLVP_0JsMDnxN_I49PYBzLbP80NMLDnw9_Y49PYBzL3A0DaG2Bgz4W_wccnoQ_Gyj_FDTCwt84_Y_7k_qzog7H0D2bsGObTB6P1N34DFPKhmPsbuwLz6YOR-qdyBQnhTSJOmjX-PV6B2fDhKP1TuoQIOhPjZFnpn-QO4txNektk_qndg_nfUGE0En_rovJP9ZzwZxORf8rnhD-bSPzTOCf82UThn8454c8m6_3TOyf82WS1f7rnhD-bLPZP-5zwZ5Ol_hmcE_6sssw_o1PCn2FW-Gd4RPizjbV_pueDP_MY-md-OPhbEgN8cw4Gf8viDz8L_hbHE30w-FsfJ_TB4E8WsXwo-NNnvXpnZP5M_gMISjVyfwyANPiLHfzFDv5iB3-xg7_YwV_s4C928Bc7-Isd_MUO_mIHf7GDv9jBX-zo_PENADxE748BUAZ_sYO_2MFf7OAvdvAXO_iLHfzFDv5iB3-xI_THF4A5iAN_DIAw-Isd_MUO_mIHf7GDv9jBX-wo_TEA-uAvdvAXO_iLHfzFjtQfAyAP_mIHf7GDv9jR-mMA1MFf7OAvdsT-GABx8Bc7-IsdtT8GQBs1P_xpo-bHAGij1ndiAKRR4zvhTxo1fiAMgC5q-2AYAFnU9KEwAKqo5SNhATRRu3eEAZBEzR4VFkAQNXpsmIDVUYvHhQlYGjV3wrABy6Km7j6MwJKomXsOQ2AZtW6qZWMO5kYNyiBsJJWotciivni-otawMOqr5idHlw6_XNWUn1vua_tG1QonjlRGjr_Dc2LZ7Japh5vl2Y5q5YOXJkh3zB0trdFf_9PqkcqwA6qW_flW2XV0t_9Hw7K8nq2qZ_t3JrsPnHldfmtJrnKOb5dU-fUj0qgzqva31WcrjbvW-Lbce4e_6WtVm3TnUCXwNj-9_WN53SFV2yiPVC75SPVcu6BBPn_9Hvm8q6_03jxf1VY-dnez17fX_7NlqvfWJVvkI7-vkNcfVbXS2ZOU5_-x2LPponNaGg_tlB9u_a534cYbfVfccoO88oSqtbkrlWU1k2XfEIc89KSqvfnXIcqBixZpyqLp9f95X_Pv_G2rss6xwv2XRtUzYuAZac6_F3jHPfNpS-uZuZ4vZu72vTbgUs_vCp-uax9-if8T_fcvGpOrrNhSJDW-n-u-6x1VW_zEIGX9jxs928Ydbrl45Qb5ptKDyjd7i1v2vbfYc-_RAdL86_d7917-2I73ncubndep2ufVA5Qvqpc1u29StbtbTvm237XSW1lR4C56W_X84KV2qc8vb52-uvQW90X9iqSGB1TttrKLlbVTX6t_sfVaban7Yck9_rj3_gOqZ8mUP_o3Hdst7zw5yttwUPXkVq6Ub3l3j9wona0Mv6LKc-x6Sdv27Pfk7Jlzpr88cINvXvaHLxTrXtv6OJQdrUt9V52Y5l7tV7XlD01R2lfXyRtWVTev0FRN-_4sRbvyUn_tf1Vt6P_2-Xa--60Zs-YNdz_0zwkvTH5L1VpfLlWe-HmbvL2yuL5h72KtftnzysZ1N2q7rnqyZcYf3vBvLDrmffqyhdr6-5pa_tXwpv9UVZv3pnZVG1hwl7_8pT3-8dIwb5Xvftl1cql88oh-H21fecbccLnsdSo7fqjf747WCmXJMw_IV9_ez9_wpapVPb5IaZu-Qjq4YZG76R5VWzfwNc9H2Zvdo1_fLNVUq9qj9bcpxz9R3F_ULJFefE7V5lwnKe1nnvPX6ttYv-0d3wNf1sxY9dlm-ear65qf_bOq7X3qXeXINQvdC-pulZ-7V9_3DXOVR6SS-pIjQ-T3di_WJs16W2naXyT__YI1vlmnVc2_tVGpOa5JhxpP-Fs-ULWC5kqltLZCXvqx033PflV7cd6fPMeWt8ilxy7zHdWf5_Fff1up_WaHfHr9q9J-_ef995Yqvr6bpEdfXeq-YKGqfdZU5tl-6k7tcPmp5vYH3_Cf-1Srd957z8ofrclrHrVL1a7ru1WZ37ZGfmffgOZ5-1Stvni5Unv_RmnElrnuV9eq2m_mr_bM2rFKnumdLJ_-XNVU50HPI1vXyqefmt1832pVO9JY6W3IGetuf6NOvl3_8_a9MlGpmFlWP-IXr8gfL1qsffX2WO-yZ_p5fjJzjja-KUs-PuH49LnjnpTPlNztn_SJqk07uEl58EPVU3p8qVz1-h750KcfKGuvuVlbWfJoS-GIN_0Lhv1K-T_n7FK8'
-       # decode string + decompress zip
+    # decode string + decompress zip
     s = 'eJzt2n1wFPUdx_HkIEAgJCSBEAgYQ-QhjwZMAya7d3ukUQd0bBWpYKsVGhU6CtRpRCWsIFUzBTQoRSzWhxGUalsfsAPJhqVqFbWigGgFNR10QHxAKlaRB-09Jbm7XC6395DPHr_P-x_gJuz97vv67iXc0O_HCQmWhMR-CYwxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxpgo9Qol9CFZ1AvJ3as-6AOz6GQU3sPvCH1yFmHh0bf7cwPiuAjsO_y5APFZhPgd_tyAuCtyex9_LkA8FR18H39uQLwUNXw_fy5APBRNfV_-PsnJyehXx4IWVfxA_twAExdt_YD-3ADTRn-xi7F_Mv3NHf3Fjv5iR3-xo7_QxZi_3b93797ol8oC1EP-vd2hXy3zr2f9uQJmq8f9uQKmKsb-yYH8uQLmCeTPDTBJMH-ugCmiv9jRX-zoL3b0Fzv6ix39xS62_AE__qO_iaK_2NFf7OgvdrH1549_Zo_-Ykd_saO_2NFf7OgvdvQXO_qLHf3Fjv5iR3-x6xH_gPz0N0P0F7uY8tPf9NFf7Ogvdjh_9CtnzmLqz3_-mT76ix39xY7-Ykd_saO_2NFf7OgvdvQXO_qLHf3Fjv5iR3-x6wn_gPz0N0X0Fzv6ix39xY7-YhdL_p7471-pfbsvSk91Whbn_qmh-HMRui6u_VNT6R9h8eyfSv-Ii6V_bD_-S02lf-TFq39qKv2jEf3jq6FRvh7946qh9HdH_-hkFv9MZwbOLab_0NPHP8WnTKH8C8L8e0Pp35aI_qPo3144_HHuP6rNv7g8ekcxh38m_buvzb-Y_iL7F9M_QVB_5wJMor8z-kcnM_kbObdI_hUVFc5fvPwn2aN1lB7wD8hP_24rba-iorSsrMztP7TM3eTKyvHuJOns9iqNHiVe_IuKinz-HBf-uW2NzO4oKyurICtrtFcjR3p-c66jke6sVVXj_PL4j5vgbkwXGTuimfzHds51RsWBX-jK0p5Z_AcO7NdR24M5nRs8eHD7NuQWODbCUXa271p49SNXnu3w5PG3lbjLC1bI5zeXf6Kzic6K2nI80C5_jqOzXJ3pKib-6enp_R2FQu9dP7-qh3c0xJH3MhR4NsJVx1q0S_tuhiPHlznE3f5O-ywjBTh6RkZGmjsz-Se25XevO_NS926QIf8BrvyHMcyRxZLuLikpqX9HXgdIDNTATvmvgafhPhW4NsJd5_eJQHm-gzj9vdZihIEyXKX5h_IP9PGvJVCeO95pbaQB3TTMk_MpOui71O_C3-gaeCrw2wffd4rAuffA4d_Fhvg2ZEiGV53U8f7eo01JsVg6-5_VlvtGj4K5v3sn-671g_sbXYOCgI9mBK1tD4YG2I1AXx_EPC2t40ljyB-yf7CiQO7t7n1pP_pg-KH5h7wHgf2DF3w7jJD7ZHZ_3x0ImbuLu71L-u70Dfl3uwhR8Q8Du2f9g378Z8TfuQFhqAe-VCD67vXD8w_9HQFRfn5-YiLC35i9q4jIg8uHpB-hv9lWwSnvrof9k5LO8C0c_xCsA9IHkg8NP4r-3W1DjNchv4O-B_27mLy7M_wzIhuRfOj6sfIPvWjQB7hsD_gHxQ-1MOGDyRvRj2__gPLtxdLf9QShQETPPyR3g_jx6u__bh-06Pp3vn7oMGH5G728If148zfi3qmI_YNfPqw9iJZ6ePjx4m_ofg8pw_5GLm4Az0_cMHiE-mb2jz5693mZR-2aof3EFnHh4JvIH4BthqKvbwTfBP6Ch8WnP7po4oehT39wWHz6o8Pi0x9dFPDDt6c_PCw-_dFFYh85Pv3R4W58-psipD398SHt6Y8PSE9_EwSkp78J6o4-dvL0N0MwePqbIl_2HkLnApgmgDj9TRSan_7Y0Pz0x4bmpz82ND_9saH56Y8NzU9_bGh--mND89MfG5qf_tjQ_PTHhuanPzY0P_2xofnpjw3NT39saH76Y0Pz0x8bmp_-2ND89MeG5qc_NjQ__bGh-emPDc1Pf2xofvpjQ_NzAbCh9emPDa1Pf2xoffpjQ-vTHxtan_7Y0Pr0x4bWpz82tD79saH16Y8NrU9_bGh9-mND69MfG1qf_tjQ-vTHhtanPza0voULAA2Nb6E_NDS-hf7Q0PgW-kND41voDw2Nb6E_NDS-hf7Q0PgW-kND41voDw2Nb6E_NDS-hf7Q0PjO0DMQObS9M_QMRA5t7ww9A5FD2ztDz0Dk0PbO0DMQObS9M_QMRA5t7ww9A5FD27tCD0Hg0PSu0EMQODS9K_QQBA5N7wo9BIFD07tCD0Hg0PTu0FMQN7S8O_QUxA0t7w49BXFDy7tDT0Hc0PKe0GMQNjS8J_QYhA0N7wk9BmFDw7eFnoOood3bQs9B1NDubaHnIGpo9_bQgxA0NHt76EEIGpq9I_QkxAyt7hV6FEKGRvcKPQohQ6N7h56FiKHNfUIPQ8DQ5L6hpyFeaHH_0PMQLbR3p9ADESw0d4DQIxEqNHbg0FMRJ7R0l6EHI0po52ChZyNCaONuQw_oNA_NG3roSZ2eoVXDDj240yW0YyxDzzY-QiuhQs_dZKE5eiz0oE1Ugl9HFqxq2tP6SnPL96q-pSlbaRi4uKo4_2DTdT-o-nPfZyrLF9TZvn6_Yat92n4pJb_EXrSnznYi-c6tv_7qI6lo2QK78v4rzaWrXm9edkrVr5-do3x6wQJb2nMbras-K5HnnzqqLG_trV_UOFO_8cSYlgMV4ydfKa3Wfrt6urTkS1XPe220UrhLte3YkyMV5w2Wj2wttn90TkLV3VOXt3xeq-rz9p2trL7pJemxRRO06kOqvj07X3lgwy-lTR-r-uh-b2n75n9hzy9do134umQtbLxVnzDicWXq26p-Zk5zc2FzZssLfWbYP53zsPa_4cutt5fU6cfuPak89PEyaVL1xKrcb1V9Zvog5eIFCdq9aWvkuqmqfsuWV227zhol3b_UUrXxpKpfs3eI8tmMQfrBMZfq65cWtsw4tsJ-cMXj2vEZ-6p2HVH1mpJRSlJuvjZ1zuXNtY6vL60doCRPeFnbNG2xfMkNqv78mZuUxj2q7c7tf6u012TKHx-YqDy84IQ2pXGkvOZpVV-5UFUm2vtUln33qFxQpuofNt1hu_qF8dq4J2qsa4tu1Y9tsdjX3rRRe2fQG_LyJxbr_WubldtSjmslGxKtO3fW63v3_6Ds_axVa9pxX9U7B1T9aMMIZfPBcmnWealbf3pbvT634R4lt7lVm1X3B3lWharf_erjyrfXTpdnPjO6Zf58x3zrb1DWX3-ddu3BPOvJbYv0nClz7fNuVm0lSy-Ta2_MlqU3HlQaFuZsWXrRqK2rXlykf7_NZvvJ3qIq7dEPm6sd-6LPyVWO939T2zF3s9zyn8X6_ZkJ9tq_TpHHnLfRurZmgX7BlEGTayacksZuf1I7b5eqr269TflX0_Tmv-TdJa39RtU_GTdDySm-XP_9n_vpyUfLWyrHP2W76ndW-RdHD2tjH1T1kylLlW2758mTzi9seWu6qk996BHlj-dPtx4pu8XWdEsf-esNg6rffPmfmj5xbVXp547rHRyhPFJcJ21ftkb61ReqnrS7Trksra_8Tcl98hLHfHfWn2Gf-MAb0oHrV8qPXKjqa-vL7bsX9pV33PSDfGpfvf7dgEZ763t3bWk4sUT-8FZV71XS255T_p62-dAKKbdV1V98erPtqdkL9ZlZddZzn_9UO370YvvJ0rs05e2Eqp2O15PRkK5ctfJG_ecjH7Tu7_uuVtsyavIdc95tPpVUq5UeU_WXqscq64bP19eNfca66h-vaVcU9pqcUfa1tvd4Y5W0X9U3lOcoc6-4R6qrmSZd6tivkxfXKDfPmKV9sGy19PZhVS9vuFpZV_KWdPh4pdTo8F49QFaeHDGhpddXj2l_36Tqj45fafv3J89K5z57u7zpOtWWeuhKZcmfdmnz-vxM_u_dqp6tb1OGqZe2fLm7QBq4XtWPpB6yrj-wyNb62DDrvVfkyXlH6idP2nGN1FTdKn_wm8W2lPTZ9uJpVu3zS1ZYZyfX2b47vE75P5RJCQo'
     s = 'eJzt2AlwFvUdxvHc70tCMMRAQjgk3IkpRUsg5ODdN0pUHESGoRapLTNApVUKrS1HSbKDrUYYjtJ6QBFECKIcsYgwxHffrO2oVSoI9aLA0EIpkVIVBOvRAn3fNwdvkvfY3Xd3f__d__OdTGYyyYTN7_PkGJylcXEJcfHOOIQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhNpKaBf10yCjS1AV9dMivVLnjh3YJkeg2PgxA0vmuJY-_hiBZXK0T0d_bID1HJ3T2R8bYLUQ9gb5YwLMFQbfMH-rTiBeSdQPqbbw-Eb6W2kCitgtuoOI-sb6W2AC2uQtM4Mo-Mb7M7wAHegZH0F0feP52VyArvaMbkCBvjn-jE3AEHvmNqBI3zR_VhZgqD1DG1Cob6I_AwNwmqLPwAQU65vpT7wApy_z_EkXoILfVH_CBTidZvuTTUCNvtn-NANwtmayP8kE1PGb7U-wAKeT0N_sBajUJ_A3eQBOJ7G_qQtQzU_gb-YCnE4G_M2bgHp-En-zBuDsGJm_KQvQoE_kb8oAOumT-hs_AE38RP7GDyCEPq2_0QvQxk_lb_QAQvIT-xu6AI38ZP6GLiC0Pr2_cQvQyk_ob9wAwvEz4G_QADTzU_obNICw-kz4G7IA7fyk_oYMIAI_G_76DyAGflp__QcQSZ8Vf70HEAu_zfwj87Pir-8AYuIn9td5AFH4mfHXdQCW9td1ANH42fHXcQGx8ZP76ziAqPws-es1AKvz6zaA6Pps-eszgBj5WfDXZwBK-Nny12MACfBvThE_Y_46DMAW_joMQBk_a_4xDyDBHv7dTeJnzj_GASTAXxU__G3pr5ifPf-YBuA_HfxV8NtrAIHT2cM_pgFY21_7AAKng78afhb9tQ6g-XTc-6viZ9Jf2wBaTmcTf4c5_PC3mb9Kfjb9tQyg9XR28dc4AHv4axhA6-ls469pAGr5WfVXPYC203Htr5rfLv7XTmcff_UDUM_PrL_KAVw7Hfzt4a9qAEGns5G_2gFo4Ie_ffy18DPsr2YAQaezk7-qAWjiZ9lfxQCCTgd_-NvGX8UAtPEz7Z8Of_jz7a98AHb0VzyAoNNx6p9mS3-lAwg6nc38lQ0gLQ3-LfHnnxbInv4KBxB0Orv5RxtAWhr84c-pf9eu9vePMgCb-_fsGeFrd3RtKeh08Ie_vfwjDiCDY38H_G3tHw__aAPI4NjfAX_4c-EfdgAZ8Ic_p_4OjvzDDYAL_6yskP8LBH8_v_39s0L7O-DPj3-IAfDlH3IAGfCHPx_-nQbg4Mw_Oww__OHPg396KH6e_G_oyO-EP1f-ffv25dk_PQQ_V_7Z8OfdP_iPACdv_rmm-JORtyukf3_4d-Dn2N8Jf_jz5Z8L_2B--MMf_vDnx98Jf_gH83PnP4Rv_1z4wx_-8Ic__Dn2H_4N-MMf_vCHP_w58x81Cv68-uc3V1RUBH_u_Ivz8wsKEhMTS25siT__MXFxI30vI7nzL2guL69PyIJOZ1__YW31C8SJf15QAwf6XnXrXNDpbOk_wl-_TnHhPzConJzrQ5Tjq-10tvMfPfomf0PbGhxcrP5MDyA9vUX4Zn8-5czMnAgFTmcr_1Br75CN_YNoM1vraD4oOP_p7OOvAD9oBbbyzwxTamq497RmF_8Qf-S01StM9vBPjVg0_8xMO_h_M5Baf00boOZuV2T78AMY0D6L-18XpUg_GwJZ0l-BfWpSUpKSD_NnUf9o9or81WyAmj1QkuKU8mudAPP4Sv27dSsstIK_cnrV_lo2wDx-RP9CfyntY9hfpb0Wf7UbYB4_OTk5RX3M-Sf2vpbR_mo2QGCfrDYN_uFHQEDfIVVL0OqvdAOs28fiH3IEpPSdizyGxMRY_JVsgHX7mP07joAdekXF6h9tA6zb6-MfNAPr0Ovm76sHnX9M9Pr6-7MKvH7-PZoL_EIx1z92ev39jViAAe56-Qfjt2WCv070RvjrtQMD1fXhD2nfYQZsyxvqr3YIZnjr5x8Nv12Mwpvk31aX1ijJdfBXZR_zFAxzp_NvjZpfg38s9irWYDg6_FX760sfyEzmsMGfgh7-1vA3ih7-jPsbCs-Qv2n87PmTucOfKX8zyeHPjr_54PCHP6_-nfjhz8IA6Pyp-eHvD_7whz_84Q9_-MMf_vCHP_zhD3_4wx_-8Ic__OEPf_jDH_7whz_84Q9_-MMf_vCHP_zhD3_4wx_-8Ic__OEP_4j88E9iYQBk_tT68Ic_edT68KeNWh_-tFHrw582an3400atD3_aqPXhTxu1Pvxpo9aHP23U-vCnjVof_rRR68OfNmp9-NNGrQ9_2qj14U8cNb9Z_gzywx_-5FHzw582an7400bND3_aqPnhTxs1P_xpo-aHP23U_PCnjZof_rRR88OfOD78WeSHP_zpgz9Z1PSB4E8WNX0g-JNFTR8I_mRR0weCP1nU9M3x4M8kP_zhz0Dwp4pavjn4U0Ut3xz8qaKWb4lDf2r55qjhW7K_P5vf_vCHPwvBnyhq-Nbs7s8oPzMDgD9R1PAtwZ8oavjW7O3PLD_84c9E8KeJ2r0tO_uzyw9_-DOSff0Z5mfIn24AHPPDn-9vf5b8qQbAMz9T_kQD4JmfLX-aAfDMz5g_yQI41mfPn2AAPPOz52_-AjjWZ9I_yeQJmKNPDR0maumwWZrfIviJDPv7s6S_dez9URNHzzr8lviF3yFqXRUx629B9mtRq2qOkt_K4B2iZjQ0Tfr2sVUWNRJZ1IdnKmoMM6O-NTvFdehn20XX5MsTvYvqXiru_Xi827tJlO-ed2_5GSm5oWr4R0KP3bd5nvjQKf3wsigPPJgpFBzNLe0uHfJUXxHlca9lCul7t9TdPKiPlOJ7_-7-ucLnFas8C3dkS6v_J8onfG-P-pso710eX_7s-YfGdH28Saj_QHSdmtPdO0Ec0VBzW6p72YfjN02YcUl6_5Qo_-jrXsKiLKn04LgLnsG-z1eX1ENYWz_LdU_WqbEPfZEg1dZvcz91d2bj0m9Xy-8U1paNHVRZ8dlZ0XWi-j2p8qfbG5YU_EN4cvN8aWp8nPTb__ierzBHWPD9-z3DHrur9NarojyjarAwaJ3oWjx0hvfKWwVjKg-dFM5JVfLKswMaL714X-mQnCJh8ZGrngPz13ju9P37B57LFKYsaJTyrmZI-86J8up1uULB6_WNXz85Tz67ZUnZulfKKvq8vLxk7vzc8qmHRfn80hTh5S8uln35V1F-a25t2cxuPSs2vCnKO6YNKx85YkPxRxc-ER6Ynuy99chKzzPHRXn7xUzh6OsvSE2HS6RtH4vy-oFZwoRPRdf-0_ukbdKbDZdXvi1smJld-sCVJd4di0W56MESof4HfcoSVtdKqZdEeeauIcLGplljL8xZ5Ip7-hHpvslnKiZdTi1ryj7uKfDd_y_ZxUK_FYLcv36Y64SYL-0ce0fF_Q-L8uj51eW5k1c0nL0r3Z3w61-WrBiR6n3hqCindp8i5C9YVbqx_7-8eyfVyN_LE4XqLQulyoNdvFPfFeVli6cIKQVfeR5-9Y7GxV_9Qv7Tt_YL004MkW7fvV76-XlR_iTdITQur5LvXTZ07KT6OE_tgk_djyZelP57YLX0xhHfPiY6hd8cSix7LOu0tOi0KL8xdKNr65H90oQDmz09ffe9cKmL8OOTvaVj92z1DPc9f9XpNOH4ow9K17ue9sz5UpTdrzqERXN7S3sO7vSuyxDl1_74vGtm5Xulmz8XXYn7aqW6V2685eQJ0fXSyARv2dCfNFQm5bkHl6VJC9ZuKpeHi_KVcY8Ik5-dJ63aXVi-pVGUK27fIdQ4T0nbt-4prztdI5-Z_o4gbWqUirwfeJt-VSOX7_q9IP7hd9Lh_sOkY76vb_a08cKMf35W0iv_-fI1A0R5uvM595In1kvS8XPeBleNvPC6YnfO9I3S2rrveHc95dvvv29y39L9RckxOsX7_gFRHv73P7vEibul8WuWekd8V5R7T4pz72mqkt4-Vlw-e48oV-90uZPfLS6rnbXUWzhbdNV-nCT8H5Kkoqk'
     s = 'eJzt2nlYVPUex3EQQcFwC2VRVHJX3FITmO3MkEvuplmkZqa5oJXbo5XiUSulMCvNLG-ZKURPZblrzhl-5c3nJrnca3nLrJte7Wqm1_Vq7vfMDDAL5_zmzPo9zO_7_icVIub7-syhp6eaORER1SIia0ZgGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIZhGIaFS9U8Bv0dYsHIszsOITzzQR5XEB75SY8jqLoFjB43UPUKPD5uoKoUNHucgPoLNj5OQM2FRh8noMpCiI8LUFuhxscJqCkYfVyAOoLTxwXAB6uPC4AN2t4e9BVYDdrdEfQl2Axa3TnoWzAZNLpz0LdgMWhz16CvwV7Q4m5Bn4O5oMErBX0QxoLmrhz0RdgKWlsq6JuwFLS1ZNBHYShoaumgr8JO0NJyQd-FlaCdZYM-DCNBM8sHfRk2glamBH0aJoJGpgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYFfRsWgjamBX0bFoI2pgV9GxaCNqYGfRwGgiamBn0cBoImpgZ9HAaCJqYGfRwGgiamBn0cBoImpgZ9HAaCJqYGfRwGgiamBn0cBoImpgZ9HAaCJqYGfRwGgiamBn0cBoImpgZ9HAaCJqYGfRwGgiamBn0cBoImpgZ9nLColpj8R6GJqYXuSGFarbLkPwOamJryF5rg_63CrVpOyX8WNDE1pS81IQH93avFjH8C-kvEjH8a-ksVjv4NGzas_ArQXzJF_hkZ0MTU3L_dhlIDUOSfnOz9Bat2Yeh_r4_-ydZ8u2JVqoGY43cM-nfvLv0qw9O_l_sfsOGfFdGtm8ufMuff2f4Xd38O_cPEv5EY5cOd27aNGG7379LFYe6Df-PGjaGJqbl9u-X-vQ0Gpz9NSxha_vM_jPwbNUpLS7u7PMfH-kYMEv3FBUT00ukeQH82_MXEp35mJvo7-_d7sF-E1X8g-kcw5T-4wl-r1dr9tdbC2l-vz8zU6_vq9XZ_vb7c32QvXP015T3k6v9IirUBA-z-A8Rf96goJSXbnvULJFcF__ZOSftHR2dmRjtqac3m39Kezb9lReHgn9TRJbt_x269ReukpJSy0hJSRP9OLkX0F0uSrF27xMSmzjVrVnGP-vXr-w0ZJVF8ebGxTZyKj3f82mg0dihP2r9Dh0zrB2PKsg4l3jmb_30VuftHRt5vrwr5p7hm9y__XTloWkKS6C8pbS0x0dVb5GjmVHRsbH23movF1KnI_na7y15UVA1bTkeMq11eTF1HUjNw3YJtDtasmi6rcPFvUsZvtOb0_q9eOdHf8RsX_1YSVQH_rk6Jh7L5205m07fqtrAl-rdIrMjFOsrdW8z2JdzQxT-2ucdUko-Ojomp0C_3txYZV574OY4RxCiaQeUxOAbhmIVbZftQlIu_y0eGDLF-rTZiavdv5yC2ZfUv-2VSUmJTp0MmVPzKRbosx1EroTvcnemjHfQxLvou_pGOBcTZPtt5BF7tQGYOUrOgzMMlF_82rpW9UWLV7k-7VWK0XG6HkiJ3ZZeUL7N303fzd55A2d_ltgGfdqBkE4mecvZPlFpQrOr9W1eu4nt3Z5YRr7QOZ3XJp72zvTu-hH-lh4DLCGo7_7P82oF78i_fLau_zIfU7i_7Fne8y2Wd3dFd1OXe8i72UvpS_hIPAdlHQeCWoNhfunusqd2_j5isP1280htdAbwzvYy-jL_kQ8DTCPxbgs_oYhVfROX-0iezV0mb9sme3N3pZfVl_WUfAopW4MMYfCV3C5qYGtXfo7e7u_yjotLfIodP9ac8BLxagdwmPPrf4wnbtVRr0MTU5MUkzLxWl_0qFH26v4eHgB8rqJwyY4p8aqr1m4EmpuatnDJzDwOi6nv09_wQCNAM_IUvC5qYGpVPIbMX8p7xlfh7MQF_duCne3nQxNSoiAGWV6avzF_ZzwH3vByCX-wVQRNT84VYOiUHVYCv3N-3CZQn_d-PFPkrMHcOmpia94dzT9lbKUbZW99Lfy9_DijJsYsAfcEw9VfM7tVb32v_YEwgwEETU_PidXgr7stb3xd_tU8AmphaT1sy37kf4j7j--Sv2gnUE4MmpkaFCJy-cnxf_V02AM1ur549aGJqwfX3Ad8ffzU9Bsrw61WvDk1MLYj-vuH76a-Kx0A9B351Rv19xg-AP-xjwMWeTX9_8APjD7SBSvbs-Xv9b_u0AfjlH-INSNoz5h8A-8D6h2YEsvQs-QfIPgj-wRwBnZ4V_wDaB8s_4CtQIM-Ef4Dtg-vvvgKfZqBYXv3-dAcA-pD4-zYEL9mrgr8HBwD60PrLrsFWpLfSVczfM4SsfJDgYf0rFd7-6d75h8C9vAD9ByD0p2R7gem25CFC5O0e-gc7yZebnu62h0gYfvQPdkoPgP7h6K_8AOgffgPw5gDoH27-3h0A_cPL39sDoH84-Xt_APQPH39fDoD-4TIB3w6A_uGxAF8PgP5hsAA_DoD-VX4Cfh0A_av2Avw9APpX5Qn4fwD0r7ITCMgB0L9KTiBgB0D_oKZu_Ej0D0GqtbeG_iFJlfbWgPzV8j-Ahsrf3xEE7QDoH-rUIm8P_UNfTXuQ7BWhP5i_GOyLt4b-gPzoDz0AWH_Ql24P_dEf_dEf_dEf_dEf_dEf_dEf_dEf_dEf_dEf_dEf_dEf_dE_8AMAffnoj_7oj_7oD-YPOgDW-dEf_dEf_dEf_dEf_dEf_dEf_dEf_dEf_UMxAMiXj_7oj_6w_pADYJ0f_dEf_dEf_dEf_dEf_dE_5AMAfPnorwJ_wAGwzo_-6I_-6I_-6A83ALiXj_5q8IcbAOv86I_-6I_-wAMAe_norwp_sAGwzo_-6I_-6M_qAFjnR3_0V8UAgF4--qvEH2gArPND-0M_ANBfLf4wA2CdH9wfeACs88P7w_4EQH_wQB8ArPOrwB90AKzzq8Ef8kcA6_zq8Id7BDCurxZ_sAGwzq8Wf6gFMK6vIv8okAmwjR-pLv-o0E-AbfxI1flbC-EG2La3Ba0tV0hGwDa9LWhnTwX1acAue0XQvl4W2DkESDwQ3wpY0KIBr4bijYS9raKgvcCCPrzKguYIWdCHVlERbh3dVVS4_qFczYo7PNndOYW7MHSeIa_gd8v0ji-ZLc3u43pMyhV-HviJZsKfPIm4nMTlL9xoFvZM1Ky5zZNHxM8v3nnF_O6SbprfbvGkN9-EW_Vld2FM6XDN6hs86bo7lbsrT1t49tQdS87tPNL2qSTuQJOt9xQVt7DU-JYnK44mc7P3rhI6TVutyb_Ek2GDUrhRC3ebO67P1bVZzpMrMztw-z-dY8jK0ugXau8SCu7kG4eMXyAMXl6o-6k5TyZXu24o_G6J0FfXaseQKzzZvrIhN3BZe6FRMaf7dTNPvpiQwUU3nWHOPTbKMvR9nmw8NZg7N7VAIKkLdQ2n86R40sNcre8LzTcmXxZuH-PJD7fjuWHPp5tH58SWLPs8jxwcvZX7fF0n0lqbZTiXedrc5cvWponHxe9r4hlhX9f9mnHfHeRyP-UN78YM0KVt_tFc-8poY9v2zxtmDMgpKRqfZt5zc6LxyNGtwuGpazR1zvHk8MPJ3G79YmHJgUTBeJkn-pv9uJ7deRL1-Rrd0Z0rNd9fqme6dfFhYdPVjsIy8fWkpT_KPXWVJ0tfeVab1XSHJnfPS8YxAm-IPJhhGXn8I3PTjbOMxTHVhY0v6y1nt_Fk_-T_GsZuXiJMm6_VHd_Ak7Nz87kDxRohLX6p5cgongzuXMwdOrXB_MGTsy3jFou_1y_jdg6eRzbHn7YsuX5V09LY3Vh0ZIpgaTVceFX0iK0Wy13711DhjW0zdOMXia97_BbDi5veNN9raa09IfrG7anFjbkwRth1_BV928dnkTYzok0R5q3CnPwY_afb88i612KMuv4688qTNUse25xHaqz4lftiT6Hw1zOv63IH8uSPJcu48y03WC5H84b93acLPZ6Nz24x4lhm_wZ_s6zeM49czDvNvXdxntC6xf-0O37iyczWy7hGzxUI26em6Ut3zSXTj3xt2DsiTnh131hd1tviHXNKuE29C4WFnXKEumd5snLRM9y1s2d2npz3sWV8Y568Oa2-cae40219iLnJll2a-AUtjQXGZMOi6gMMyY8vEGYnEVPfHk-SwtPHSy7v7qkd9N0zxuJVv5mfbiBYnv59Hnn79drG5q9ONux94ZuSF0nzrJqp2aaVJ3ny53uHhQ_q7NNkdTlhnD3lM0Hfo4VumsCT0Ru2czErqmk2D4kr0RbnkR_qvWDM-I03DJt5Qttqxz7z_YWpprHnxTu8-Inws7FU89jYFsa2BeMMez_7T8nAJ37Jyj-ebOr9wCXt0zlvl3R9YCaZNGa46d-94oTp17qUdE2aSy5Expma1Ysv6Z-fZyj6ZrLQckj77IyXDcK-h2L1Ez7JI_pRpcbb454y5L1PSvjPijIbPTHDNGUQb1j12grd2uvHzV8fW25cnfe-8NaU0qz5onfetyncgQ8XaDYeKtLWuciT88aV3KERDbOy539l-ftP80iTgu7GRR8ZzUdSP9TqxI8_t3Qkt-g6MV_SzbaMFvd07YqJO1CQbDi3t79h24MLhF_GJmd3GPMYeWPprZK1-wZp7z_c0bT-4Dvm_CnZlqIt4r7IJG5xnVzDmn4H9IZZOuGj88tMs0W3Ng0E4UL2t5rt_5hv_DidJ1s2r7NMzjmp6Tn-Q2ON_X-aI0Y-b14rOqb20HD_fGuTOfOddywzevFkZEa68UbxMLJ_Tm1ycMUIbavoSSa-_wBD5okkQ534scKtS9-Y1o14lBSsiCYJN4ZpnyQFpld6txem5vax_LGeJ_0W1zU0vjqHfHW0W4l-T5z29VF1TI-kzSXV2nUpWXsuVkv6pJkyptUVoqJOaseJz4E2i-82_HhmtnZSTrTlq0Pi95l4mpt9ZIu20ynekDEtTyi90zb70qot5q5bZ2mXi-_jmx3mc7qf_yKU1phgKS0Qnz836xr_D_uhnYI'
@@ -2805,19 +3035,18 @@ if __name__ == '__main__':
     # process float 1D array into int 2D array with 255 values
     im = depthMap["depthMap"]
 
-
-    #print(im)
+    # print(im)
     im[np.where(im == max(im))[0]] = 0
     # if min(im) < 0:
     #     im[np.where(im < 0)[0]] = 0
-    im = im.reshape((depthMap["height"], depthMap["width"]))#.astype(int)
+    im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
     # display image
     img = PIL.Image.fromarray(im)
     img.save(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\PB03JZMg9nKvRjwf_T0xBg.tif')
     plt.imshow(im)
     plt.show()
-    #print(im)
-    #plt.imsave(r'D:\Code\StreetView\Essex\t\img.tiff', im)
-    #------------------------------------
+    # print(im)
+    # plt.imsave(r'D:\Code\StreetView\Essex\t\img.tiff', im)
+    # ------------------------------------
 
-   # print(features.check('libtiff'))
+# print(features.check('libtiff'))

@@ -16,33 +16,33 @@ class MyTestCase(unittest.TestCase):
         self.gpano = GPano.GPano()
         self.gsv = GPano.GSV_depthmap()
 
-    # def test_seg_to_landcover2(self):
-    #     # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
-    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-    #     file = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
-    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
-    #     file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\1BV2qdirkaTkng2bqtfOMA_ - 74.205713_40.793248_0_241.75.png'
-    #     # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
-    #     seglist = glob.glob(
-    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
-    #     seglist = glob.glob(
-    #         r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
-    #     # seglist = [file]
-    #     # predicts = []
-    #     # for seg in seglist:
-    #     #     if not "color" in seg:
-    #     #         predicts.append(seg)
-    #     # #seglist = seglist[:]
-    #     # seglist = predicts
-    #     # seglist.append(file)
-    #
-    #     seglist[0] = [file]
-    #
-    #     print("seglist:", seglist[0])
-    #     # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-    #     saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test2'
-    #     GPano.GSV_depthmap.seg_to_landcover2(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=90)
-    #     print("seg_to landcover finished.")
+    def test_seg_to_landcover2(self):
+        # file = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\xmrpSi0qZ9UQUZKxGWMIEw_-74.2180614_40.7864947_0_53.png'
+        file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+        file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\UHg76--mCi5HvNwwoPTQQw_-74.209031_40.792517_0_275.20.png'
+        file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\LeYAIu-xGFNEJQwOZAl3Iw_-74.209119_40.792425_0_329.16.png'
+        file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\1BV2qdirkaTkng2bqtfOMA_ - 74.205713_40.793248_0_241.75.png'
+        # seglist = glob.glob(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024\*.png')
+        seglist = glob.glob(
+            r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
+        seglist = glob.glob(
+            r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\QkoG1sMV03bGPbMADdmV9g*.png')
+        # seglist = [file]
+        # predicts = []
+        # for seg in seglist:
+        #     if not "color" in seg:
+        #         predicts.append(seg)
+        # #seglist = seglist[:]
+        # seglist = predicts
+        # seglist.append(file)
+
+        # seglist[0] = [file]
+
+        print("seglist:", seglist[0])
+        # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
+        saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test2'
+        GPano.GSV_depthmap.seg_to_landcover2(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=math.radians(90))
+        print("seg_to landcover finished.")
 
 
     # def test_colrow_to_spherial(self):
@@ -326,6 +326,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual((-74.203195, 40.794957000000004), pts[0])
     """
 
+    """
     def test_getPanoJPGfrmArea(self):
         print('started! ')
         pts = GPano.GPano.readRoadSeedsPts_csv(GPano.GPano(),
@@ -360,7 +361,7 @@ class MyTestCase(unittest.TestCase):
         #
         # plt.scatter(lons, lats)
         # plt.show()
-
+        """
 
 if __name__ == '__main__':
     unittest.main()

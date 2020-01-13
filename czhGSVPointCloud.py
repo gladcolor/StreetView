@@ -46,7 +46,7 @@ class czhGSVPano():
             if style ==1:
                 self.getPanoTiles()
             else:
-                self.getPanoImage(self.pano_id)#suffix='color'
+                self.getPanoImage(self.pano_id) #suffix='color'
 
     def getPanoTileXYfromURL(self,url):
         #return value 0
@@ -106,7 +106,7 @@ class czhGSVPano():
 
     def getPanoImage(self,PanoID,filepath='',prefix='',suffix='',ext=''):
         if len(filepath.strip())==0 :
-            filepath = os.getcwd()+'\\Pano_Segment\\'
+            filepath = os.getcwd()+ r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024'
         if len(ext.strip())==0:
             ext = '.png'
 
@@ -393,7 +393,7 @@ class czhGSVDepthmap():
 class czhGSVPointClouds():
     # rotate matrix refer to https: // en.wikipedia.org / wiki / Rotation_matrix
     #resolution unit :meter
-    def __init__(self,panorama:czhGSVPano,depthmap:czhGSVDepthmap,save_xyz_flag:int =0,save_pointclouds2img_flag:int =1,resolution:float=0.1):
+    def __init__(self,panorama:czhGSVPano, depthmap:czhGSVDepthmap,save_xyz_flag:int =0,save_pointclouds2img_flag:int =1,resolution:float=0.1):
 
         self.c_depthmap = depthmap
         self.c_panorama = panorama
@@ -786,6 +786,8 @@ class czhGSVPointClouds():
         # nImage = self.clip_pano2(theta, phi, 0, 0, math.radians(fov_h), math.radians(fov_v),w_thumb, self.c_panorama.panorama)
 
         nImage,pano_thetas,pano_phis = self.clip_pano2(theta,phi,0,0,math.radians(fov_h),math.radians(fov_v),w_thumb,self.c_panorama.panorama)
+       # nImage, pano_thetas, pano_phis = self.clip_pano2(theta0, phi0, 0, 0, math.radians(fov_h), math.radians(fov_v), \
+                                                   #      w_thumb, img_thumb)
         img = Image.fromarray(nImage)
 
         h_thumb,w_thumb = pano_phis.shape
@@ -1089,9 +1091,18 @@ def main():
 
     # Dg0LGX581Uu5ooKrLlvQGA f9IgU8o1UG5KztkMJIYCJg qAYd9QiwszKOAKE7TGmfuQ kE3e_0Ylr8kfcOkDJHXb1w ，OnscXILHuyqAJrWW8Bx2AQ   jS7rN0Wca908ifzbSUfi7Q  Washington St 4oHz09u-8JQ8aFfAcQKuRg iQ9Yk6re834ZluvfQXkt5g
     t_depthmap = czhGSVDepthmap(panoid='Dg0LGX581Uu5ooKrLlvQGA') #5ywu6UsJ7BjbquAj8yzkIw
+
+    # t_depthmap = czhGSVDepthmap(panoid='iMYzd7bDv0J0CKfdLzkAZg')
+    t_pano= czhGSVPano(panoid='Dg0LGX581Uu5ooKrLlvQGA',style =2)
+
+    file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\color\ilnBcF0ZOVDY-VIjgYTiJg_-74.207665_40.794218_0_184.00_color.png'
+
+    t_depthmap = czhGSVDepthmap(panoid='Dg0LGX581Uu5ooKrLlvQGA') #5ywu6UsJ7BjbquAj8yzkIw
     t_pano= czhGSVPano(panoid='Dg0LGX581Uu5ooKrLlvQGA',style =2)
 
     t_pointClouds = czhGSVPointClouds(t_pano,t_depthmap)
+
+    print(t_pointClouds)
 
     # path = r"D:\2019\njit learning\201909\streetView\StreetView\Pano_Segment"
     # panoids = []

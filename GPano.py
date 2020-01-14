@@ -1329,72 +1329,72 @@ class GPano():
         else:
             return theta_phis
 
-    def castesian_to_shperical0(self, rowcols, w, h, fov):  # yaw: set the heading, pitch
-        fov = radians(fov)
-        f = (0.5 * w) / math.tan(fov * 0.5)
-        # print("f:", f)
-        if not isinstance(rowcols, list):
-            rowcols = [rowcols]
-
-        theta_phis = []
-        # print("type of colrows:", colrows)
-        # plt_x = []
-        # plt_y = []
-        # print("len of : colrows", len(colrows))
-
-        for colrow in rowcols:
-            # print('colrow, len of colrow: ', colrow, len(colrow))
-            row = colrow[0]
-            col = colrow[1]
-            new_rowcols = 0
-            # print('col, row:', col, row)
-            x = col - w * 0.5
-            y = h * 0.5 - row
-            z = f
-
-            # plt_x.append(x)
-            # print('x, y, z, w, h:', x, y, z, w, h)
-
-            #  theta = atan(y / z)
-            # print('theta:', theta)
-            # if y < 0:
-            #     theta = theta * -1
-            # print('theta:', theta)
-
-            # theta = atan(y / z)
-
-            # theta = acos(z / sqrt(x * x + y * y + z * z))
-            # if y < 0:
-            #     theta = -1 * theta
-
-            # phi = acos(x / sqrt(x * x + y * y))
-            # if y < 0:
-            #     #phi = 2 * pi - phi
-            #     phi = -1 * phi
-
-            phi = acos(z / sqrt(x * x + z * z))
-            if x < 0:
-                phi = -phi
-            theta = atan(y / sqrt(x * x + z * z))
-
-            # phi = atan(x / y)
-
-            theta = degrees(theta)
-            phi = degrees(phi)
-            # plt_y.append(phi)
-
-            theta_phis.append((theta, phi))
-
-            # print("col, row, x, y, z, theta, phi:")
-            # print(col, row, x, y, z, theta, phi)
-        # print('theta_phis:', theta_phis)
-        # print(x, y, z, theta + heading, phi + pitch, pi)
-        # plt.scatter(plt_x, plt_y)
-        # plt.show()
-        if len(theta_phis) == 1:
-            return theta_phis[0]
-        else:
-            return theta_phis
+    # def castesian_to_shperical0(self, rowcols, w, h, fov):  # yaw: set the heading, pitch
+    #     fov = radians(fov)
+    #     f = (0.5 * w) / math.tan(fov * 0.5)
+    #     # print("f:", f)
+    #     if not isinstance(rowcols, list):
+    #         rowcols = [rowcols]
+    #
+    #     theta_phis = []
+    #     # print("type of colrows:", colrows)
+    #     # plt_x = []
+    #     # plt_y = []
+    #     # print("len of : colrows", len(colrows))
+    #
+    #     for colrow in rowcols:
+    #         # print('colrow, len of colrow: ', colrow, len(colrow))
+    #         row = colrow[0]
+    #         col = colrow[1]
+    #         new_rowcols = 0
+    #         # print('col, row:', col, row)
+    #         x = col - w * 0.5
+    #         y = h * 0.5 - row
+    #         z = f
+    #
+    #         # plt_x.append(x)
+    #         # print('x, y, z, w, h:', x, y, z, w, h)
+    #
+    #         #  theta = atan(y / z)
+    #         # print('theta:', theta)
+    #         # if y < 0:
+    #         #     theta = theta * -1
+    #         # print('theta:', theta)
+    #
+    #         # theta = atan(y / z)
+    #
+    #         # theta = acos(z / sqrt(x * x + y * y + z * z))
+    #         # if y < 0:
+    #         #     theta = -1 * theta
+    #
+    #         # phi = acos(x / sqrt(x * x + y * y))
+    #         # if y < 0:
+    #         #     #phi = 2 * pi - phi
+    #         #     phi = -1 * phi
+    #
+    #         phi = acos(z / sqrt(x * x + z * z))
+    #         if x < 0:
+    #             phi = -phi
+    #         theta = atan(y / sqrt(x * x + z * z))
+    #
+    #         # phi = atan(x / y)
+    #
+    #         theta = degrees(theta)
+    #         phi = degrees(phi)
+    #         # plt_y.append(phi)
+    #
+    #         theta_phis.append((theta, phi))
+    #
+    #         # print("col, row, x, y, z, theta, phi:")
+    #         # print(col, row, x, y, z, theta, phi)
+    #     # print('theta_phis:', theta_phis)
+    #     # print(x, y, z, theta + heading, phi + pitch, pi)
+    #     # plt.scatter(plt_x, plt_y)
+    #     # plt.show()
+    #     if len(theta_phis) == 1:
+    #         return theta_phis[0]
+    #     else:
+    #         return theta_phis
 
     def clip_pano(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90):  # fov < 120
         if fov > 120:
@@ -1705,9 +1705,9 @@ class GSV_depthmap(object):
                     if t < 100:
                         depthMap[y * w + x] = t
                     else:
-                        depthMap[y * w + x] = 0
+                        depthMap[y * w + x] = 9999999
                 else:
-                    depthMap[y * w + x] = 0
+                    depthMap[y * w + x] = 9999999
 
         return {"width": w, "height": h, "depthMap": depthMap}
 
@@ -1740,7 +1740,7 @@ class GSV_depthmap(object):
 
         # print(im)
 
-    def getPointCloud(self, theta_phis_in_thumb, heading_of_thumb, pitch_of_thumb, \
+    def getPointCloud(self, theta_phis_in_pano, heading_of_thumb, pitch_of_thumb, \
                       depthmap, cameraLon, cameraLat,
                       cameraH, heading_of_pano, pitch_of_pano):
         try:
@@ -1748,10 +1748,10 @@ class GSV_depthmap(object):
             print('pitch_of_thumb:', math.degrees(pitch_of_thumb))
             results = []
 
-            if not isinstance(theta_phis_in_thumb, list):
-                theta_phis_in_thumb = [theta_phis_in_thumb]
+            # if not isinstance(theta_phis_in_pano, list):
+            #     theta_phis_in_thumb = [theta_phis_in_pano]
 
-            results = np.array(theta_phis_in_thumb)
+            results = theta_phis_in_pano
             print('results shape: ', results.shape, results[0])
             heading_of_thumb = float(heading_of_thumb)
             pitch_of_thumb = float(pitch_of_thumb)
@@ -1765,11 +1765,10 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
             # theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_pano = theta_phis_in_thumb
 
-            results = np.array(theta_phis_in_thumb)
+            # results = np.array(theta_phis_in_thumb)
             print('results shape: ', results.shape, results[0])
-            results = np.concatenate((results, np.array(theta_phis_in_pano)), axis=1)
+            results = np.concatenate((results, theta_phis_in_pano), axis=1)
 
             print('results shape: ', results.shape, results[0])
 
@@ -1780,10 +1779,10 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
 
             # print("row: ", row)
-            points3D = []
+            points3D = np.zeros((len(theta_phis_in_pano), 4))
             print('depthmap[width]: ', depthmap['width'])
             print('depthmap[height]:', depthmap['height'])
-            print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
+            # print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
             cnt = 0
             cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
             print('cameraX, cameraY:', cameraX, cameraY)
@@ -1803,7 +1802,7 @@ class GSV_depthmap(object):
             print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
 
             grid_col = np.linspace(-pi, pi, dm_w)
-            grid_row = np.linspace(pi / 2, -pi / 2, dm_h)
+            grid_row = np.linspace(pi , 0, dm_h)
             # gridxx = np.arange(512)
             # gridyy = np.arange(256)
             # gridxx, gridyy = np.meshgrid(grid_col, grid_row)
@@ -1826,25 +1825,37 @@ class GSV_depthmap(object):
             # 二维插值
             interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
                                           kind='linear')  # 'cubic' will distord the distance.
-            print('theta_phis_in_pano[0]: ', theta_phis_in_pano[0])
-            distances = interp(theta_phis_in_pano[:, 0], theta_phis_in_pano[:, 1])
-            print('distances[0]: ', distances[0])
+            print('theta_phis_in_pano.shape: ', theta_phis_in_pano.shape)
+            print('theta_phis_in_pano[:, 1]: ', theta_phis_in_pano[:, 1])
+            print('theta_phis_in_pano[:, 0]: ', theta_phis_in_pano[:, 0])
 
-            for idx, ray in enumerate(theta_phis_in_pano):
+            # distances = interp(theta_phis_in_pano[-10:, 1], theta_phis_in_pano[-10:, 0])
+            # print('distances[0]: ', distances)
+            idx = 0
+
+            for ray in theta_phis_in_pano:
                 # if ray[1] < 0:
                 #     print('ray (degree):', ray)
 
-                theta = ray[0]
-                phi = ray[1]
+                theta1 = ray[1]
+                theta =theta1-math.pi/2.0
 
-                if phi > pi:
-                    phi = phi - pi
+                phi1 = ray[0] -math.pi
+                phi = phi1- (heading_of_thumb-heading_of_pano)
 
-                x = phi / pi * depthmap['width'] / 2
-                y = theta / (pi / 2) * depthmap['height'] / 2
-                row = int(depthmap['height'] / 2 - y)
-                # row = min(row - 5, 0)
-                col = int(x + depthmap['width'] / 2)
+                if phi>math.pi:
+                    phi = phi-math.pi*2.0
+                elif phi<-math.pi:
+                    phi = phi +math.pi*2.0
+
+                # if phi > pi:
+                #     phi = phi - pi
+
+                # x = phi / pi * depthmap['width'] / 2
+                # y = theta / (pi / 2) * depthmap['height'] / 2
+                # row = int(depthmap['height'] / 2 - y)
+                # # row = min(row - 5, 0)
+                # col = int(x + depthmap['width'] / 2)
 
                 # x = phi / pi * dm_w / 2
                 # y = theta / (pi/2) * dm_h / 2
@@ -1853,15 +1864,18 @@ class GSV_depthmap(object):
 
                 #
 
-                distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
+                # distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
                 # distance = interp(phi, theta - pitch_of_pano)[0]
-                distance = interp(phi, theta)[0]
-                # distance = interp(phi, min(theta + 0.05, 0) )[0]
-                # if distance > 2 or distance0 > 2:
-                #     print("distance：", idx, ray, distance, distance0, col, row)
+                # distance = interp(phi,theta)[0]
+
+                distance = interp(phi1, theta1)[0]
+
+                # # distance = interp(phi, min(theta + 0.05, 0) )[0]
+                # if distance > 2 and distance < 20:
+                #     print("distance：", idx, ray, distance)
                 # distance = distance * 2
-                if distance < 0:
-                    print("distance < 0：", distance, distance0, col, row)
+                # if distance < 0:
+                #     print("distance < 0：", distance, distance0, col, row)
                 # print(type(distance))
                 # print(distance.shape)
                 # print(distance.size)
@@ -1876,15 +1890,23 @@ class GSV_depthmap(object):
                 # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
                 # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
                 # print("pitch_of_pano:", pitch_of_pano)
-                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+
+                # pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
+                # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
+                # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
+
+
+                pointX =  distance * cos(theta) * sin(phi)
+                pointY =  distance * cos(theta ) * cos(phi )
+                pointZ =  distance * sin(theta )
+
                 # else:
                 #     pointX = 0
                 #     pointY = 0
                 #     pointZ = 0
 
-                points3D.append((pointX, pointY, pointZ, distance))
+                points3D[idx] = np.array([pointX, pointY, pointZ, distance])
+                idx += 1
 
                 # print("distance * cos(theta):",distance * cos(theta))
                 # #
@@ -1896,23 +1918,42 @@ class GSV_depthmap(object):
                 #     print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
                 # cnt += 1
             # results = np.concatenate((results, np.array(points3D)), axis=1)
+           #transform to 3d coordinates
+
+            pointsCloud_xyz = points3D[:, :3]
+
+            def RawPointsCloud2Camera3D( pointsCloud, alpha, beta, gamma):
+
+                pointsCloud = self.rotate_z(-gamma).dot(self.rotate_x(-beta)).dot(self.rotate_z(-alpha)).dot(
+                    pointsCloud.T).T
+
+                return pointsCloud
+
+
+            # pointsCloud_xyz[:] = self.RawPointsCloud2Camera3D(pointsCloud_xyz,pano_yaw,tilt_pitch,tilt_yaw)
+            # pointsCloud_xyz[:] = self.RawPointsCloud2Camera3D(pointsCloud_xyz, pano_yaw, 0, 0)
+            pointsCloud_xyz[:] = RawPointsCloud2Camera3D(pointsCloud_xyz, heading_of_thumb, pitch_of_thumb, 0)
+
+            pointsCloud_xyz[:] = pointsCloud_xyz + np.array([cameraX, cameraY, cameraH])
+
             print('final points3D shape : ', points3D[0:5], len(points3D))
             return points3D  # ， results
         except Exception as e:
             print("Error in getPointCloud():", e)
 
-    def getPointCloud2(self, theta_phis_in_thumb, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
-                       cameraH, heading_of_pano, pitch_of_pano):
+    # DO not use it!!
+    def getPointCloud2(self, theta_phis_in_pano, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
+                       cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*2, sub_h=768*2):
         try:
-            # print('heading_of_thumb:', heading_of_thumb)
-            # print('pitch_of_thumb:', pitch_of_thumb)
-            results = []
+            # print('heading_of_thumb:', math.degrees(heading_of_thumb))
+            # print('pitch_of_thumb:', math.degrees(pitch_of_thumb))
 
-            if not isinstance(theta_phis_in_thumb, list):
-                theta_phis_in_thumb = [theta_phis_in_thumb]
 
-            results = np.array(theta_phis_in_thumb)
-            print('results shape: ', results.shape, results[0])
+            # if not isinstance(theta_phis_in_pano, list):
+            #     theta_phis_in_thumb = [theta_phis_in_pano]
+
+            results = theta_phis_in_pano
+            # print('results shape: ', results.shape, results[0])
             heading_of_thumb = float(heading_of_thumb)
             pitch_of_thumb = float(pitch_of_thumb)
             cameraLon = float(cameraLon)
@@ -1920,19 +1961,15 @@ class GSV_depthmap(object):
             cameraH = float(cameraH)
             heading_of_pano = float(heading_of_pano)
             pitch_of_pano = float(pitch_of_pano)
-            print('results shape: ', results.shape, results[0])
+            # print('results shape: ', results.shape, results[0])
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
-            # theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-            theta_phis_in_pano = [tuple([row[0] + pitch_of_thumb, row[1] + heading_of_thumb]) for row in
-                                  theta_phis_in_thumb]
 
-            results = np.array(theta_phis_in_thumb)
-            print('results shape: ', results.shape, results[0])
-            results = np.concatenate((results, np.array(theta_phis_in_pano)), axis=1)
+            # print('results shape: ', results.shape, results[0])
+            results = np.concatenate((results, theta_phis_in_pano), axis=1)
 
-            print('results shape: ', results.shape, results[0])
+            # print('results shape: ', results.shape, results[0])
 
             # for row in theta_phis_in_thumb:
             #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
@@ -1941,14 +1978,15 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
 
             # print("row: ", row)
-            points3D = []
+            points3D = np.zeros((len(theta_phis_in_pano), 4))
             # print('depthmap[width]: ', depthmap['width'])
             # print('depthmap[height]:', depthmap['height'])
-            # print('theta_phis_in_thumb： ', theta_phis_in_thumb)
+            # print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
             cnt = 0
             cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
-            heading_of_pano = radians(heading_of_pano)
-            pitch_of_pano = radians(pitch_of_pano)
+            # print('cameraX, cameraY:', cameraX, cameraY)
+            # heading_of_pano = radians(heading_of_pano)
+            # pitch_of_pano = radians(pitch_of_pano)
             dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
             # plt.imshow(dempth_image)
             # plt.show()
@@ -1964,121 +2002,52 @@ class GSV_depthmap(object):
 
             grid_col = np.linspace(-pi, pi, dm_w)
             grid_row = np.linspace(pi / 2, -pi / 2, dm_h)
-            # gridxx = np.arange(512)
-            # gridyy = np.arange(256)
-            # gridxx, gridyy = np.meshgrid(grid_col, grid_row)
-            # print("shapes: gridx, gridy", grid_col.shape, grid_row.shape, dempth_image.shape)
-            # print("types: gridx, dempth_image", (gridx), (dempth_image))
-            # print(gridx)
-            # print(gridy)
-            # print('dempth_image: ', dempth_image)
 
-            # fig = plt.figure(figsize=(9, 6))
-            # Draw sub-graph1
-            # ax = plt.subplot(1, 2, 1, projection='3d')
-            # surf = ax.plot_surface(gridxx, gridyy, dempth_image, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5, antialiased=True)
-            # ax.set_xlabel('x')
-            # ax.set_ylabel('y')
-            # ax.set_zlabel('f(x, y)')
-            # plt.colorbar(surf, shrink=0.5, aspect=5)  # 标注
-            # plt.show()
+
 
             # 二维插值
             interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
                                           kind='linear')  # 'cubic' will distord the distance.
-            # print(grid_col[0], grid_row[0], interp(grid_col[0], grid_row[0]), dempth_image[0][0])
-            # print(interp(grid_col[511], grid_row[255]), dempth_image[255][511])
-            # print(interp(grid_col[256], grid_row[68]), dempth_image[68][256])
-            # print(grid_col[111], grid_row[222], interp(grid_col[111], grid_row[222]), dempth_image[222][111])
-            # distance = interp(grid_row, grid_col)
-            # print('interp(gridyy, gridxx): ', interp(grid_row, grid_col))
-            # print("fnished", gridx, gridy)
+            # print('theta_phis_in_pano.shape: ', theta_phis_in_pano.shape)
+            # print('theta_phis_in_pano[:, 1]: ', theta_phis_in_pano[:, 1])
+            # print('theta_phis_in_pano[:, 0]: ', theta_phis_in_pano[:, 0])
 
-            # 计算100*100的网格上的插值
+            min_theta = np.min(theta_phis_in_pano[:, 1])
+            max_theta = np.max(theta_phis_in_pano[:, 1])
 
-            # xnew = np.linspace(-pi, pi, 512/6)
-            # ynew = np.linspace(-pi/2, pi/2, 256/6)
-            # fnew = interp(xnew, ynew)  # 仅仅是y值   100*100的值  np.shape(fnew) is 100*100
-            # xnew, ynew = np.meshgrid(xnew, ynew)
-            # ax2 = plt.subplot(1, 2, 2, projection='3d')
-            # surf2 = ax2.plot_surface(xnew, ynew, fnew, rstride=2, cstride=2, cmap=cm.coolwarm, linewidth=0.5,
-            #                          antialiased=True)
-            # ax2.set_xlabel('xnew')
-            # ax2.set_ylabel('ynew')
-            # ax2.set_zlabel('fnew(x, y)')
-            # plt.colorbar(surf2, shrink=0.5, aspect=5)  # 标注
-            #
-            # plt.show()
+            min_phi = np.min(theta_phis_in_pano[:, 0])
+            max_phi = np.max(theta_phis_in_pano[:, 0])
 
-            for idx, ray in enumerate(theta_phis_in_pano):
-                # if ray[1] < 0:
-                #     print('ray (degree):', ray)
 
-                theta = radians(ray[0])
-                phi = radians(ray[1])
 
-                # if phi > pi:
-                #     print(phi)
+            new_grid_col = np.linspace(min_phi, max_phi, sub_w)
+            new_grid_row = np.linspace(max_theta, min_theta, sub_h)
 
-                x = phi / pi * depthmap['width'] / 2
-                y = theta / (pi / 2) * depthmap['height'] / 2
-                row = int(depthmap['height'] / 2 - y)
-                # row = min(row - 5, 0)
-                col = int(x + depthmap['width'] / 2)
+            sub_depthmap = interp(new_grid_col, new_grid_row)
 
-                # x = phi / pi * dm_w / 2
-                # y = theta / (pi/2) * dm_h / 2
-                # row = int(dm_h / 2 - y)
-                # col = int(x + dm_w / 2)
+            # distances = interp(theta_phis_in_pano[-10:, 1], theta_phis_in_pano[-10:, 0])
+            resolution_phi = (max_phi - min_phi) / sub_w
+            resolution_theta = (max_theta - min_theta) / sub_h
+            col_rows = (theta_phis_in_pano - np.array([min_phi, min_theta]))/ np.array(resolution_phi, resolution_theta)
+            col_rows = np.rint(col_rows).astype(int)
+            bou = np.array([sub_w - 1, sub_h - 1])
+            col_rows = np.where(col_rows > bou, bou, col_rows)
+            distances = sub_depthmap[col_rows[:, 1], col_rows[:, 0]]
 
-                #
+            # distances = distances[distances < 20]
+            # distances = distances[distances > 0]
+            pointX = cameraX + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.sin(theta_phis_in_pano[:, 0] + heading_of_pano)
+            pointY = cameraY + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.cos(theta_phis_in_pano[:, 0] + heading_of_pano)
+            pointZ = cameraH + distances * np.sin(theta_phis_in_pano[:, 1] + pitch_of_pano)
 
-                distance0 = depthmap['depthMap'][depthmap['width'] * row + col]
-                # distance = interp(phi, theta - pitch_of_pano)[0]
-                distance = interp(phi, theta)[0]
-                # distance = interp(phi, min(theta + 0.05, 0) )[0]
-                # print("distance：", distance, distance0, col, row)
-                # distance = distance * 2
-                if distance < 0:
-                    print("distance < 0：", distance, distance0, col, row)
-                # print(type(distance))
-                # print(distance.shape)
-                # print(distance.size)
-                # distance = dempth_image[row][col]
-                # if idx % 1500 == 0:
-                #     print('distance:', theta, phi, interp(phi, theta))
-                #     print('distance:', x, y, col, row, distance)
-                #     print('distance:', dempth_image[row][col])
+            points3D = np.stack((pointX, pointY, pointZ, distances), axis=1)
 
-                # if distance > 1:
-                # pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
-                # pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
-                # pointZ = cameraH + distance * sin(theta + pitch_of_pano)
-                # print("pitch_of_pano:", pitch_of_pano)
-                pointX = cameraX + distance * cos(theta + pitch_of_pano) * sin(phi + heading_of_pano)
-                pointY = cameraY + distance * cos(theta + pitch_of_pano) * cos(phi + heading_of_pano)
-                pointZ = cameraH + distance * sin(theta + pitch_of_pano)
-                # else:
-                #     pointX = 0
-                #     pointY = 0
-                #     pointZ = 0
 
-                points3D.append((pointX, pointY, pointZ, distance))
-
-                # print("distance * cos(theta):",distance * cos(theta))
-                # #
-                #
-                # print('point_lat, point_lon: ', self.WebMercator2lonlat(pointX, pointY))
-                # print("pointX, pointY, pointZ, distance: ", pointX, pointY, pointZ, distance)
-                # print("d_pointX, d_pointY, d_pointZ: ", distance * cos(theta) * sin(phi + heading_of_pano), distance * cos(theta) * cos(phi + heading_of_pano), distance * sin(theta))
-                # if cnt < 3:
-                #     print('theta, phi, x, y, row, col:', theta, phi, x, y, row, col)
-                # cnt += 1
-            # results = np.concatenate((results, np.array(points3D)), axis=1)
-            print('results shape: ', results.shape, results[0])
+            # print('final points3D shape : ', points3D[0:5], len(points3D))
             return points3D  # ， results
         except Exception as e:
-            print("Error in getPointCloud():", e)
+            print("Error in getPointCloud2():", e)
+
 
     def seg_to_pointcloud(self, seg_list, saved_path, fov):
         try:
@@ -2184,7 +2153,7 @@ class GSV_depthmap(object):
                         # print("worldfile:", worldfile_name)
                         with open(worldfile_name, 'w') as wf:
                             for line in worldfile:
-                                print(line)
+                                # print(line)
                                 wf.write(str(line) + '\n')
                         # results = np.concatenate((np.array(sidewalk_idx), results, np.array(sidewalk_sph)), axis=1)
                         # np.savetxt(results_name, results, delimiter=",")
@@ -2216,26 +2185,26 @@ class GSV_depthmap(object):
     def rotate_x(self,pitch):
         #picth is degree
         r_x = np.array([[1.0,0.0,0.0],
-                        [0.0,math.cos(pitch*math.pi/180.0),-1*math.sin(pitch*math.pi/180.0)],
-                        [0.0,math.sin(pitch*math.pi/180.0),math.cos(pitch*math.pi/180.0)]])
+                        [0.0,math.cos(pitch),-1*math.sin(pitch)],
+                        [0.0,math.sin(pitch),math.cos(pitch)]])
         return r_x
 
     def rotate_y(self,yaw):
         #
-        r_y = np.array([[math.cos(yaw*math.pi/180.0),0.0,math.sin(yaw*math.pi/180.0)],
+        r_y = np.array([[math.cos(yaw),0.0,math.sin(yaw)],
                         [0.0,1.0,0.0],
-                        [-1*math.sin(yaw*math.pi/180.0),0.0,math.cos(yaw*math.pi/180.0)]])
+                        [-1*math.sin(yaw),0.0,math.cos(yaw)]])
         return r_y
 
     def rotate_z(self,roll):
         #
-        r_z = np.array([[math.cos(roll*math.pi/180.0),-1*math.sin(roll*math.pi/180.0),0.0],
-                        [math.sin(roll*math.pi/180.0),math.cos(roll*math.pi/180.0),0.0],
+        r_z = np.array([[math.cos(roll),-1*math.sin(roll),0.0],
+                        [math.sin(roll),math.cos(roll),0.0],
                         [0.0,0.0,1.0]])
         return r_z
 
 
-    def castesian_to_shperical(self, rowcols, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
+    def castesian_to_shperical(self, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
         """
         Convert the row, col to the original spherical coordinates which can be used as the
          coordinates of the depthmap to look up distance.
@@ -2249,6 +2218,7 @@ class GSV_depthmap(object):
         :param width:
         :return:
         """
+        tilt_pitch =0
         m = self.rotate_y(phi0).dot(self.rotate_x(theta0 - tilt_pitch))
         print("m: ", m)
 
@@ -2282,20 +2252,97 @@ class GSV_depthmap(object):
         print("v: ", v)
 
         diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
-        # theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
-        # phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi
+        theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
+        phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi#+ np.pi
 
-        theta = np.arctan2(v[:, 1], diag) + theta0
-        phi = np.arctan2(v[:, 0], v[:, 2]) + phi0
+        # theta = np.arctan2(v[:, 1], diag) + theta0
+        # phi = np.arctan2(v[:, 0], v[:, 2]) -math.pi
 
-        print("len of diag, theta, phi", len(diag), len(theta), len(phi))
-
-        result = [x for x in zip(theta, phi)]
-        print("result in castesian_to_shperical():", math.degrees(result[0][0]), math.degrees(result[0][1]))
         # plt_x = [math.degrees(x) for x in phi]
         # plt_y =  [math.degrees(x) for x in theta]
         # plt.scatter(plt_x, plt_y)
+        # plt.title("castesian to spheric")
         # plt.show()
+
+        print("len of diag, theta, phi", len(diag), len(theta), len(phi))
+
+        theta = theta.reshape(height, width)
+        phi =     phi.reshape(height, width)
+
+
+        result = np.stack((theta, phi), axis=2)
+        # print("result in castesian_to_shperical():", math.degrees(result[0][0]), math.degrees(result[0][1]))
+
+        return result
+
+
+    def castesian_to_shperical0(self, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
+        """
+        Convert the row, col to the original spherical coordinates which can be used as the
+         coordinates of the depthmap to look up distance.
+        :param rowcols:
+        :param theta0:
+        :param phi0:
+        :param tilt_pitch:
+        :param tilt_yaw:
+        :param fov_h:
+        :param height:
+        :param width:
+        :return:
+        """
+        tilt_pitch = - tilt_pitch
+        m = self.rotate_y(phi0).dot(self.rotate_x(theta0 - tilt_pitch))
+        # print("m: ", m)
+
+        # print("theta0, phi0, tilt_pitch, tilt_yaw:", math.degrees(theta0), math.degrees(phi0), math.degrees(tilt_pitch), math.degrees(tilt_yaw) )
+        #
+        # height = int(math.ceil(width * np.tan(fov_v / 2) / np.tan(fov_h / 2)))
+        width = int(width)
+
+        fov_v = atan((height * tan((fov_h / 2)) / width)) * 2
+
+        # print("height, width, fov_v, fov_h", height, width, fov_v, fov_h)
+        # print("height, width, fov_v, fov_h", height, width, math.degrees(fov_v), math.degrees(fov_h))
+
+        DI = np.ones((int(height * width), 3), np.int)
+
+        trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
+                          [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
+
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+
+        DI[:, 0] = xx.reshape(height * width)
+        DI[:, 1] = yy.reshape(height * width)
+
+        v = np.ones((height * width, 3), np.float)
+
+        v[:, :2] = np.dot(DI, trans.T)
+
+        # print("trans.T:", trans.T)
+
+        v = np.dot(v, m.T)
+        # print("v: ", v)
+
+        diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
+
+        theta = np.arctan2(v[:, 1], diag) + theta0
+        phi = np.arctan2(v[:, 0], v[:, 2]) # + phi0
+
+        # plt_x = [math.degrees(x) for x in phi]
+        # plt_y =  [math.degrees(x) for x in theta]
+        # plt.scatter(plt_x, plt_y)
+        # plt.title("castesian to spheric")
+        # plt.show()
+
+        # print("len of diag, theta, phi", len(diag), len(theta), len(phi))
+
+        theta = theta.reshape(height, width)
+        phi =     phi.reshape(height, width)
+
+
+        result = np.stack((theta, phi), axis=2)
+        # print("result in castesian_to_shperical0():", math.degrees(result[0][0][0]), math.degrees(result[1][0][1]))
+
         return result
 
 
@@ -2381,8 +2428,8 @@ class GSV_depthmap(object):
                     # print('len of dm_planes[indices]:', len(dm_planes['indices']))
 
                     dm = self.getDepthmapfrmJson(obj_json)
-                    print('dm[depthjMap]:', dm['depthMap'])
-                    print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
+                    # print('dm[depthjMap]:', dm['depthMap'])
+                    # print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
                     # self.saveDepthmapImage(dm, os.path.join(saved_path, basename.replace('.png', '.tif')))
                     # GPano.getPanoZoom0frmID(GPano(), thumb_panoId, saved_path)
@@ -2502,18 +2549,6 @@ class GSV_depthmap(object):
                         # plt.imshow(im)
                         # plt.show()
 
-                        # for idx, point in enumerate(pointcloud):
-                        #     if point[3] > distance_min and point[3] < distance_max:
-                        #         pointcloud_clean.append((point[0], point[0], point[0], point[0], predict[classes[0][idx], classes[1][idx]]))
-                        #
-                        # print("pointcloud_clean:", pointcloud_clean)
-                        #
-                        # with open(new_file_name, 'w') as f:
-                        #     f.write('x,y,h,d,c\n')
-                        #     for idx, point in enumerate(pointcloud):
-                        #         if point[3] > distance_min and point[3] < distance_max:
-                        #             f.write('%s,%s,%s,%s,'% point)
-                        #             f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
 
                     else:
                         print("No point in image:", seg)
@@ -2537,7 +2572,7 @@ class GSV_depthmap(object):
                     predict = io.imread(seg)
                     predict = np.array(predict)
                     h, w = predict.shape
-                    print("image w, h: ", w, h)
+                    # print("image w, h: ", w, h)
                     # sidewalk_idx = np.argwhere((predict == 11) | (predict == 52))  # sidewalk and path classes in ADE20k.
                     # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     print("seg files:", seg)
@@ -2580,8 +2615,8 @@ class GSV_depthmap(object):
                     # print("dm:", dm)
 
 
-                    print('dm[depthjMap]:', dm['depthMap'])
-                    print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
+                    # print('dm[depthjMap]:', dm['depthMap'])
+                    # print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
@@ -2589,9 +2624,9 @@ class GSV_depthmap(object):
 
                     # sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
                     sidewalk_idx = np.argwhere(predict > -1)  #
-                    print('sidewalk_idx:', sidewalk_idx)
+                    # print('sidewalk_idx:', sidewalk_idx)
                     # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
-                    print('sidewalk_idx:', sidewalk_idx)
+                    # print('sidewalk_idx:', sidewalk_idx)
                     classes = np.where(predict == -1)
                     # print("classes len: ", len(classes))
 
@@ -2610,9 +2645,9 @@ class GSV_depthmap(object):
                         pano_tilt_yaw = math.radians(float(pano_tilt_yaw))
                         # print('pano_heading:', pano_heading)
                         pano_lon = float(obj_json["Location"]['lng'])
-                        print('pano_lon:', pano_lon)
+                        # print('pano_lon:', pano_lon)
                         pano_lat = float(obj_json["Location"]['lat'])
-                        print('pano_lat:', pano_lat)
+                        # print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
 
                         thumb_phi0 = thumb_heading - pano_heading
@@ -2622,18 +2657,26 @@ class GSV_depthmap(object):
                         fov_h = fov
                         fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
 
-                        print('fov_h, fov_v:', fov_h, fov_v)
+                        # print('fov_h, fov_v:', fov_h, fov_v)
 
-                        print("len of sidewalk_idx:", len(sidewalk_idx))
+                        # print("len of sidewalk_idx:", len(sidewalk_idx))
 
-                        sidewalk_sph = self.castesian_to_shperical(sidewalk_idx, thumb_theta0, \
+                        sphs = self.castesian_to_shperical0(thumb_theta0, \
                                                                    thumb_phi0, pano_pitch, \
                                                                    pano_tilt_yaw, fov_h, h, w)
+                        sidewalk_sph_phi   = sphs[sidewalk_idx[:, 0], sidewalk_idx[:, 1], 1]
+                        sidewalk_sph_theta = sphs[sidewalk_idx[:, 0], sidewalk_idx[:, 1], 0]
 
-                        print('len of sidewalk_sph :', len(sidewalk_sph))
-                        print('sidewalk_sph[0]:', sidewalk_sph[0])
+                        # plt_x = [math.degrees(x) for x in sidewalk_sph_phi]
+                        # plt_y = [math.degrees(x) for x in sidewalk_sph_theta]
+                        # plt.scatter(plt_x, plt_y)
+                        # plt.show()
 
-                        pointcloud = self.getPointCloud(sidewalk_sph, thumb_heading, thumb_theta0, dm,
+                        sidewalk_sph = np.stack((sidewalk_sph_phi, sidewalk_sph_theta), axis=1)
+                        # print('len of sidewalk_sph :', len(sidewalk_sph))
+                        # print('sidewalk_sph[0]:', sidewalk_sph[0])
+
+                        pointcloud = self.getPointCloud2(sidewalk_sph, thumb_heading, thumb_theta0, dm,
                                                         pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         # print("pointcloud: ", pointcloud[:3], len(pointcloud))
                         # saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
@@ -2650,10 +2693,14 @@ class GSV_depthmap(object):
                         distance_min = 2
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
+                        # pointcloud_np = np.flip(pointcloud_np, axis=0)
+
+                        # all_classes = np.flip(predict,axis=0).reshape((predict.size, 1))
                         all_classes = predict.reshape((predict.size, 1))
                         # print("all_classes:", all_classes[:3], all_classes.shape)
 
                         pointcloud_class = np.concatenate((pointcloud_np, all_classes), axis=1)
+
                         # print("pointcloud_class len:", len(pointcloud_class))
                         # print("pointcloud_class:", pointcloud_class[:3])
                         # print("classes:", classes[0][:3], classes[1][:3])
@@ -2676,10 +2723,10 @@ class GSV_depthmap(object):
                         print("new_file_name:", new_file_name)
                         # im.save(new_file_name)
                         worldfile_name = new_file_name.replace(".png", '.pgw')
-                        print("worldfile:", worldfile)
+                        # print("worldfile:", worldfile)
                         with open(worldfile_name, 'w') as wf:
                             for line in worldfile:
-                                print(line)
+                                # print(line)
                                 wf.write(str(line) + '\n')
                         # plt.imshow(im)
                         # plt.show()
@@ -2701,7 +2748,7 @@ class GSV_depthmap(object):
                         print("No point in image:", seg)
 
                 except Exception as e:
-                    print("Error in seg_to_landcover() for loop:", e, seg)
+                    print("Error in seg_to_landcover2() for loop:", e, seg)
                     continue
 
         except Exception as e:

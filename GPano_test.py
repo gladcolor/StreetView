@@ -26,7 +26,7 @@ class MyTestCase(unittest.TestCase):
         seglist = glob.glob(
             r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\IEiJfDicXGTPsnQcYq0CwQ*.png')
         seglist = glob.glob(
-            r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\QkoG1sMV03bGPbMADdmV9g*.png')
+            r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png')
         # seglist = [file]
         # predicts = []
         # for seg in seglist:
@@ -40,7 +40,7 @@ class MyTestCase(unittest.TestCase):
 
         print("seglist:", seglist[0])
         # saved_path = r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-        saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\test2'
+        saved_path = r'J:\temp\t3+pitch'
         GPano.GSV_depthmap.seg_to_landcover2(GPano.GSV_depthmap(), seglist, saved_path=saved_path, fov=math.radians(90))
         print("seg_to landcover finished.")
 

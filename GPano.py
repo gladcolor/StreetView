@@ -1946,7 +1946,6 @@ class GSV_depthmap(object):
                        cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*2, sub_h=768*2):
         try:
             # print('heading_of_thumb:', math.degrees(heading_of_thumb))
-            # print('pitch_of_thumb:', math.degrees(pitch_of_thumb))
 
 
             # if not isinstance(theta_phis_in_pano, list):
@@ -2036,12 +2035,23 @@ class GSV_depthmap(object):
 
             # distances = distances[distances < 20]
             # distances = distances[distances > 0]
+            # pointX = distances * np.cos(theta_phis_in_pano[:, 1]) * np.sin(theta_phis_in_pano[:, 0])
+            # pointY = distances * np.cos(theta_phis_in_pano[:, 1]) * np.cos(theta_phis_in_pano[:, 0])
+            # pointZ = distances * np.sin(theta_phis_in_pano[:, 1])
+            #
+            # points3D = self.rotate_x(-heading_of_pano).dot(self.rotate_z(-pitch_of_pano)).dot(points3D.T).T
+            # points3D += np.array([cameraX, cameraY, cameraH])
+            # distances = distances.reshape((distances.size, 1))
+            # points3D = np.concatenate((points3D, distances), axis=1)
+
+            pitch_of_pano = 0
+
+
             pointX = cameraX + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.sin(theta_phis_in_pano[:, 0] + heading_of_pano)
             pointY = cameraY + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.cos(theta_phis_in_pano[:, 0] + heading_of_pano)
             pointZ = cameraH + distances * np.sin(theta_phis_in_pano[:, 1] + pitch_of_pano)
 
             points3D = np.stack((pointX, pointY, pointZ, distances), axis=1)
-
 
             # print('final points3D shape : ', points3D[0:5], len(points3D))
             return points3D  # ， results
@@ -2290,7 +2300,7 @@ class GSV_depthmap(object):
         :param width:
         :return:
         """
-        tilt_pitch = - tilt_pitch
+        tilt_pitch = 0
         m = self.rotate_y(phi0).dot(self.rotate_x(theta0 - tilt_pitch))
         # print("m: ", m)
 

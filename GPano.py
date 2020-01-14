@@ -100,7 +100,7 @@ class GPano():
             https://blog.csdn.net/zhuqiuhui/article/details/53180395
 
             This article shows the similar method
-            Bearing from point A to B,
+            Bearing from point B to A,
 
             https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
         """

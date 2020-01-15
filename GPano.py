@@ -1627,12 +1627,13 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
-    def lonlat2WebMercator(self, lon, lat):
+    def lonlat_to_proj(self, lon, lat, out_epsg=6565,  in_epsg=4326):
+        # DVRPC 6564    # NJ: 2824
         # return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
-        return transform(Proj(init='epsg:4326'), Proj(init='epsg:2824'), lon, lat)
+        return transform(Proj('epsg:'+str(in_epsg)), Proj('epsg:'+str(out_epsg)), lon, lat)
 
-    def WebMercator2lonlat(self, X, Y):
-        return transform(Proj(init='epsg:3857'), Proj(init='epsg:4326'), X, Y)
+    def proj_to_lonlat(self, X, Y, out_epsg=4326,  in_epsg=2824):
+        return transform(Proj(init='epsg:'+str(in_epsg)), Proj(init='epsg:'+str(out_epsg)), X, Y)
 
     def parse(self, b64_string):
         # fix the 'inccorrect padding' error. The length of the string needs to be divisible by 4.
@@ -1815,7 +1816,7 @@ class GSV_depthmap(object):
             print('depthmap[height]:', depthmap['height'])
             # print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
             cnt = 0
-            cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
+            cameraX, cameraY = self.lonlat_to_proj(cameraLon, cameraLat)
             print('cameraX, cameraY:', cameraX, cameraY)
             # heading_of_pano = radians(heading_of_pano)
             # pitch_of_pano = radians(pitch_of_pano)
@@ -1942,7 +1943,7 @@ class GSV_depthmap(object):
                 # print("distance * cos(theta):",distance * cos(theta))
                 # #
                 #
-                # print('point_lat, point_lon: ', self.WebMercator2lonlat(pointX, pointY))
+                # print('point_lat, point_lon: ', self.proj_to_lonlat(pointX, pointY))
                 # print("pointX, pointY, pointZ, distance: ", pointX, pointY, pointZ, distance)
                 # print("d_pointX, d_pointY, d_pointZ: ", distance * cos(theta) * sin(phi + heading_of_pano), distance * cos(theta) * cos(phi + heading_of_pano), distance * sin(theta))
                 # if cnt < 3:
@@ -2013,7 +2014,7 @@ class GSV_depthmap(object):
             # print('depthmap[height]:', depthmap['height'])
             # print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
             cnt = 0
-            cameraX, cameraY = self.lonlat2WebMercator(cameraLon, cameraLat)
+            cameraX, cameraY = self.lonlat_to_proj(cameraLon, cameraLat)
             # print('cameraX, cameraY:', cameraX, cameraY)
             # heading_of_pano = radians(heading_of_pano)
             # pitch_of_pano = radians(pitch_of_pano)

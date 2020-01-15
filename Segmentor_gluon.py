@@ -51,8 +51,8 @@ class Seg():
         colored = get_color_pallete(predict, dataset)
         if saved_name != '':
             try:
-                # colored.save(saved_name)
-                io.imsave(saved_name, colored, check_contrast=False)
+                colored.save(saved_name)
+                # io.imsave(saved_name, colored, check_contrast=False)
             except Exception as e:
                 print("Error in saving file in getSeg():", e, saved_name)
         return colored

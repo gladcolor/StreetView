@@ -84,6 +84,7 @@ def isNearPts(pt, pts):
     idx = 0
     return idx
 
+
 def main():
     print("Starting main()...")
     # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
@@ -118,7 +119,7 @@ def main():
             try:
                 if dangleImg == 0:
                     print("Did not found json in lon/lat : ", lon_d, lat_d)
-                    dangles_results_mp.append(("No street view image", 'No pano'))
+                    dangles_results_mp.append(("No street view image", 'No pano', -1))
                     continue
             except:
                 pass
@@ -138,7 +139,7 @@ def main():
                 sidewalk_idx.append(np.argwhere((seged == label)))
             sidewalk_idx = np.concatenate(sidewalk_idx)
             if len(sidewalk_idx) > 200:
-                dangles_results_mp.append(("Found sidewalk", panoId))
+                dangles_results_mp.append(("Found sidewalk", panoId, len(sidewalk_idx)))
 
                 print('Found sidewalk: ', panoId, idx, len(sidewalk_idx))
 
@@ -146,13 +147,13 @@ def main():
 
                 landcover = gsv.seg_to_landcover2(seged_name, saved_path)
                 colored_name = seged_name.replace('.png', '_seg_color.png')
-                colored = seg.getColor(seged, colored_name)
+                colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
                 # colored.i
                 plt.imshow(colored)
                 plt.show()
 
             else:
-                dangles_results_mp.append(("No sidewalk", panoId))
+                dangles_results_mp.append(("No sidewalk", panoId, 0))
                 print('No sidewalk.')
 
         except Exception as e:

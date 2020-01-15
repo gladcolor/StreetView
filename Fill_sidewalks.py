@@ -89,7 +89,7 @@ def main():
     # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
     # getBearingAngle(dangle_file)
     bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
-    dangles = pd.read_csv(bearing_file).iloc[0:43]
+    dangles = pd.read_csv(bearing_file).iloc[33:43]
     # print(dangles)
 
 
@@ -118,13 +118,19 @@ def main():
             try:
                 if dangleImg == 0:
                     print("Did not found json in lon/lat : ", lon_d, lat_d)
-                    dangles_results_mp.append("No street view image")
+                    dangles_results_mp.append(("No street view image", 'No pano'))
                     continue
             except:
                 pass
             
             plt.imshow(dangleImg)
             plt.show()
+
+            basename = os.path.basename(jpg_name)
+            params = basename[:-4].split('_')
+            # print("params:", params)
+            panoId = '_'.join(params[:(len(params) - 4)])
+
             seged_name = jpg_name.replace('.jpg', '.png')
             seged = seg.getSeg(dangleImg, seged_name)
             sidewalk_idx = []
@@ -132,8 +138,12 @@ def main():
                 sidewalk_idx.append(np.argwhere((seged == label)))
             sidewalk_idx = np.concatenate(sidewalk_idx)
             if len(sidewalk_idx) > 200:
-                dangles_results_mp.append("Found sidewalk")
-                print('Found sidewalk: ', idx, len(sidewalk_idx))
+                dangles_results_mp.append(("Found sidewalk", panoId))
+
+                print('Found sidewalk: ', panoId, idx, len(sidewalk_idx))
+
+                dangles_results_mp.append(("Found sidewalk", panoId))
+
                 landcover = gsv.seg_to_landcover2(seged_name, saved_path)
                 colored_name = seged_name.replace('.png', '_seg_color.png')
                 colored = seg.getColor(seged, colored_name)
@@ -142,14 +152,14 @@ def main():
                 plt.show()
 
             else:
-                dangles_results_mp.append("No sidewalk")
+                dangles_results_mp.append(("No sidewalk", panoId))
                 print('No sidewalk.')
 
         except Exception as e:
             print("Error in processing json: ", e)
             continue
 
-    # print("dangles_latlon_mp: ", dangles_latlon_mp)
+    print("dangles_results_mp: ", dangles_results_mp)
     #
 
     print("Finished main().")

@@ -480,16 +480,16 @@ class GPano():
     def getPanoJsonfrmLonat(self, lon, lat):
         try:
             server_num = random.randint(0, 3)
-            # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+            # url = f'http://maps.google.com/cbk?hl=en&gl=us&output=json&ll={lat},{lon}'
 
-            url = f'https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=json&ll={lat}%2C{lon}&dm=0'
-            # print(url)
+            url = f'https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=json&ll={lat},{lon}'
+            print(url)
             r = requests.get(url)
-            if not r.json():
-                panoId, lon_p, lat_p = self.getPanoIDfrmLonlat0(lon, lat)
-                url = f'http://maps.google.com/cbk?output=json&panoid={panoId}'
-                # print(url)
-                r = requests.get(url)
+            # if not r.json():
+            #     panoId, lon_p, lat_p = self.getPanoIDfrmLonlat0(lon, lat)
+            #     url = f'http://maps.google.com/cbk?output=json&panoid={panoId}'
+            #     # print(url)
+            #     r = requests.get(url)
 
             return r.json()
 

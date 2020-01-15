@@ -104,7 +104,7 @@ def main():
 
         # print('lon, lat, bearing: ', lon, lat, bearing)
         print("Processing row: ", idx)
-        jdata = gpano.getPanoJsonfrmLonat(lon_d, lat_d, dm=1)
+        jdata = gpano.getPanoJsonfrmLonat(lon_d, lat_d)
         if jdata == 0:
             print("Did not found json in lon/lat : ", lon_d, lat_d)
             continue

@@ -467,8 +467,8 @@ class GPano():
         data = self.getPanoJsonfrmLonat(lon, lat)
 
         if not data:
-            data = self.getPanoIDfrmLonlat0(lon, lat)
-            print("data from getPanoIDfrmLonlat0(): ", data)
+            panoId = self.getPanoIDfrmLonlat0(lon, lat)
+            print("data from getPanoIDfrmLonlat0(): ", panoId)
 
         if data == 0:
             return 0, 0, 0
@@ -482,7 +482,13 @@ class GPano():
             url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
             # print(url)
             r = requests.get(url)
+            if not r.json():
+                panoId = self.getPanoIDfrmLonlat0(lon, lat)
+                url = f'http://maps.google.com/cbk?output=json&panoid={panoId}'
+                r = requests.get(url)
+
             return r.json()
+
         except Exception as e:
             print("Error in getPanoJsonfrmLonnat():", e)
             return 0

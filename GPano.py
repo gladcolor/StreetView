@@ -40,16 +40,16 @@ from PIL import features
 import urllib.request
 import urllib
 #
-# WINDOWS_SIZE = '100, 100'
-# chrome_options = Options()
-# chrome_options.add_argument("--headless")
-# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-# Loading_time = 5
+WINDOWS_SIZE = '100, 100'
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+Loading_time = 5
 import sqlite3
 
 web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
-# driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
-# Process_cnt = 10
+driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+Process_cnt = 10
 
 """
 Read Me 
@@ -452,12 +452,12 @@ class GPano():
                 # pos2 = new_url.find(url_part2)
                 pos2 = new_url.find(url_part2[:5])
                 PanoID = new_url[(pos1 + len(url_part1)):pos2]
-                print(url)
-                print(new_url)
+                # print(url)
+                print("getPanoIDfrmLonlat0() obtained new_url: ", new_url)
 
             return PanoID, lon_pano, lat_pano  # if cannot find the panomara, return (0, 0, 0)
         except Exception as e:
-            print("Error in getPanoIDfrmLonlat()", e)
+            print("Error in getPanoIDfrmLonlat()0", e)
 
     # Finished!
     def getPanoIDfrmLonlat(self, lon, lat):
@@ -465,10 +465,10 @@ class GPano():
         # print(url)
         r = requests.get(url)
         data = self.getPanoJsonfrmLonat(lon, lat)
-
-        if not data:
-            panoId = self.getPanoIDfrmLonlat0(lon, lat)
-            print("data from getPanoIDfrmLonlat0(): ", panoId)
+        #
+        # if not data:
+        #     panoId = self.getPanoIDfrmLonlat0(lon, lat)
+        #     print("data from getPanoIDfrmLonlat0(): ", panoId)
 
         if data == 0:
             return 0, 0, 0
@@ -479,12 +479,16 @@ class GPano():
 
     def getPanoJsonfrmLonat(self, lon, lat):
         try:
-            url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+            server_num = random.randint(0, 3)
+            # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+
+            url = f'https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=json&ll={lat}%2C{lon}&dm=0'
             # print(url)
             r = requests.get(url)
             if not r.json():
-                panoId = self.getPanoIDfrmLonlat0(lon, lat)
+                panoId, lon_p, lat_p = self.getPanoIDfrmLonlat0(lon, lat)
                 url = f'http://maps.google.com/cbk?output=json&panoid={panoId}'
+                # print(url)
                 r = requests.get(url)
 
             return r.json()
@@ -1135,7 +1139,7 @@ class GPano():
 
         # print(idx, 'Heading angle between tree and panorama:', heading)
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
-        image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
+        image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=str(prefix) + panoid,
                               pitch=pitch, yaw=heading)
 
         if views == 1:
@@ -2727,7 +2731,7 @@ class GSV_depthmap(object):
                         # plt.show()
 
                         distance_max = 20
-                        distance_min = 2
+                        distance_min = 0
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
                         # pointcloud_np = np.flip(pointcloud_np, axis=0)

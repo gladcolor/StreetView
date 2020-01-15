@@ -89,7 +89,7 @@ def main():
     # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
     # getBearingAngle(dangle_file)
     bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
-    dangles = pd.read_csv(bearing_file).iloc[0:42]
+    dangles = pd.read_csv(bearing_file).iloc[0:43]
     # print(dangles)
 
 
@@ -104,10 +104,10 @@ def main():
 
         # print('lon, lat, bearing: ', lon, lat, bearing)
         print("Processing row: ", idx)
-        jdata = gpano.getPanoJsonfrmLonat(lon_d, lat_d)
-        if jdata == 0:
-            print("Did not found json in lon/lat : ", lon_d, lat_d)
-            continue
+        # jdata = gpano.getPanoJsonfrmLonat(lon_d, lat_d)
+        # if jdata == 0:
+        #     print("Did not found json in lon/lat : ", lon_d, lat_d)
+        #     continue
 
         try:
             # lon_g = jdata['Location']['lng']
@@ -125,21 +125,25 @@ def main():
             
             plt.imshow(dangleImg)
             plt.show()
-            segged = seg.getSeg(dangleImg)
+            seged_name = jpg_name.replace('.jpg', '.png')
+            seged = seg.getSeg(dangleImg, seged_name)
             sidewalk_idx = []
             for label in LABEL_IDS:
-                sidewalk_idx.append(np.argwhere((segged == label)))
+                sidewalk_idx.append(np.argwhere((seged == label)))
             sidewalk_idx = np.concatenate(sidewalk_idx)
             if len(sidewalk_idx) > 200:
                 dangles_results_mp.append("Found sidewalk")
                 print('Found sidewalk: ', idx, len(sidewalk_idx))
-                landcover = gsv.seg_to_landcover2(jpg_name, saved_path)
-                colored = seg.getColor(segged)
+                landcover = gsv.seg_to_landcover2(seged_name, saved_path)
+                colored_name = seged_name.replace('.png', '_seg_color.png')
+                colored = seg.getColor(seged, colored_name)
+                # colored.i
                 plt.imshow(colored)
                 plt.show()
 
             else:
                 dangles_results_mp.append("No sidewalk")
+                print('No sidewalk.')
 
         except Exception as e:
             print("Error in processing json: ", e)
@@ -151,6 +155,6 @@ def main():
     print("Finished main().")
 
 if __name__ == "__main__":
-    print("Starting. to fill sidewalks...")
+    print("Starting to fill sidewalks...")
     main()
 

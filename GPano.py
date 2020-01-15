@@ -39,12 +39,12 @@ from skimage import io
 from PIL import features
 import urllib.request
 import urllib
-
-WINDOWS_SIZE = '100, 100'
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-Loading_time = 5
+#
+# WINDOWS_SIZE = '100, 100'
+# chrome_options = Options()
+# chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+# Loading_time = 5
 import sqlite3
 
 web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
@@ -465,6 +465,11 @@ class GPano():
         # print(url)
         r = requests.get(url)
         data = self.getPanoJsonfrmLonat(lon, lat)
+
+        if not data:
+            data = self.getPanoIDfrmLonlat0(lon, lat)
+            print("data from getPanoIDfrmLonlat0(): ", data)
+
         if data == 0:
             return 0, 0, 0
         if 'Location' in data:
@@ -518,14 +523,15 @@ class GPano():
             if image.getbbox():
                 if saved_path != '':
                     image.save(jpg_name)
-                    return 1
                 else:
-                    return image
-            # print(url2)
+                    # print(url1)
+                    pass
+                return image, jpg_name
+
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
-            return 0
+            return 0, jpg_name
 
     def getImageclipfrmPano(self, panoId, saved_path='', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
@@ -563,7 +569,7 @@ class GPano():
             if image.getbbox():
                 if saved_path != '':
                     image.save(jpg_name)
-                    return 1
+                    return image, jpg_name
                 else:
                     return image
             # print(url2)
@@ -1096,21 +1102,25 @@ class GPano():
         pool.close()
         pool.join()
 
-    def shootLonlat(self, ori_lon, ori_lat, saved_path, views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
+    def shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
 
         # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
-        jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
+        try:
+            jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
+
+        except Exception as e:
+            print("Error in getting json in shootLonlat():", e)
         if 'Location' in jdata:
             panoid = jdata['Location']['panoId']
             lon = jdata['Location']['original_lng']
             lat = jdata['Location']['original_lat']
         else:
             print("No Location in the Panojson file.")
-            return 0
+            return 0, 0
 
         if panoid == 0:
             print("No PanoID return for location: ", ori_lon, ori_lat)
-            return 0
+            return 0, 0
         lon = float(lon)
         lat = float(lat)
 
@@ -1119,14 +1129,21 @@ class GPano():
 
         # print(idx, 'Heading angle between tree and panorama:', heading)
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
-        self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
+        image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
                               pitch=pitch, yaw=heading)
+
+        if views == 1:
+            return image, jpg_name
+
         if views == 3:
+            images = []
+            jpg_names = []
+            images.append(image)
             try:
                 links = jdata["Links"]
             except Exception as e:
                 print("Error in shootLonlat() getting Links: ", e)
-                return 0
+                return 0, 0
 
             for link in links:
                 try:
@@ -1139,11 +1156,15 @@ class GPano():
                     lon = float(lon)
                     lat = float(lat)
                     heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
-                    self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
+                    image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=prefix,
                                           pitch=pitch, yaw=heading)
+                    images.append(image)
+                    jpg_names.append(jpg_name)
                 except Exception as e:
                     print("Error in processing links in shootLonlat():", e)
                     continue
+            # if saved_path != "":
+            return images, jpg_names
 
     def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
@@ -2690,7 +2711,7 @@ class GSV_depthmap(object):
                                                         pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
                         # print("pointcloud: ", pointcloud[:3], len(pointcloud))
                         # saved_path = r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg\segmented_1024_pc'
-                        new_file_name = os.path.join(saved_path, basename[:-4] + '.png')
+                        new_file_name = os.path.join(saved_path, basename[:-4] + '_landcover.png')
                         # print('new_file_name: ', new_file_name)
                         # plt.imshow(predict)
                         # plt.show()

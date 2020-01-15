@@ -1,5 +1,6 @@
 import mxnet as mx
 from mxnet import image
+import numpy as np
 from mxnet.gluon.data.vision import transforms
 from gluoncv.data.transforms.presets.segmentation import test_transform
 from matplotlib import pyplot as plt
@@ -12,7 +13,7 @@ import matplotlib.image as mpimg
 
 import os
 
-import mxnet as mx
+
 from mxnet import image
 from mxnet.gluon.data.vision import transforms
 from gluoncv.data.transforms.presets.segmentation import test_transform
@@ -31,6 +32,8 @@ class Seg():
         self.ctx = mx.gpu(gpu_num)
 
     def getSeg(self, np_img, saved_name=''):
+        np_img = np.array(np_img)
+        np_img = mx.ndarray.array(np_img)
         img = test_transform(np_img, self.ctx)
         # print(img)
         output = self.model.predict(img)

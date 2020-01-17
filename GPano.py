@@ -3,13 +3,13 @@ Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 """
 from pyproj import Proj, transform
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib as mpl
+
+
 from scipy import interpolate
-import matplotlib.cm as cm
+
 import multiprocessing as mp
 import numpy as np
-import scipy.ndimage
+
 from scipy import interpolate
 from math import *
 import pandas as pd
@@ -1628,9 +1628,9 @@ class GSV_depthmap(object):
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
     def lonlat_to_proj(self, lon, lat, out_epsg=6565,  in_epsg=4326):
-        # DVRPC 6564    # NJ: 2824
+        # DVRPC 6564 meter   # NJ: 2824
         # return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
-        return transform(Proj('epsg:'+str(in_epsg)), Proj('epsg:'+str(out_epsg)), lon, lat)
+        return transform(Proj('epsg:'+str(in_epsg)), Proj('epsg:'+str(out_epsg)), lat, lon)
 
     def proj_to_lonlat(self, X, Y, out_epsg=4326,  in_epsg=2824):
         return transform(Proj(init='epsg:'+str(in_epsg)), Proj(init='epsg:'+str(out_epsg)), X, Y)
@@ -1975,7 +1975,7 @@ class GSV_depthmap(object):
 
     # DO not use it!!
     def getPointCloud2(self, theta_phis_in_pano, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
-                       cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*2, sub_h=768*2):
+                       cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*2, sub_h=768*2, unit_scale=3.280833333):
         try:
             # print('heading_of_thumb:', math.degrees(heading_of_thumb))
 
@@ -2055,7 +2055,7 @@ class GSV_depthmap(object):
             new_grid_row = np.linspace(max_theta, min_theta, sub_h)
 
             sub_depthmap = interp(new_grid_col, new_grid_row)
-
+            # sub_depthmap *=  unit_scale  # meter to U.S. feet
             # distances = interp(theta_phis_in_pano[-10:, 1], theta_phis_in_pano[-10:, 0])
             resolution_phi = (max_phi - min_phi) / sub_w
             resolution_theta = (max_theta - min_theta) / sub_h
@@ -2063,7 +2063,7 @@ class GSV_depthmap(object):
             col_rows = np.rint(col_rows).astype(int)
             bou = np.array([sub_w - 1, sub_h - 1])
             col_rows = np.where(col_rows > bou, bou, col_rows)
-            distances = sub_depthmap[col_rows[:, 1], col_rows[:, 0]]
+            distances = sub_depthmap[col_rows[:, 1], col_rows[:, 0]] * unit_scale  # meter to U.S. feet
 
             # distances = distances[distances < 20]
             # distances = distances[distances > 0]
@@ -2077,8 +2077,6 @@ class GSV_depthmap(object):
             # points3D = np.concatenate((points3D, distances), axis=1)
 
             pitch_of_pano = 0
-
-
             pointX = cameraX + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.sin(theta_phis_in_pano[:, 0] + heading_of_pano)
             pointY = cameraY + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.cos(theta_phis_in_pano[:, 0] + heading_of_pano)
             pointZ = cameraH + distances * np.sin(theta_phis_in_pano[:, 1] + pitch_of_pano)
@@ -2602,7 +2600,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_landcover():", e, seg)
 
-    def seg_to_landcover2(self, seg_list, saved_path, fov=math.radians(90)):
+    def seg_to_landcover2(self, seg_list, saved_path, fov=math.radians(90), unit_scale=3.280833333):
         try:
             if not isinstance(seg_list, list):
                 seg_list = [seg_list]
@@ -2731,7 +2729,7 @@ class GSV_depthmap(object):
                         # plt.scatter(plt_x, plt_y)
                         # plt.show()
 
-                        distance_max = 20
+                        distance_max = 20 * unit_scale
                         distance_min = 0
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
@@ -2755,11 +2753,14 @@ class GSV_depthmap(object):
                         # print("pointcloud_clean:", pointcloud_clean[:5])
                         # print("pointcloud_clean len:", len(pointcloud_clean))
 
-                        np_image, worldfile = self.pointCloud_to_image(pointcloud_clean, resolution=0.1)
+                        np_image, worldfile = self.pointCloud_to_image(pointcloud_clean, resolution=0.3)
                         #                         # print("np_image:", np_image[:5])
 
+                        img_pil = Image.fromarray(np_image)
+                        img_pil.save()
                         colored = self.get_color_pallete(np_image, 'ade20k')
-                        colored.save(new_file_name)
+                        colored.save(np_image)
+                        colored = self.get_color_pallete(np_image, 'ade20k')
                         # im.save(new_file_name)
                         # im = Image.fromarray(colored)
                         print("new_file_name:", new_file_name)

@@ -1,7 +1,8 @@
 from __future__ import print_function
 import cv2
 import numpy as np
-
+from shapely.geometry import Polygon
+# from centerline.geometry import Centerline
 MAX_FEATURES = 500
 GOOD_MATCH_PERCENT = 0.15
 
@@ -11,6 +12,8 @@ import GPano
 
 #%%
 #gpano = GPanorama()
+
+from label_centerlines import get_centerline
 
 
 def alignImages(im1, im2):
@@ -55,7 +58,7 @@ def alignImages(im1, im2):
 
     return im1Reg, h
 
-def castesian_to_shperical(rowcols, w, h, heading, pitch):
+
 
 
 if __name__ == '__main__':
@@ -84,5 +87,127 @@ if __name__ == '__main__':
     # # Print estimated homography
     # print("Estimated homography : \n", h)
 
+    from shapely.geometry import Polygon
+    from centerline.geometry import Centerline
+    import cv2
 
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from skimage import io
+    from PIL import Image
+
+    img_file = r'I:\DVRPC\Fill_gap\StreetView\images\A6cVqLl94hZqpnEJkLir-g_-75.499092_40.401787_0_51.09_landcover.png'
+    img_file = r'I:\DVRPC\Fill_gap\StreetView\images\sG51XsNz_X9EWGv_nU8jaw_-74.848704_40.150078_0_134.31_landcover.png'
+    img_cv = cv2.imread(img_file)
+    img_io = io.imread(img_file)
+    img_pil = Image.open(img_file)
+    # plt.imshow(img_io)
+    # plt.show()
+
+    np_img = np.array(img_pil)
+
+    unique_elements, counts_elements = np.unique(np_img, return_counts=True)
+    print(unique_elements)
+    print(counts_elements)
+
+    np_img = np.where((np_img == 12) | (np_img == 53), 255, 0).astype(np.uint8)
+    unique_elements, counts_elements = np.unique(np_img, return_counts=True)
+    print(unique_elements)
+    print(counts_elements)
+
+    pimg = Image.fromarray(np_img)
+
+    # plt.imshow(pimg)
+    # plt.show()
+
+    # cannot convert png to cv2 format.
+    pimg.save("temp.png")
+
+    # img1 = Image.open("temp.png")
+    # plt.imshow(img1)
+    # plt.show()
+
+    img_cv2 = cv2.imread("temp.png", cv2.IMREAD_UNCHANGED)
+
+    cv2.imshow('landcover', cv2.imread(img_file, cv2.IMREAD_UNCHANGED))
+
+    # plt.imshow(img_cv2)
+    # plt.show()
+
+    img_np = np.array(img_cv2)
+    unique_elements, counts_elements = np.unique(img_np, return_counts=True)
+    print(unique_elements)
+    print(counts_elements)
+
+    cv2.imshow('MORPH_CLOSE', cv2.imread("temp.png", cv2.IMREAD_UNCHANGED))
+
+    ret,thresh = cv2.threshold(img_cv2, 0, 255,0)
+    cv2.imshow('thresh', thresh)
+
+    g = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+
+
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, g)
+    cv2.imshow('MORPH_CLOSE', closed)
+
+    opened = cv2.morphologyEx(closed, cv2.MORPH_OPEN, g)
+    cv2.imshow('MORPH_OPEN', opened)
+
+
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, g)
+    cv2.imshow('MORPH_CLOSE2', closed)
+
+    opened = cv2.morphologyEx(closed, cv2.MORPH_OPEN, g)
+    cv2.imshow('MORPH_OPEN2', opened)
+
+    backtorgb = cv2.cvtColor(img_cv2, cv2.COLOR_GRAY2RGB)
+    # print(thresh[:, 100
+
+    # plt.imshow(img_cv2)
+    # plt.show()
+
+    contours, hierarchy = cv2.findContours(opened,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    # cnt = contours[3]
+    # print(contours[0])
+
+    contour = np.squeeze(contours[0])
+
+
+    # attributes = {"id": 1, "name": "polygon", "valid": True}
+    # centerline1 = Centerline(polygon,interpolation_distance=10)
+
+
+    backtorgb = cv2.cvtColor(opened, cv2.COLOR_GRAY2RGB)
+    cv2.imshow("Original", backtorgb)
+    t = cv2.drawContours((backtorgb), contours, -1, (0, 255, 0), 1)
+    print(len(contours))
+
+    lineThickness = 1
+
+    # for line in centerline1:
+    #     # print(list(line.coords)[0])
+    #     coords = list(line.coords)
+    #     start = (int(coords[0][0]), int(coords[0][1]))
+    #     end   = (int(coords[1][0]), int(coords[1][1]))
+    #     cv2.line(t, start, end, (0, 0, 255), lineThickness)
+
+    for cont in contours:
+        contour = np.squeeze(cont)
+        polygon = Polygon(contour)
+        print(polygon)
+        centerline1 = get_centerline(polygon, segmentize_maxlen=8, max_points=3000, simplification=0.05, smooth_sigma=5)
+        print(centerline1)
+        line = centerline1
+        # print(list(line.coords)[0])
+        coords = list(line.coords)
+        print(len(coords), coords)
+        for idx, coord in enumerate(coords[:-1]):
+            # print(idx, )
+            start = (int(coords[idx][0]), int(coords[idx][1]))
+            end   = (int(coords[idx + 1][0]), int(coords[idx + 1][1]))
+            cv2.line(t, start, end, (0, 0, 255), lineThickness)
+
+    cv2.imshow('closed',t)
+    if cv2.waitKey(0) == ord('q'):
+        cv2.destroyAllWindows()
 

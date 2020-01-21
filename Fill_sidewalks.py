@@ -220,7 +220,7 @@ def getContours(img_file, kernel=9):
 
     contours = [np.squeeze(cont) for cont in contours]
 
-    print(contours)
+    # print(contours)
     return contours
     # cnt = contours[3]
     # print(contours)
@@ -248,6 +248,7 @@ def get_polygon_centline(contours, segmentize_maxlen=8, max_points=3000, simplif
             print("Error in get_polygon_centline():", e)
             results.append(0)
             continue
+    return results
 
 
 def main():
@@ -334,9 +335,11 @@ def main():
 
     print("Finished main().")
 
-if __name__ == "__main__":
+if __name__
     print("Starting to fill sidewalks...")
     # main()
 
     img_file = r'I:\DVRPC\Fill_gap\StreetView\images\sG51XsNz_X9EWGv_nU8jaw_-74.848704_40.150078_0_134.31_landcover.png'
-    getContours(img_file)
+    contours = getContours(img_file)
+    centerlines = get_polygon_centline(contours)
+    print(list(centerlines[0].coords))

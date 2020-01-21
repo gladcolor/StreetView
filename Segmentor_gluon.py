@@ -1,5 +1,4 @@
 import mxnet as mx
-from mxnet import image
 import numpy as np
 from mxnet.gluon.data.vision import transforms
 from gluoncv.data.transforms.presets.segmentation import test_transform
@@ -12,7 +11,6 @@ from gluoncv.utils.viz import get_color_pallete
 import matplotlib.image as mpimg
 
 import os
-
 
 from mxnet import image
 from mxnet.gluon.data.vision import transforms

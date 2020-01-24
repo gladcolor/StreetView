@@ -80,8 +80,8 @@ class GPano():
         print(panoId)
         jdata = self.getJsonfrmPanoID(panoId)
         print(jdata)
-        lon = jdata["Location"]["original_lng"]
-        lat = jdata["Location"]["original_lat"]
+        lon = jdata["Location"]["lng"]
+        lat = jdata["Location"]["lat"]
         url_part1 = r'!3m6!1e1!3m4!1s'
         url_part2 = r'!2e0!7i16384!8i8192'
         heading = str(heading)
@@ -112,7 +112,8 @@ class GPano():
         y = math.sin(dLon) * cos(radLatB)
         x = cos(radLatA) * sin(radLatB) - sin(radLatA) * cos(radLatB) * cos(dLon)
         brng = degrees(atan2(y, x))
-        brng = (brng + 360) % 360
+        if brng < 0:
+            brng = (brng + 360) #% 360
         return brng
 
     def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
@@ -473,7 +474,7 @@ class GPano():
         if data == 0:
             return 0, 0, 0
         if 'Location' in data:
-            return (data['Location']['panoId'], data['Location']['original_lng'], data['Location']['original_lat'])
+            return (data['Location']['panoId'], data['Location']['lng'], data['Location']['lat'])
         else:
             return 0, 0, 0
 
@@ -548,8 +549,8 @@ class GPano():
         # h maximum: 768
         server_num = random.randint(0, 3)
         jdata = self.getJsonfrmPanoID(panoId)
-        lon = jdata["Location"]["original_lng"]
-        lat = jdata["Location"]["original_lat"]
+        lon = jdata["Location"]["lng"]
+        lat = jdata["Location"]["lat"]
         height = int(height)
         pitch = int(pitch)
         width = int(width)
@@ -701,8 +702,8 @@ class GPano():
         try:
             panoId = jdata["Location"]["panoId"]
             heading = float(jdata["Projection"]["pano_yaw_deg"])
-            lon = float(jdata["Location"]["original_lng"])
-            lat = float(jdata["Location"]["original_lat"])
+            lon = float(jdata["Location"]["lng"])
+            lat = float(jdata["Location"]["lat"])
 
             if not isinstance(yaw_list, list):
                 yaw_list = [yaw_list]
@@ -764,8 +765,8 @@ class GPano():
                         if next_Json == 0:
                             return lonlats
 
-                        next_lon = next_Json["Location"]["original_lng"]
-                        next_lat = next_Json["Location"]["original_lat"]
+                        next_lon = next_Json["Location"]["lng"]
+                        next_lat = next_Json["Location"]["lat"]
                         next_panoId = next_Json["Location"]["panoId"]
                         pre_panoId = panoId
 
@@ -780,8 +781,8 @@ class GPano():
                         continue
 
                     # print('jdata: ', jdata)
-                    pt_lon = float(jdata["Location"]["original_lng"])
-                    pt_lat = float(jdata["Location"]["original_lat"])
+                    pt_lon = float(jdata["Location"]["lng"])
+                    pt_lat = float(jdata["Location"]["lat"])
                     lonlats.append((pt_lon, pt_lat))
                     panoId = jdata["Location"]["panoId"]
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
@@ -796,8 +797,8 @@ class GPano():
                         print("File exists in forward(): ", saved_path, panoId + ".json")
                         return lonlats
                         # next_Json = self.getNextJson(jdata, pre_panoId)
-                        # next_lon = next_Json["Location"]["original_lng"]
-                        # next_lat = next_Json["Location"]["original_lat"]
+                        # next_lon = next_Json["Location"]["lng"]
+                        # next_lat = next_Json["Location"]["lat"]
                         # next_panoId = next_Json["Location"]["panoId"]
                         # step_cnt += 1
                         # next_pt = (next_lon, next_lat)
@@ -836,8 +837,8 @@ class GPano():
                         print("The road is dead end in Google Stree Map.")
                         return lonlats
                     else:
-                        next_lon = next_Json["Location"]["original_lng"]
-                        next_lat = next_Json["Location"]["original_lat"]
+                        next_lon = next_Json["Location"]["lng"]
+                        next_lat = next_Json["Location"]["lat"]
                         next_panoId = next_Json["Location"]["panoId"]
 
                         next_pt = (next_lon, next_lat)
@@ -866,8 +867,8 @@ class GPano():
                     if next_Json == 0:
                         return lonlats
 
-                    next_lon = next_Json["Location"]["original_lng"]
-                    next_lat = next_Json["Location"]["original_lat"]
+                    next_lon = next_Json["Location"]["lng"]
+                    next_lat = next_Json["Location"]["lat"]
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
@@ -917,8 +918,8 @@ class GPano():
                     jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path, dm=1)
 
                     # print('jdata: ', jdata)
-                    pt_lon = float(jdata["Location"]["original_lng"])
-                    pt_lat = float(jdata["Location"]["original_lat"])
+                    pt_lon = float(jdata["Location"]["lng"])
+                    pt_lat = float(jdata["Location"]["lat"])
                     lonlats.append((pt_lon, pt_lat))
                     panoId = jdata["Location"]["panoId"]
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
@@ -936,8 +937,8 @@ class GPano():
                         return lonlats
                         # print('yaw_list : None', yaw_list)
                         # next_Json = self.getLastJson(jdata, pre_panoId)
-                        # next_lon = next_Json["Location"]["original_lng"]
-                        # next_lat = next_Json["Location"]["original_lat"]
+                        # next_lon = next_Json["Location"]["lng"]
+                        # next_lat = next_Json["Location"]["lat"]
                         # next_panoId = next_Json["Location"]["panoId"]
                         # step_cnt += 1
                         # next_pt = (next_lon, next_lat)
@@ -952,8 +953,8 @@ class GPano():
                                 json.dump(jdata, f)
                         else:
                             next_Json = self.getLastJson(jdata, pre_panoId)
-                            next_lon = next_Json["Location"]["original_lng"]
-                            next_lat = next_Json["Location"]["original_lat"]
+                            next_lon = next_Json["Location"]["lng"]
+                            next_lat = next_Json["Location"]["lat"]
                             next_panoId = next_Json["Location"]["panoId"]
 
                             next_pt = (next_lon, next_lat)
@@ -986,8 +987,8 @@ class GPano():
                         print("The road is dead end in Google Stree Map.")
                         return lonlats
                     else:
-                        next_lon = next_Json["Location"]["original_lng"]
-                        next_lat = next_Json["Location"]["original_lat"]
+                        next_lon = next_Json["Location"]["lng"]
+                        next_lat = next_Json["Location"]["lat"]
                         next_panoId = next_Json["Location"]["panoId"]
 
                         next_pt = (next_lon, next_lat)
@@ -1020,8 +1021,8 @@ class GPano():
                     next_Json = self.getLastJson(jdata, pre_panoId)
                     if next_Json == 0:
                         return lonlats
-                    next_lon = next_Json["Location"]["original_lng"]
-                    next_lat = next_Json["Location"]["original_lat"]
+                    next_lon = next_Json["Location"]["lng"]
+                    next_lat = next_Json["Location"]["lat"]
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
@@ -1122,8 +1123,8 @@ class GPano():
             print("Error in getting json in shootLonlat():", e)
         if 'Location' in jdata:
             panoid = jdata['Location']['panoId']
-            lon = jdata['Location']['original_lng']
-            lat = jdata['Location']['original_lat']
+            lon = jdata['Location']['lng']
+            lat = jdata['Location']['lat']
         else:
             print("No Location in the Panojson file.")
             return 0, 0
@@ -1161,8 +1162,8 @@ class GPano():
                     panoId1 = link['panoId']
                     jdata1 = self.getJsonfrmPanoID(panoId1)
                     # print("jdata1: ", jdata1['Location']['panoId'])
-                    lon = jdata1['Location']['original_lng']
-                    lat = jdata1['Location']['original_lat']
+                    lon = jdata1['Location']['lng']
+                    lat = jdata1['Location']['lat']
                     lon = float(lon)
                     lat = float(lat)
                     heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
@@ -1563,8 +1564,8 @@ class GSV_depthmap(object):
             if saved_path == '':
                 return jdata
             else:
-                mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
-                    'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
+                mapname = os.path.join(saved_path, prefix + jdata['Location']['lng'] + '_' + jdata['Location'][
+                    'lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
                 with open(mapname, 'w') as f:
                     json.dump(jdata, f)
 
@@ -1595,8 +1596,8 @@ class GSV_depthmap(object):
                 jdata = r.json()
                 # str_dm = jdata['model']['depth_map']
 
-                mapname = os.path.join(saved_path, prefix + jdata['Location']['original_lng'] + '_' + jdata['Location'][
-                    'original_lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
+                mapname = os.path.join(saved_path, prefix + jdata['Location']['lng'] + '_' + jdata['Location'][
+                    'lat'] + '_' + jdata['Location']['panoId'] + suffix + '.json')
 
                 with open(mapname, 'w') as f:
                     json.dump(jdata, f)
@@ -2156,9 +2157,9 @@ class GSV_depthmap(object):
                         pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
                         pano_pitch = float(pano_pitch)
                         # print('pano_heading:', pano_heading)
-                        pano_lon = obj_json["Location"]['original_lng']
+                        pano_lon = obj_json["Location"]['lng']
                         # print('pano_lon:', pano_lon)
-                        pano_lat = obj_json["Location"]['original_lat']
+                        pano_lat = obj_json["Location"]['lat']
                         # print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
                         # print('pano_H:', pano_H)
@@ -2530,9 +2531,9 @@ class GSV_depthmap(object):
                         pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
                         pano_pitch = float(pano_pitch)
                         # print('pano_heading:', pano_heading)
-                        pano_lon = obj_json["Location"]['original_lng']
+                        pano_lon = obj_json["Location"]['lng']
                         # print('pano_lon:', pano_lon)
-                        pano_lat = obj_json["Location"]['original_lat']
+                        pano_lat = obj_json["Location"]['lat']
                         # print('pano_lat:', pano_lat)
                         pano_H = obj_json["Location"]['elevation_wgs84_m']
                         # print('pano_H:', pano_H)
@@ -2659,7 +2660,7 @@ class GSV_depthmap(object):
                     # print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
 
-                    url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=thumb_heading)
+                    url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=math.degrees(thumb_heading))
                     print("Google street view URL:", url)
 
                     # sidewalk_idx = np.argwhere(predict > -1)  # all classes in ADE20k.
@@ -2729,7 +2730,7 @@ class GSV_depthmap(object):
                         # plt.scatter(plt_x, plt_y)
                         # plt.show()
 
-                        distance_max = 20 * unit_scale
+                        distance_max = 15 * unit_scale
                         distance_min = 0
                         pointcloud_clean = []
                         pointcloud_np = np.array(pointcloud)
@@ -2757,10 +2758,11 @@ class GSV_depthmap(object):
                         #                         # print("np_image:", np_image[:5])
 
                         img_pil = Image.fromarray(np_image)
-                        img_pil.save()
+                        # img_pil.save(new_file_name)
                         colored = self.get_color_pallete(np_image, 'ade20k')
-                        colored.save(np_image)
-                        colored = self.get_color_pallete(np_image, 'ade20k')
+                        #
+                        # colored = self.get_color_pallete(np_image, 'ade20k')
+                        colored.save(new_file_name)
                         # im.save(new_file_name)
                         # im = Image.fromarray(colored)
                         print("new_file_name:", new_file_name)
@@ -2771,6 +2773,7 @@ class GSV_depthmap(object):
                             for line in worldfile:
                                 # print(line)
                                 wf.write(str(line) + '\n')
+                        return  colored, new_file_name
                         # plt.imshow(im)
                         # plt.show()
 
@@ -2783,7 +2786,8 @@ class GSV_depthmap(object):
                         # with open(new_file_name, 'w') as f:
                         #     f.write('x,y,h,d,c\n')
                         #     for idx, point in enumerate(pointcloud):
-                        #         if point[3] > distance_min and point[3] < distance_max:
+                        #         if point[3] > distance_min and
+                        #         point[3] < distance_max:
                         #             f.write('%s,%s,%s,%s,'% point)
                         #             f.write('%s\n' % predict[classes[0][idx], classes[1][idx]])
 

@@ -1974,9 +1974,9 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getPointCloud():", e)
 
-    # DO not use it!!
-    def getPointCloud2(self, theta_phis_in_pano, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
-                       cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*2, sub_h=768*2, unit_scale=3.280833333):
+
+    def getPointCloud2(self, theta_phis, heading_of_thumb, pitch_of_thumb, depthmap, cameraLon, cameraLat,
+                       cameraH, heading_of_pano, pitch_of_pano, sub_w = 1024*1, sub_h=768*1, unit_scale=3.280833333):
         try:
             # print('heading_of_thumb:', math.degrees(heading_of_thumb))
 
@@ -1984,7 +1984,7 @@ class GSV_depthmap(object):
             # if not isinstance(theta_phis_in_pano, list):
             #     theta_phis_in_thumb = [theta_phis_in_pano]
 
-            results = theta_phis_in_pano
+            # results = theta_phis_in_pano
             # print('results shape: ', results.shape, results[0])
             heading_of_thumb = float(heading_of_thumb)
             pitch_of_thumb = float(pitch_of_thumb)
@@ -1999,7 +1999,7 @@ class GSV_depthmap(object):
 
 
             # print('results shape: ', results.shape, results[0])
-            results = np.concatenate((results, theta_phis_in_pano), axis=1)
+            # results = np.concatenate((results, theta_phis_in_pano), axis=1)
 
             # print('results shape: ', results.shape, results[0])
 
@@ -2010,7 +2010,7 @@ class GSV_depthmap(object):
             #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
 
             # print("row: ", row)
-            points3D = np.zeros((len(theta_phis_in_pano), 4))
+            points3D = np.zeros((len(theta_phis), 4))
             # print('depthmap[width]: ', depthmap['width'])
             # print('depthmap[height]:', depthmap['height'])
             # print('theta_phis_in_thumb[0]: ', math.degrees(theta_phis_in_thumb[0][0]), math.degrees(theta_phis_in_thumb[0][1]))
@@ -2020,6 +2020,9 @@ class GSV_depthmap(object):
             # heading_of_pano = radians(heading_of_pano)
             # pitch_of_pano = radians(pitch_of_pano)
             dempth_image = np.array(depthmap['depthMap']).reshape(256, 512)
+
+            # pil_dm_img = Image.fromarray(dempth_image)
+            # pil_dm_img.save()
             # plt.imshow(dempth_image)
             # plt.show()
 
@@ -2044,26 +2047,52 @@ class GSV_depthmap(object):
             # print('theta_phis_in_pano[:, 1]: ', theta_phis_in_pano[:, 1])
             # print('theta_phis_in_pano[:, 0]: ', theta_phis_in_pano[:, 0])
 
-            min_theta = np.min(theta_phis_in_pano[:, 1])
-            max_theta = np.max(theta_phis_in_pano[:, 1])
+            min_theta = np.min(theta_phis[:, 1])
+            max_theta = np.max(theta_phis[:, 1])
 
-            min_phi = np.min(theta_phis_in_pano[:, 0])
-            max_phi = np.max(theta_phis_in_pano[:, 0])
-
-
+            min_phi = np.min(theta_phis[:, 0])
+            max_phi = np.max(theta_phis[:, 0])
 
             new_grid_col = np.linspace(min_phi, max_phi, sub_w)
             new_grid_row = np.linspace(max_theta, min_theta, sub_h)
 
-            sub_depthmap = interp(new_grid_col, new_grid_row)
-            # sub_depthmap *=  unit_scale  # meter to U.S. feet
-            # distances = interp(theta_phis_in_pano[-10:, 1], theta_phis_in_pano[-10:, 0])
-            resolution_phi = (max_phi - min_phi) / sub_w
+            # 二维插值
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+                                          kind='linear')  # 'cubic' will distord the distance.
+
+
+            sub_depthmap = interp(new_grid_col, new_grid_row)  # flip for unknow reason
+            sub_depthmap = sub_depthmap[::-1]
+
+            # sub_depthmap = np.where(sub_depthmap > 20, 0, sub_depthmap)
+
+            # plt.imshow(sub_depthmap)
+            # plt.show()
+
+            # resolution_phi = (max_phi - min_phi) / sub_w
+            # resolution_theta = (max_theta - min_theta) / sub_h
+
+            # if fov_h is alwasy pi/2:
+            resolution_phi = (math.pi/2) / sub_w
             resolution_theta = (max_theta - min_theta) / sub_h
-            col_rows = (theta_phis_in_pano - np.array([min_phi, min_theta]))/ np.array(resolution_phi, resolution_theta)
+
+            col_rows = (theta_phis - np.array([min_phi, max_theta])) / np.array([resolution_phi, resolution_theta])  # flip
+            # col_rows = theta_phis - np.array([min_phi, max_theta])
+            # col_rows = col_rows / np.array([resolution_phi, resolution_theta])
+            # rows =  theta_phis[:, 1]
+            # max0 = np.max(rows)
+            # rows2  = rows - np.array(max_theta)
+            # max2 = np.max(rows2)
+            # rows3 = rows2 / np.array(resolution_theta)
+            # max3 = np.max(rows3)
+            col_rows = col_rows * np.array([1, -1])
             col_rows = np.rint(col_rows).astype(int)
             bou = np.array([sub_w - 1, sub_h - 1])
             col_rows = np.where(col_rows > bou, bou, col_rows)
+
+            # plt.scatter(col_rows[:, 0], col_rows[:,1])
+            # plt.show()
+
             distances = sub_depthmap[col_rows[:, 1], col_rows[:, 0]] * unit_scale  # meter to U.S. feet
 
             # distances = distances[distances < 20]
@@ -2078,9 +2107,9 @@ class GSV_depthmap(object):
             # points3D = np.concatenate((points3D, distances), axis=1)
 
             pitch_of_pano = 0
-            pointX = cameraX + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.sin(theta_phis_in_pano[:, 0] + heading_of_pano)
-            pointY = cameraY + distances * np.cos(theta_phis_in_pano[:, 1] + pitch_of_pano) * np.cos(theta_phis_in_pano[:, 0] + heading_of_pano)
-            pointZ = cameraH + distances * np.sin(theta_phis_in_pano[:, 1] + pitch_of_pano)
+            pointX = cameraX + distances * np.cos(theta_phis[:, 1] + pitch_of_pano) * np.sin((theta_phis[:, 0] + heading_of_pano))
+            pointY = cameraY + distances * np.cos(theta_phis[:, 1] + pitch_of_pano) * np.cos((theta_phis[:, 0] + heading_of_pano))
+            pointZ = cameraH + distances * np.sin(theta_phis[:, 1] + pitch_of_pano)
 
             points3D = np.stack((pointX, pointY, pointZ, distances), axis=1)
 
@@ -2607,7 +2636,8 @@ class GSV_depthmap(object):
                 seg_list = [seg_list]
                 print("Converted the single file into a list.")
             # print(io.imread(seg_list[0]).shape)
-
+            np_images = []
+            coloreds_names = []
             for idx, seg in enumerate(seg_list):
                 try:
                     predict = io.imread(seg)
@@ -2710,7 +2740,7 @@ class GSV_depthmap(object):
 
                         # plt_x = [math.degrees(x) for x in sidewalk_sph_phi]
                         # plt_y = [math.degrees(x) for x in sidewalk_sph_theta]
-                        # plt.scatter(plt_x, plt_y)
+                        # plt.scatter(sidewalk_sph_phi, sidewalk_sph_theta)
                         # plt.show()
 
                         sidewalk_sph = np.stack((sidewalk_sph_phi, sidewalk_sph_theta), axis=1)
@@ -2737,6 +2767,7 @@ class GSV_depthmap(object):
                         # pointcloud_np = np.flip(pointcloud_np, axis=0)
 
                         # all_classes = np.flip(predict,axis=0).reshape((predict.size, 1))
+                        # predict = predict[::-1]
                         all_classes = predict.reshape((predict.size, 1))
                         # print("all_classes:", all_classes[:3], all_classes.shape)
 
@@ -2750,6 +2781,13 @@ class GSV_depthmap(object):
                         pointcloud_clean = pointcloud_class[pointcloud_class[:, 3] > distance_min]
                         # print("pointcloud_clean len:", len(pointcloud_clean0))
                         pointcloud_clean = pointcloud_clean[pointcloud_clean[:, 3] < distance_max]
+
+                        dempth_image = np.array(dm['depthMap']).reshape(256, 512)
+                        dempth_image = np.where(dempth_image > 100, 100, dempth_image)
+                        pil_dm_img = Image.fromarray(dempth_image)
+                        pil_dm_img.save(new_file_name.replace('_landcover.png', '_depth.tif'))
+
+                        np.savetxt(new_file_name.replace('.png', '.csv'), pointcloud_clean)
                         #
                         # print("pointcloud_clean:", pointcloud_clean[:5])
                         # print("pointcloud_clean len:", len(pointcloud_clean))
@@ -2760,9 +2798,12 @@ class GSV_depthmap(object):
                         img_pil = Image.fromarray(np_image)
                         # img_pil.save(new_file_name)
                         colored = self.get_color_pallete(np_image, 'ade20k')
+                        np_images.append(np_image)
+
                         #
                         # colored = self.get_color_pallete(np_image, 'ade20k')
                         colored.save(new_file_name)
+                        coloreds_names.append(new_file_name)
                         # im.save(new_file_name)
                         # im = Image.fromarray(colored)
                         print("new_file_name:", new_file_name)
@@ -2773,7 +2814,7 @@ class GSV_depthmap(object):
                             for line in worldfile:
                                 # print(line)
                                 wf.write(str(line) + '\n')
-                        return  colored, new_file_name
+                        # return  colored, new_file_name
                         # plt.imshow(im)
                         # plt.show()
 
@@ -2797,6 +2838,10 @@ class GSV_depthmap(object):
                 except Exception as e:
                     print("Error in seg_to_landcover2() for loop:", e, seg)
                     continue
+            if len(np_images) == 1:
+                np_images =  np_images[0]
+                coloreds_names = coloreds_names[0]
+            return np_images, coloreds_names
 
         except Exception as e:
             print("Error in seg_to_landcover():", e, seg)
@@ -3137,8 +3182,8 @@ if __name__ == '__main__':
     # display image
     img = PIL.Image.fromarray(im)
     img.save(r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\streetview_images\PB03JZMg9nKvRjwf_T0xBg.tif')
-    plt.imshow(im)
-    plt.show()
+    # plt.imshow(im)
+    # plt.show()
     # print(im)
     # plt.imsave(r'D:\Code\StreetView\Essex\t\img.tiff', im)
     # ------------------------------------

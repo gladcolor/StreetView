@@ -39,6 +39,8 @@ from skimage import io
 from PIL import features
 import urllib.request
 import urllib
+from geopy.distance import geodesic
+
 #
 WINDOWS_SIZE = '100, 100'
 chrome_options = Options()

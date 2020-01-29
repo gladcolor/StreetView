@@ -2,6 +2,7 @@
 Designed by Huan Ning, gladcolor@gmail.com, 2020.01.14
 
 """
+import glob
 from pyproj import Proj, transform, itransform
 from shapely import affinity
 # from mpl_toolkits.mplot3d import Axes3D
@@ -43,6 +44,8 @@ from skimage import io
 from PIL import features
 import urllib.request
 import urllib
+from geopy.distance import geodesic
+
 from shapely.geometry import Polygon
 # from centerline.geometry import Centerline
 import logging
@@ -359,7 +362,7 @@ def getNextShot(crt_json, crt_yaw,  direction_d, phi=90, saved_path='', pitch=0,
                          pitch=0, yaw=shotYaw)
     return next_img, file_name, yawDeg
 
-def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path='sidewalk_imgs'):
+def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path='sidewalk_imgs', distance_thres=20):
     """
 
     :param lon:
@@ -368,12 +371,14 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
     :param pixel_thres: 30 for 0.1m resolution
     :param rtree_bounds: boundaries of Area of Interest
     :param saved_path:
+    :param distance_thres: meter
     :return:
     """
     try:
         steps_lonlat = []
 
-
+        lon_d = lon
+        lat_d = lat
 
         if not os.path.exists(saved_path):
             os.mkdir(saved_path)
@@ -388,11 +393,19 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         except:
             return steps_lonlat
 
+        if shotExists(jpg_name, folder=saved_path, threshold=15):
+            print("Found an existing shoot: ", jpg_name)
+            return steps_lonlat
+
         basename = os.path.basename(jpg_name)
         params = basename[:-4].split('_')
         lon = float(params[-4])
         lat = float(params[-3])
         # print("params:", params)
+        if geodesic((lat, lon), (lat_d, lon_d)).m > distance_thres:  # (latitude, longitude) don't confuse
+            print("Distance is too long : meter, (lat, lon), (lat_d, lon_d): ", geodesic((lat, lon), (lat_d, lon_d)).m, (lat, lon), (lat_d, lon_d))
+            return steps_lonlat
+
         panoId = '_'.join(params[:(len(params) - 4)])
 
         crt_json = gpano.getJsonfrmPanoID(panoId)
@@ -448,15 +461,26 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
             except:
                 pass
 
+            if shotExists(jpg_name, folder=saved_path, threshold=15):
+                print("Found an existing shoot: ", jpg_name)
+                return steps_lonlat
+
             basename = os.path.basename(jpg_name)
             params = basename[:-4].split('_')
             # bearing_deg = float(params[-1])
             panoId = '_'.join(params[:(len(params) - 4)])
 
+            lat_d = lat
+            lon_d = lon
+
             lon = float(params[-4])
             lat = float(params[-3])
 
+            if geodesic((lat, lon), (lat_d, lon_d)).m > distance_thres:  # (latitude, longitude) don't confuse
+                print("Distance is too long : meter, (lat, lon), (lat_d, lon_d): ",
+                      geodesic((lat, lon), (lat_d, lon_d)).m, (lat, lon), (lat_d, lon_d))
 
+                return steps_lonlat
 
             seged_name = jpg_name.replace('.jpg', '.png')
             seged = seg.getSeg(next_img, seged_name)
@@ -530,7 +554,7 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         print("Error in go_along_sidewalk():", e)
         return steps_lonlat
 
-def getPanoBox(lon, lat, bearing_deg, w_meter=5, h_meter=10):
+def getPanoBox(lon, lat, bearing_deg, w_meter=8, h_meter=15):
     """
     :param lon:
     :param lat:
@@ -558,13 +582,32 @@ def getPanoBox(lon, lat, bearing_deg, w_meter=5, h_meter=10):
 
     return Polygon(results)
 
+def shotExists(jpg_name, folder, threshold=15):
+
+    basename = os.path.basename(jpg_name)
+    params = basename[:-4].split('_')
+    panoId = '_'.join(params[:(len(params) - 4)])
+    shotDirection = float(params[-1])
+
+    candidates = glob.glob(os.path.join(folder, panoId + '*.jpg'))
+    for can in candidates:
+        basename_c = os.path.basename(can)
+        params_c = basename_c[:-4].split('_')
+        panoId_c = '_'.join(params_c[:(len(params) - 4)])
+        shotDirection_c = float(params_c[-1])
+
+        if abs(shotDirection_c - shotDirection) < threshold:
+            return True
+
+    return False
+
 def go_along_sidewalk_excute():
     print("go_along_sidewalk_excute()...")
     # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
     # getBearingAngle(dangle_file)
     saved_path = 'I:\DVRPC\Fill_gap\StreetView\images5'
     bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
-    dangles = pd.read_csv(bearing_file).iloc[18:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
+    dangles = pd.read_csv(bearing_file).iloc[459:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
     # print(dangles)    # 38:40
 
     dangles_latlon_mp = mp.Manager().list()

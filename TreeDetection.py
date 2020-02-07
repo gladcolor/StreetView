@@ -25,11 +25,18 @@ class tree_detection():
 
             self.closed = cv2.morphologyEx(self.seg_cv2, cv2.MORPH_CLOSE, g)
             self.opened = cv2.morphologyEx(self.seg_cv2, cv2.MORPH_OPEN, g)
-
+            #
             # plt.imshow(self.opened)
             # plt.show()
 
             self.contoursNONE, hierarchy = cv2.findContours(self.opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+
+            con = cv2.drawContours(self.opened, self.contoursNONE, -1, (255, 255, 100), 3)
+            #
+            # plt.imshow(con)
+            # plt.show()
+
             self.contoursNONE = [np.squeeze(cont) for cont in self.contoursNONE]
 
             self.peaks_all = object
@@ -37,9 +44,8 @@ class tree_detection():
             print("Error in tree_detection __init__():", e)
         # self. = object
 
-    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=(0, 100), prom_ratio=0.2):
+    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=1, prom_ratio=0.2):
         """
-
         :param prominence:
         :param width:
         :param distance:
@@ -54,15 +60,21 @@ class tree_detection():
 
         roots_all = []
         widths = []
+        # self.contoursNONE = self.contoursNONE[2:]
         for cont_num, cont in enumerate(self.contoursNONE):
             try:
-                if len(cont) < 20:
+                if len(cont) < 40:
                     continue
 
                 roots = []
                 print("Processing contours #:", cont_num)
+
                 peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=prominence, width=width, distance=distance,
                                                          plateau_size=plateau_size)
+                # print("cont:", cont)
+                # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=10, width=10, distance=20,
+                #                                          plateau_size=10)
+
                 peaks = cont[peaks_idx]
                 roots.append(peaks)
                 roots = np.concatenate(roots)
@@ -72,9 +84,9 @@ class tree_detection():
                 if len(peaks_idx) == 0:
                     continue
 
-                prominence = dic['prominences']
+                prominences = dic['prominences']
 
-                DBH_row = (roots[:, 1] - prominence * prom_ratio ).astype(int)
+                DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
 
                 for idx, r in enumerate(DBH_row):
 
@@ -94,7 +106,7 @@ class tree_detection():
                     #     print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
 
-                    w = math.tan(math.radians(50)) * prominence[idx] / 5
+                    w = math.tan(math.radians(50)) * prominences[idx] / 5
                     #         print("w:", w)
 
                     if abs(DBH_x[0] - roots[idx, 0]) < w:
@@ -106,11 +118,14 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
+        # if len(roots_all) > 0:
+            # roots_all = np.concatenate(roots_all)
+
         return roots_all, widths
 
 def test_getRoots():
 
-    img_file0 = r'55103_-75.090305_40.026045_20_165'
+    img_file0 = r'56977_-75.13713_40.001763_20_260'
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
     tree_detect = tree_detection(seg_file_path=img_file)

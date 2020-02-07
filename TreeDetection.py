@@ -16,7 +16,7 @@ class tree_detection():
             self.seg_file_path = seg_file_path
 
             self.seg_cv2 = cv2.imread(self.seg_file_path, cv2.IMREAD_UNCHANGED)
-            seg_width, seg_height = self.seg_cv2.shape
+            seg_height, seg_width = self.seg_cv2.shape
             self.seg_cv2 = self.seg_cv2[int(seg_height * clip_up):, :]  # remove the top 1/3 image.
             self.seg_cv2 = cv2.inRange(self.seg_cv2, tree_label, tree_label)  # the class lable of trees is 4
             ret, self.seg_cv2 = cv2.threshold(self.seg_cv2, 0, 1, cv2.THRESH_BINARY)

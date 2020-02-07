@@ -2789,7 +2789,7 @@ class GSV_depthmap(object):
                         pil_dm_img = Image.fromarray(dempth_image)
                         pil_dm_img.save(new_file_name.replace('_landcover.png', '_depth.tif'))
 
-                        np.savetxt(new_file_name.replace('.png', '.csv'), pointcloud_clean)
+                        # np.savetxt(new_file_name.replace('.png', '.csv'), pointcloud_clean)
                         #
                         # print("pointcloud_clean:", pointcloud_clean[:5])
                         # print("pointcloud_clean len:", len(pointcloud_clean))

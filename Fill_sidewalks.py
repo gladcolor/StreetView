@@ -325,7 +325,7 @@ def getNextShot(crt_json, crt_yaw,  direction_d, phi=90, saved_path='', pitch=0,
     next_panoId, yawDeg = getSameDirectionPanoId(crt_json, direction_d)
     yawDeg = float(yawDeg)
     if yawDeg == -999:
-        return 0, 0
+        return 0, 0, 0
 
     next_json = gpano.getJsonfrmPanoID(next_panoId)
     lon = float(next_json['Location']['lng'])
@@ -374,6 +374,8 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
     :param distance_thres: meter
     :return:
     """
+    max_step = 20
+
     try:
         steps_lonlat = []
 
@@ -418,7 +420,8 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         landcover, landcover_file = gsv.seg_to_landcover2(seged_name, saved_path)
 
         colored_name = seged_name.replace('.png', '_seg_color.png')
-        # colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
+        colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
+        colored.save(colored_name)
 
         sidewalk_idx = []
         for label in LABEL_IDS:
@@ -435,18 +438,10 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         steps_lonlat.append([panoId, lon, lat])
 
             # dangles_results_mp.append(("Found sidewalk", panoId))
-            # landcover = gsv.seg_to_landcover2(seged_name, saved_path)
-            # landcover = np.array(landcover)  # for unkown reason to get a tuple (np.array)
-            # colored_name = seged_name.replace('.png', '_seg_color.png')
-            # colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
-            # colored.i
-            # plt.imshow(colored)
-            # plt.show()
+
 
         # else:
         #     # dangles_results_mp.append(("No sidewalk", panoId, 0))
-        #     print('No sidewalk.')
-        #     return 0
 
 
         x, y = gsv.lonlat_to_proj(lon, lat, 6565, 4326)
@@ -459,10 +454,14 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
                     print("Did not found json in lon/lat : ", lon, lat)
                     break
             except:
-                pass
+                return steps_lonlat
 
             if shotExists(jpg_name, folder=saved_path, threshold=15):
                 print("Found an existing shoot: ", jpg_name)
+                return steps_lonlat
+
+            if len(steps_lonlat) > max_step:
+                print("Number of steps more than maximum limit: ", max_step)
                 return steps_lonlat
 
             basename = os.path.basename(jpg_name)
@@ -487,7 +486,8 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
 
             landcover, landcover_file = gsv.seg_to_landcover2(seged_name, saved_path)
             colored_name = seged_name.replace('.png', '_seg_color.png')
-            # colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
+            colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
+            colored.save(colored_name)
 
             sidewalk_idx = []
             for label in LABEL_IDS:
@@ -501,9 +501,7 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
                 steps_lonlat.append([panoId, lon, lat])
 
                 print('Found sidewalk at: ', lon, lat, len(sidewalk_idx), jpg_name)
-                view_box = getPanoBox(lon, lat, bearing_deg)
-
-
+                view_box = getPanoBox(lon, lat, float(params[-1]))
 
                 # x, y = view_box.exterior.xy
                 # fig = plt.figure(1, figsize=(5, 5), dpi=90)
@@ -519,9 +517,9 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
                     print('Found few sidewalks at: ', lon, lat, len(sidewalk_idx), jpg_name)
 
                 # dangles_results_mp.append(("Found sidewalk", panoId))
-                landcover = gsv.seg_to_landcover2(seged_name, saved_path)
-                colored_name = seged_name.replace('.png', '_seg_color.png')
-                colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
+                # landcover = gsv.seg_to_landcover2(seged_name, saved_path)
+                # colored_name = seged_name.replace('.png', '_seg_color.png')
+                # colored = seg.getColor(seged, dataset='ade20k', saved_name=colored_name)
 
                 lon = params[-4]
                 lat = params[-3]
@@ -534,6 +532,9 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
                 x, y = gsv.lonlat_to_proj(lon, lat, 6565, 4326)
                 isInside = isInBounds((x, y, x, y), rtree_bounds)
                 crt_json = gpano.getJsonfrmPanoID(panoId)
+
+                if not isInside:
+                    print("Outside the boundry.")
                 # jdata = gpano.getJsonfrmPanoID(panoId)
 
                 # go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles,\
@@ -554,7 +555,7 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         print("Error in go_along_sidewalk():", e)
         return steps_lonlat
 
-def getPanoBox(lon, lat, bearing_deg, w_meter=8, h_meter=15):
+def getPanoBox(lon, lat, bearing_deg, w_meter=10, h_meter=15):
     """
     :param lon:
     :param lat:
@@ -572,7 +573,7 @@ def getPanoBox(lon, lat, bearing_deg, w_meter=8, h_meter=15):
 
     box = Polygon((upper_left, upper_right, bottom_right, bottom_left))
     box = affinity.rotate(box,
-                          -bearing_deg)  # Positive angles are counter-clockwise and negative are clockwise rotations.
+                          -bearing_deg, origin=(0, 0))  # Positive angles are counter-clockwise and negative are clockwise rotations.
 
     box_pts = box.exterior.coords
     box_pts = list(box_pts)
@@ -589,14 +590,17 @@ def shotExists(jpg_name, folder, threshold=15):
     panoId = '_'.join(params[:(len(params) - 4)])
     shotDirection = float(params[-1])
 
-    candidates = glob.glob(os.path.join(folder, panoId + '*.jpg'))
+    candidates = glob.glob(os.path.join(folder, panoId + '*_landcover.png'))
     for can in candidates:
         basename_c = os.path.basename(can)
+        basename_c = basename_c.replace('_landcover', '')
         params_c = basename_c[:-4].split('_')
         panoId_c = '_'.join(params_c[:(len(params) - 4)])
         shotDirection_c = float(params_c[-1])
 
-        if abs(shotDirection_c - shotDirection) < threshold:
+        diff = abs(shotDirection_c - shotDirection)
+
+        if diff < threshold and diff > 0:
             return True
 
     return False
@@ -607,7 +611,7 @@ def go_along_sidewalk_excute():
     # getBearingAngle(dangle_file)
     saved_path = 'I:\DVRPC\Fill_gap\StreetView\images5'
     bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
-    dangles = pd.read_csv(bearing_file).iloc[459:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
+    dangles = pd.read_csv(bearing_file).iloc[0:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
     # print(dangles)    # 38:40
 
     dangles_latlon_mp = mp.Manager().list()

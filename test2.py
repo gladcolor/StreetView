@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 import gdal
 from shapely.geometry import Polygon
 from centerline.geometry import Centerline
+import math
 
 polygon = Polygon([[0, 0], [0, 4], [4, 4], [4, 0]])
 attributes = {"id": 1, "name": "polygon", "valid": True}
 centerline = Centerline(polygon, **attributes)
 print(centerline.id == 1)
 
+x  = math.log2(3, 2)
 
 
 """
@@ -51,3 +53,7 @@ while (1):
     else:
         cv2.imshow('MORPH_CLOSE', dilation)
 """
+
+
+
+

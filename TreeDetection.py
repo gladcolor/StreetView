@@ -26,8 +26,8 @@ class tree_detection():
             self.closed = cv2.morphologyEx(self.seg_cv2, cv2.MORPH_CLOSE, g)
             self.opened = cv2.morphologyEx(self.seg_cv2, cv2.MORPH_OPEN, g)
 
-            plt.imshow(self.opened)
-            plt.show()
+            # plt.imshow(self.opened)
+            # plt.show()
 
             self.contoursNONE, hierarchy = cv2.findContours(self.opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             self.contoursNONE = [np.squeeze(cont) for cont in self.contoursNONE]
@@ -66,8 +66,8 @@ class tree_detection():
                 peaks = cont[peaks_idx]
                 roots.append(peaks)
                 roots = np.concatenate(roots)
-                roots_all.append(roots)
-                # print('\n', dic)
+                # roots_all.append(roots)
+                print('\n', dic)
 
                 if len(peaks_idx) == 0:
                     continue
@@ -85,8 +85,7 @@ class tree_detection():
 
                     DBH_idx = np.argwhere(self.contoursNONE[cont_num][:, 1] == r)
                     #         print('DBH_x: ', DBH_x)
-                    #         print('contoursNONE[cont_num][:, 1]:',cont_num, contoursNONE[cont_num][:,:])
-
+                    #         print('contoursNONE[cont_num][:, 1]:',cont_num, contoursONE[cont_num][:,:])N
                     t = [x[0] for x in DBH_idx]
 
                     #         print('t = [x[0] for x in DBH_idx]:', t)
@@ -103,13 +102,14 @@ class tree_detection():
                         roots_all.append(peaks[idx])
                         widths.append(DBH_x[1] - DBH_x[0])
 
-                return roots_all, widths
-
             except Exception as e:
                 print("Error in getRoots():", e)
                 continue
 
+        return roots_all, widths
+
 def test_getRoots():
+
     img_file0 = r'55103_-75.090305_40.026045_20_165'
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 

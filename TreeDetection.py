@@ -44,7 +44,7 @@ class tree_detection():
             print("Error in tree_detection __init__():", e)
         # self. = object
 
-    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=1, prom_ratio=0.2):
+    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=0, prom_ratio=0.2):
         """
         :param prominence:
         :param width:
@@ -79,7 +79,7 @@ class tree_detection():
                 roots.append(peaks)
                 roots = np.concatenate(roots)
                 # roots_all.append(roots)
-                print('\n', dic)
+                # print('\n', dic)
 
                 if len(peaks_idx) == 0:
                     continue
@@ -90,7 +90,7 @@ class tree_detection():
 
                 for idx, r in enumerate(DBH_row):
 
-                    print('\nr:', r)
+                    # print('\nr:', r)
 
                     line_x = []
                     line_y = []
@@ -106,7 +106,7 @@ class tree_detection():
                     #     print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
 
-                    w = math.tan(math.radians(50)) * prominences[idx] / 5
+                    w = math.tan(math.radians(40)) * prominences[idx] / 5
                     #         print("w:", w)
 
                     if abs(DBH_x[0] - roots[idx, 0]) < w:
@@ -118,8 +118,9 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
-        # if len(roots_all) > 0:
-            # roots_all = np.concatenate(roots_all)
+        if len(roots_all) > 0:
+            roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
+
 
         return roots_all, widths
 
@@ -129,8 +130,14 @@ def test_getRoots():
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
     tree_detect = tree_detection(seg_file_path=img_file)
+    roots_all, widths = tree_detect.getRoots()
+    print(roots_all, widths)
 
-    print(tree_detect.getRoots())
+
+    plt.imshow(tree_detect.seg_cv2)
+    plt.scatter(roots_all[:, 0], roots_all[:, 1])
+    plt.show()
+
 
 if __name__ == "__main__":
     test_getRoots()

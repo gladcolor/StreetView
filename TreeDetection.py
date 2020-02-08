@@ -10,7 +10,7 @@ import math
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.33, kernel_morph=15, kernel_list=[20, 30, 35, 40, 50, 60, 80, 100, 120]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.33, kernel_morph=15, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
 
         try:
             self.seg_file_path = seg_file_path
@@ -34,6 +34,8 @@ class tree_detection():
             self.sobel_v = cv2.Sobel(self.opened, cv2.CV_64F, 1, 0, ksize=3)
             self.sobel_v_abs = np.abs(self.sobel_v)
             self.sobel_v_abs = np.where(self.sobel_v_abs > 2.0, self.sobel_v_abs, 0)
+            self.sobel_v_abs[:, :-2] = 1 # set the edge to sobel_v
+            self.sobel_v_abs[:, 0:3] = 1  # set the edge to sobel_v
 
             self.sobel_h = cv2.Sobel(self.opened, cv2.CV_64F, 0, 1, ksize=3)
             self.sobel_h_abs = np.abs(self.sobel_h)
@@ -73,7 +75,7 @@ class tree_detection():
         for kernel in self.kernel_list:
             kernel_w = kernel
             kernel_h = kernel_w * 1.5
-            threshold = kernel_h * 1.5
+            threshold = kernel_h * 1.4
             #         print(threshold)
             if (row > kernel_h) and (col > kernel_w / 2):
                 if (row < self.seg_height) and (col < (self.seg_width - kernel_w / 2)):
@@ -82,8 +84,9 @@ class tree_detection():
                     sum_conv = np.sum(conved) / 2
 
                     if sum_conv > threshold:
-                        return True
-                    #     if self.sobel_h[row, col] < -1:
+                        if self.sobel_h[row, col] < -1:
+                            return True
+                    #
 
                     # return sum_conv, kernel_w
 
@@ -139,15 +142,16 @@ class tree_detection():
                 DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
 
                 ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=12)
-                plt.show()
+                # plt.show()
 
                 for peak in peaks:
                     col = peak[0]
                     row = peak[1]
 
                     if self.conv_verify(row, col):
-                        ax.scatter(col, row, color='g', s=19)
-                plt.imshow()
+                        ax.scatter([col], [row], color='green', s=19)
+                        print("Verified!")
+                plt.show()
 
                 for idx, r in enumerate(DBH_row):
 

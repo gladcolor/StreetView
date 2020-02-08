@@ -10,7 +10,7 @@ import math
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.5, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
 
         try:
             self.seg_file_path = seg_file_path

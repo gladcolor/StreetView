@@ -105,7 +105,7 @@ class tree_detection():
 
         DBH: Diameter at breast height
         """
-        isDraw = 1
+        isDraw = 0
 
         if isDraw:
             fig, ax = plt.subplots()

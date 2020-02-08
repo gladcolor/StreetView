@@ -10,7 +10,7 @@ import math
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.5, kernel_morph=15, kernel_list=[15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.5, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
 
         try:
             self.seg_file_path = seg_file_path
@@ -146,7 +146,7 @@ class tree_detection():
                 DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
                 DBH_row = (roots[:, 1] - prominence).astype(int)
 
-                # ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=12)
+                ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=50)
                 # plt.show()
 
                 for peak in peaks:
@@ -173,7 +173,16 @@ class tree_detection():
 
 
                     DBH_x = self.contoursNONE[cont_num][:, 0][t]
-                    #     print('DBH_x: ', DBH_x)
+
+                    # remove the adjacent pixels
+                    temp = [DBH_x[0]]
+                    for x in range(1, len(DBH_x)):
+                        if (DBH_x[x] - DBH_x[x - 1]) > 1:
+                            temp.append(DBH_x[x])
+                    DBH_x = temp
+
+
+                    print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
 
                     w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
@@ -196,7 +205,7 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
-        ax.scatter(verifieds_x, verifieds_y, color='green', s=40)
+        ax.scatter(verifieds_x, verifieds_y, color='green', s=20)
         plt.show()
         # plt.show()
 
@@ -220,6 +229,7 @@ def test_getRoots():
     img_file0 = r'56431_-75.139869_40.016782_20_305'
     img_file0 = r'56389_-75.134487_39.993348_20_227'
     img_file0 = r'56323_-75.138984_40.010789_20_237'
+    img_file0 = r'56279_-75.137075_39.981078_20_79'
 
 
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'

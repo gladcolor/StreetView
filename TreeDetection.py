@@ -10,7 +10,7 @@ import math
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.33, kernel_morph=15, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.5, kernel_morph=15, kernel_list=[15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
 
         try:
             self.seg_file_path = seg_file_path
@@ -75,7 +75,7 @@ class tree_detection():
         for kernel in self.kernel_list:
             kernel_w = kernel
             kernel_h = kernel_w * 1.5
-            threshold = kernel_h * 1.4
+            threshold = kernel_h * 1.5
             #         print(threshold)
             if (row > kernel_h) and (col > kernel_w / 2):
                 if (row < self.seg_height) and (col < (self.seg_width - kernel_w / 2)):
@@ -92,7 +92,7 @@ class tree_detection():
 
         return False
 
-    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.2):
+    def getRoots(self, prominence=30, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.2):
         """
         :param prominence:
         :param width:
@@ -114,6 +114,10 @@ class tree_detection():
         roots_all = []
         widths = []
         # self.contoursNONE = self.contoursNONE[2:]
+
+        verifieds_x = []
+        verifieds_y = []
+
         for cont_num, cont in enumerate(self.contoursNONE):
             try:
                 if len(cont) < 40:
@@ -140,8 +144,9 @@ class tree_detection():
                 prominences = dic['prominences']
 
                 DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
+                DBH_row = (roots[:, 1] - prominence).astype(int)
 
-                ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=12)
+                # ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=12)
                 # plt.show()
 
                 for peak in peaks:
@@ -149,9 +154,11 @@ class tree_detection():
                     row = peak[1]
 
                     if self.conv_verify(row, col):
-                        ax.scatter([col], [row], color='green', s=19)
-                        print("Verified!")
-                plt.show()
+                        verifieds_x.append(col)
+                        verifieds_y.append(row)
+                        print("Verified!", col, row)
+
+
 
                 for idx, r in enumerate(DBH_row):
 
@@ -161,22 +168,21 @@ class tree_detection():
                     line_y = []
 
                     DBH_idx = np.argwhere(self.contoursNONE[cont_num][:, 1] == r)
-                    #         print('DBH_x: ', DBH_x)
-                    #         print('contoursNONE[cont_num][:, 1]:',cont_num, contoursONE[cont_num][:,:])N
+
                     t = [x[0] for x in DBH_idx]
 
-                    #         print('t = [x[0] for x in DBH_idx]:', t)
 
                     DBH_x = self.contoursNONE[cont_num][:, 0][t]
                     #     print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
 
                     w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
+                    w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
                     #         print("w:", w)
 
 
 
-                    if abs(DBH_x[0] - roots[idx, 0]) < w:
+                    if abs(DBH_x[0] - roots[idx, 0]) < 80:
                         roots_all.append(peaks[idx])
                         widths.append(DBH_x[1] - DBH_x[0])
                         line_x.append(DBH_x[1])
@@ -190,8 +196,9 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
-
+        ax.scatter(verifieds_x, verifieds_y, color='green', s=40)
         plt.show()
+        # plt.show()
 
         if len(roots_all) > 0:
             roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
@@ -200,12 +207,21 @@ class tree_detection():
                 ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
                 plt.show()
 
-
         return roots_all, widths
 
 def test_getRoots():
 
-    img_file0 = r'56816_-75.14024_40.019736_20_288'
+    img_file0 = r'55019_-75.074928_40.028516_20_27' # failed
+    img_file0 = r'56781_-75.116041_40.027007_20_353' # failed
+    img_file0 = r'56666_-75.135652_39.978263_20_102'
+    img_file0 = r'56615_-75.135871_39.977264_20_148'
+    img_file0 = r'56507_-75.142394_40.007453_20_134'
+    img_file0 = r'56436_-75.139345_40.019191_20_223'
+    img_file0 = r'56431_-75.139869_40.016782_20_305'
+    img_file0 = r'56389_-75.134487_39.993348_20_227'
+    img_file0 = r'56323_-75.138984_40.010789_20_237'
+
+
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
     tree_detect = tree_detection(seg_file_path=img_file)

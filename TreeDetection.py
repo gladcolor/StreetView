@@ -92,7 +92,7 @@ class tree_detection():
 
         return False
 
-    def getRoots(self, prominence=30, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.2):
+    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.5):
         """
         :param prominence:
         :param width:
@@ -133,6 +133,18 @@ class tree_detection():
                 #                                          plateau_size=10)
 
                 peaks = cont[peaks_idx]
+                verifieds_idx = []
+                for i, peak in enumerate(peaks):
+                    col = peak[0]
+                    row = peak[1]
+
+                    if self.conv_verify(row, col):
+                        verifieds_x.append(col)
+                        verifieds_y.append(row)
+                        verifieds_idx.append(i)
+                        # print("Verified!", col, row)
+
+                peaks = peaks[verifieds_idx]
                 roots.append(peaks)
                 roots = np.concatenate(roots)
                 # roots_all.append(roots)
@@ -144,19 +156,11 @@ class tree_detection():
                 prominences = dic['prominences']
 
                 DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
-                DBH_row = (roots[:, 1] - prominence).astype(int)
+                # DBH_row = (roots[:, 1] - prominence).astype(int)
 
-                ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=50)
+                if isDraw:
+                    ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=50)
                 # plt.show()
-
-                for peak in peaks:
-                    col = peak[0]
-                    row = peak[1]
-
-                    if self.conv_verify(row, col):
-                        verifieds_x.append(col)
-                        verifieds_y.append(row)
-                        print("Verified!", col, row)
 
 
 
@@ -182,13 +186,10 @@ class tree_detection():
                     DBH_x = temp
 
 
-                    print('DBH_x: ', DBH_x)
+                    # print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
-
-                    w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
                     w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
                     #         print("w:", w)
-
 
 
                     if abs(DBH_x[0] - roots[idx, 0]) < 80:
@@ -205,9 +206,10 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
-        ax.scatter(verifieds_x, verifieds_y, color='green', s=20)
-        plt.show()
-        # plt.show()
+        if isDraw:
+            ax.scatter(verifieds_x, verifieds_y, color='green', s=20)
+            plt.show()
+
 
         if len(roots_all) > 0:
             roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
@@ -220,8 +222,6 @@ class tree_detection():
 
 def test_getRoots():
 
-    img_file0 = r'55019_-75.074928_40.028516_20_27' # failed
-    img_file0 = r'56781_-75.116041_40.027007_20_353' # failed
     img_file0 = r'56666_-75.135652_39.978263_20_102'
     img_file0 = r'56615_-75.135871_39.977264_20_148'
     img_file0 = r'56507_-75.142394_40.007453_20_134'
@@ -230,6 +230,15 @@ def test_getRoots():
     img_file0 = r'56389_-75.134487_39.993348_20_227'
     img_file0 = r'56323_-75.138984_40.010789_20_237'
     img_file0 = r'56279_-75.137075_39.981078_20_79'
+    img_file0 = r'56781_-75.116041_40.027007_20_353'  # failed
+    img_file0 = r'55019_-75.074928_40.028516_20_27'  # failed
+    img_file0 = r'56231_-75.134955_40.019275_20_319'
+    img_file0 = r'56072_-75.135019_39.975304_20_211'
+    img_file0 = '55953_-75.138752_40.021529_20_126'
+    img_file0 = '55960_-75.139287_40.021254_20_204'
+    img_file0 = '55926_-75.13393_40.023424_20_190'
+    img_file0 = r'55931_-75.134294_40.023345_20_128'
+    img_file0 = '55835_-75.11125_40.027203_20_141'
 
 
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'

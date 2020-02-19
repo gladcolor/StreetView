@@ -2037,14 +2037,14 @@ class GSV_depthmap(object):
             dm_h, dm_w = dempth_image.shape
             # print("dempth_image.shape: ", dempth_image.shape, dm_h, dm_w)
 
-            grid_col = np.linspace(-pi, pi, dm_w)
+            grid_col = np.linspace(-pi - 2 * pi, pi + 2 * pi, dm_w * 3)
             grid_row = np.linspace(pi / 2, -pi / 2, dm_h)
 
 
 
             # 二维插值
-            interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
-                                          kind='linear')  # 'cubic' will distord the distance.
+            # interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+            #                               kind='linear')  # 'cubic' will distord the distance.
             # print('theta_phis_in_pano.shape: ', theta_phis_in_pano.shape)
             # print('theta_phis_in_pano[:, 1]: ', theta_phis_in_pano[:, 1])
             # print('theta_phis_in_pano[:, 0]: ', theta_phis_in_pano[:, 0])
@@ -2059,9 +2059,11 @@ class GSV_depthmap(object):
             new_grid_row = np.linspace(max_theta, min_theta, sub_h)
 
             # 二维插值
-            interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+            dempth_image_X3 =  np.concatenate((dempth_image, dempth_image, dempth_image,), axis=1) # avoid the boundary issue
+            # interp = interpolate.interp2d(grid_col, grid_row, dempth_image,
+            #                               kind='linear')  # 'cubic' will distord the distance.
+            interp = interpolate.interp2d(grid_col, grid_row, dempth_image_X3,
                                           kind='linear')  # 'cubic' will distord the distance.
-
 
             sub_depthmap = interp(new_grid_col, new_grid_row)  # flip for unknow reason
             sub_depthmap = sub_depthmap[::-1]

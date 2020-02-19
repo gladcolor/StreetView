@@ -167,6 +167,7 @@ def isInBounds(bounds, Rtree_idx):
     else:
         return False
 
+
 def getContours(img_file, kernel=9):
     """
 
@@ -362,7 +363,7 @@ def getNextShot(crt_json, crt_yaw,  direction_d, phi=90, saved_path='', pitch=0,
                          pitch=0, yaw=shotYaw)
     return next_img, file_name, yawDeg
 
-def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path='sidewalk_imgs', distance_thres=20):
+def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path, current_dangle, distance_thres=300):
     """
 
     :param lon:
@@ -374,7 +375,7 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
     :param distance_thres: meter
     :return:
     """
-    max_step = 20
+    max_step = 30
 
     try:
         steps_lonlat = []
@@ -511,8 +512,19 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
                 isConnected = isInBounds(view_box.bounds, rtree_dangles)
 
                 if isConnected:
-                    print("Connected to another dangles.")
-                    return steps_lonlat
+                    isConnected = False
+                    intersected_dangles = [n.object for n in rtree_dangles.intersection(view_box.bounds, objects=True)]
+                    for d in intersected_dangles:
+                        print("Maybe connected to another dangles.", d)
+                        if (Point(d[1], d[2]).within(view_box)) and (d[0] != current_dangle):
+                            isConnected = True
+                            conn_id = d[0]
+                    if isConnected:
+                        print("Connected to another dangles.")
+                        steps_lonlat.append(["Connected to (dangle ID), ", conn_id])
+                        return steps_lonlat
+                    print("Seems connected to another dangles, but not.")
+
                 else:
                     print('Found few sidewalks at: ', lon, lat, len(sidewalk_idx), jpg_name)
 
@@ -555,7 +567,8 @@ def go_along_sidewalk(lon, lat, bearing_deg, pixel_thres, rtree_bounds, rtree_da
         print("Error in go_along_sidewalk():", e)
         return steps_lonlat
 
-def getPanoBox(lon, lat, bearing_deg, w_meter=10, h_meter=15):
+
+def getPanoBox(lon, lat, bearing_deg, w_meter=10, h_meter=20):
     """
     :param lon:
     :param lat:
@@ -572,11 +585,27 @@ def getPanoBox(lon, lat, bearing_deg, w_meter=10, h_meter=15):
     bottom_left = (0 - w_meter / 2, 0)
 
     box = Polygon((upper_left, upper_right, bottom_right, bottom_left))
+    #     box = affinity.rotate(box,
+    #                           -bearing_deg, origin=(0, 0))  # Positive angles are counter-clockwise and negative are clockwise rotations.
+
+    x_ori = w_meter / 2
+
+    bearing_deg = math.fmod(bearing_deg, 360)
+    if bearing_deg < 0:
+        x_ori = - w_meter / 2
+
+    if bearing_deg > 180:
+        x_ori = - w_meter / 2
+
     box = affinity.rotate(box,
-                          -bearing_deg, origin=(0, 0))  # Positive angles are counter-clockwise and negative are clockwise rotations.
+                          -bearing_deg, origin=(
+        x_ori, 0))  # Positive angles are counter-clockwise and negative are clockwise rotations.
 
     box_pts = box.exterior.coords
+    #     print(box_pts)
+    #     box_pts[:, 0] = box_pts[:, 0] - w_meter / 2
     box_pts = list(box_pts)
+    box_pts = [(c[0] - x_ori, c[1]) for c in box_pts]
     results = itransform(proj_local, Proj('epsg:4326'), box_pts)
     results = list(results)
     results = [(c[1], c[0]) for c in results]
@@ -609,7 +638,7 @@ def go_along_sidewalk_excute():
     print("go_along_sidewalk_excute()...")
     # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
     # getBearingAngle(dangle_file)
-    saved_path = 'I:\DVRPC\Fill_gap\StreetView\images5'
+    saved_path = 'I:\DVRPC\Fill_gap\StreetView\images6'
     bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
     dangles = pd.read_csv(bearing_file).iloc[0:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
     # print(dangles)    # 38:40
@@ -625,9 +654,9 @@ def go_along_sidewalk_excute():
         pixel_thres = 30
         print("Processing row: ", idx)
 
-        rtree_dangles = load_RtreeIdx(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_rtree')
+        rtree_dangles = load_RtreeIdx(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_rtree_obj')
         rtree_bounds = load_RtreeIdx(r'I:\DVRPC\Test49rtree')
-        sidewalk_panos = go_along_sidewalk(lon_d, lat_d, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path=saved_path)
+        sidewalk_panos = go_along_sidewalk(lon_d, lat_d, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path=saved_path, current_dangle=idx)
 
 
         print('lon, lat, bearing: ', lon_d, lat_d, bearing_deg)

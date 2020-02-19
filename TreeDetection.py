@@ -7,13 +7,16 @@ import numpy as np
 import scipy.signal
 from matplotlib.lines import Line2D
 import math
+import os
+import glob
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
 
         try:
             self.seg_file_path = seg_file_path
+            self.clip_up = clip_up
 
             self.seg_cv2 = cv2.imread(self.seg_file_path, cv2.IMREAD_UNCHANGED)
 
@@ -21,7 +24,14 @@ class tree_detection():
 
             self.seg_cv2 = self.seg_cv2[int(self.seg_height * clip_up):, :]  # remove the top 1/3 image.
 
-            self.seg_height, self.seg_width = self.seg_cv2.shape
+            self.gsv_folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\tree_jpg'
+            self.img_gsv_filename = os.path.join(self.gsv_folder, os.path.basename(seg_file_path.replace('.png', '.jpg')))
+            self.img_gsv_cv2 = cv2.imread(self.img_gsv_filename, cv2.IMREAD_UNCHANGED)
+            self.gsv_height, self.gsv_width, self.gsv_channels = self.img_gsv_cv2.shape
+            # self.img_gsv_cv2 = self.img_gsv_cv2[int(self.seg_height * clip_up):, :]
+            self.img_gsv_cv2 = cv2.cvtColor(self.img_gsv_cv2, cv2.COLOR_BGR2RGB)
+
+            # self.seg_height, self.seg_width = self.seg_cv2.shape
 
             self.seg_cv2 = cv2.inRange(self.seg_cv2, tree_label, tree_label)  # the class lable of trees is 4
             ret, self.seg_cv2 = cv2.threshold(self.seg_cv2, 0, 1, cv2.THRESH_BINARY)
@@ -86,9 +96,7 @@ class tree_detection():
                     if sum_conv > threshold:
                         if self.sobel_h[row, col] < -1:
                             return True
-                    #
 
-                    # return sum_conv, kernel_w
 
         return False
 
@@ -105,11 +113,12 @@ class tree_detection():
 
         DBH: Diameter at breast height
         """
-        isDraw = 0
+        isDraw = 1
 
         if isDraw:
-            fig, ax = plt.subplots()
-            plt.imshow(self.opened)
+            fig = plt.figure(figsize=(15, 10))
+            ax = fig.add_subplot()
+            plt.imshow(self.img_gsv_cv2)
 
         roots_all = []
         widths = []
@@ -140,7 +149,7 @@ class tree_detection():
 
                     if self.conv_verify(row, col):
                         verifieds_x.append(col)
-                        verifieds_y.append(row)
+                        verifieds_y.append(row + self.gsv_height * self.clip_up)
                         verifieds_idx.append(i)
                         # print("Verified!", col, row)
 
@@ -158,8 +167,8 @@ class tree_detection():
                 DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
                 # DBH_row = (roots[:, 1] - prominence).astype(int)
 
-                if isDraw:
-                    ax.scatter(peaks[:, 0], peaks[:, 1], color='red', s=50)
+                # if isDraw:
+                #     ax.scatter(peaks[:, 0], peaks[:, 1] , color='red', s=50)
                 # plt.show()
 
 
@@ -197,8 +206,8 @@ class tree_detection():
                         widths.append(DBH_x[1] - DBH_x[0])
                         line_x.append(DBH_x[1])
                         line_x.append(DBH_x[0])
-                        line_y.append(r)
-                        line_y.append(r)
+                        line_y.append(r + self.gsv_height * self.clip_up)
+                        line_y.append(r + self.gsv_height * self.clip_up)
 
                         if isDraw:
                             ax.add_line(Line2D(line_x, line_y, color='r'))
@@ -207,16 +216,19 @@ class tree_detection():
                 continue
 
         if isDraw:
-            ax.scatter(verifieds_x, verifieds_y, color='green', s=20)
-            plt.show()
+            ax.scatter(verifieds_x, verifieds_y, color='red', s=20)
 
+            plt.savefig(os.path.join(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\Tree_detected2', \
+                                     os.path.basename(self.seg_file_path)))
+            # plt.show()
 
         if len(roots_all) > 0:
             roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
+            roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
 
-            if isDraw:   # draw results
-                ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
-                plt.show()
+            # if isDraw:   # draw results
+            #     ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
+            #     plt.show()
 
         return roots_all, widths
 
@@ -243,9 +255,13 @@ def test_getRoots():
 
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
-    tree_detect = tree_detection(seg_file_path=img_file)
-    roots_all, widths = tree_detect.getRoots()
-    print(roots_all, widths)
+    folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\Segmented_PSP\*.png'
+
+    files = glob.glob(folder)
+    for file in files:
+        tree_detect = tree_detection(seg_file_path=file)
+        roots_all, widths = tree_detect.getRoots()
+        print(roots_all, widths)
 
 
     # plt.imshow(tree_detect.opened)

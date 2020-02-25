@@ -714,7 +714,7 @@ class GPano():
                 pitch_list = [pitch_list]
 
             for yaw in yaw_list:
-                if yaw.isnumeric():
+                if str(yaw).isnumeric():
                     for pitch in pitch_list:
                         self.getImagefrmAngle(lon=lon, lat=lat, saved_path=saved_path, prefix=panoId, pitch=pitch,
                                               yaw=yaw + heading)

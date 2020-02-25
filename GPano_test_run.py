@@ -23,7 +23,7 @@ def test_getPanoJPGfrmArea():
     random.shuffle(pts)
 
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
-    gpano.getPanoJPGfrmArea_mp('json_only', pts, saved_path, coords, zoom=4, Process_cnt=3)
+    gpano.getPanoJPGfrmArea_mp([0, 90, 180, 270], pts, saved_path, coords, zoom=4, Process_cnt=3)
 
 
 if __name__ == '__main__':

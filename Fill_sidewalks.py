@@ -60,7 +60,7 @@ os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = '0'
 import GPano
 import Segmentor_gluon
 from rtree import index
-
+import multiprocessing as mp
 gpano = GPano.GPano()
 gsv = GPano.GSV_depthmap()
 seg = Segmentor_gluon.Seg()
@@ -634,30 +634,38 @@ def shotExists(jpg_name, folder, threshold=15):
 
     return False
 
-def go_along_sidewalk_excute():
-    print("go_along_sidewalk_excute()...")
-    # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
-    # getBearingAngle(dangle_file)
-    saved_path = 'I:\DVRPC\Fill_gap\StreetView\images6'
-    bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
-    dangles = pd.read_csv(bearing_file).iloc[0:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
-    # print(dangles)    # 38:40
+def go_along_sidewalk_mp(dangles_latlon_mp, pixel_thres, rtree_bounds, rtree_dangles, saved_path=saved_path, Process_cnt=2):
+    pool = mp.Pool(processes=Process_cnt)
 
-    dangles_latlon_mp = mp.Manager().list()
-    dangles_results_mp = mp.Manager().list()
-    for idx, row in dangles.iterrows():
-        dangles_latlon_mp.append((idx, row['POINT_X'], row['POINT_Y'], row['bearing']))
+    for i in range(Process_cnt):
+        pool.apply_async(go_along_sidewalk_excute, args=(dangles_latlon_mp, pixel_thres, rtree_bounds, rtree_dangles, saved_path))
+    pool.close()
+    pool.join()
 
-    total_num = len(dangles_latlon_mp)
+
+def go_along_sidewalk_excute(dangles_latlon_mp, pixel_thres, rtree_bounds, rtree_dangles, saved_path):
+    # print("go_along_sidewalk_excute()...")
+    # # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
+    # # getBearingAngle(dangle_file)
+    # saved_path = 'I:\DVRPC\Fill_gap\StreetView\images6'
+    # bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
+    # dangles = pd.read_csv(bearing_file).iloc[1760:] # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
+    # # print(dangles)    # 38:40
+    #
+    # dangles_latlon_mp = mp.Manager().list()
+    # dangles_results_mp = mp.Manager().list()
+    # for idx, row in dangles.iterrows():
+    #     dangles_latlon_mp.append((idx, row['POINT_X'], row['POINT_Y'], row['bearing']))
+    #
+    # total_num = len(dangles_latlon_mp)
+
+
     while len(dangles_latlon_mp) > 0:
         idx, lon_d, lat_d, bearing_deg = dangles_latlon_mp.pop(0)
         pixel_thres = 30
         print("Processing row: ", idx)
 
-        rtree_dangles = load_RtreeIdx(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_rtree_obj')
-        rtree_bounds = load_RtreeIdx(r'I:\DVRPC\Test49rtree')
         sidewalk_panos = go_along_sidewalk(lon_d, lat_d, bearing_deg, pixel_thres, rtree_bounds, rtree_dangles, saved_path=saved_path, current_dangle=idx)
-
 
         print('lon, lat, bearing: ', lon_d, lat_d, bearing_deg)
 
@@ -665,14 +673,29 @@ def go_along_sidewalk_excute():
             for p in sidewalk_panos:
                 f.writelines(str(p) + '\n')
 
-
-
-        # jdata = gpano.getPanoJsonfrmL
-
-        #     print("Did not found json in lon/lat : ", lon_d, lat_d)
-
     print("go_along_sidewalk_excute() done.")
 
+def go_along_sidewalk_excute_mp():
+
+    print("go_along_sidewalk_excute()...")
+    # dangle_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles.csv'
+    # getBearingAngle(dangle_file)
+    saved_path = 'I:\DVRPC\Fill_gap\StreetView\images6'
+    bearing_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_bearing.csv'
+    dangles = pd.read_csv(bearing_file).iloc[
+              13068:]  # index =  row_in_the_dangle_table - 1. E.g., iloc[11475] = id 11476 in the table
+    # print(dangles)    # 38:40
+    rtree_dangles = load_RtreeIdx(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\DVRPC\Dangles_rtree_obj')
+    rtree_bounds = load_RtreeIdx(r'I:\DVRPC\Test49rtree')
+
+    dangles_latlon_mp = mp.Manager().list()
+    dangles_results_mp = mp.Manager().list()
+    pixel_thres = 300
+
+    for idx, row in dangles.iterrows():
+        dangles_latlon_mp.append((idx, row['POINT_X'], row['POINT_Y'], row['bearing']))
+
+    go_along_sidewalk_mp(dangles_latlon_mp, pixel_thres, rtree_bounds, rtree_dangles, saved_path, Process_cnt=2)
 
 def main():
     print("Starting main()...")
@@ -767,7 +790,7 @@ if __name__ == "__main__":
 
     # main()
 
-    go_along_sidewalk_excute()
+    go_along_sidewalk_excute_mp()
 
     # Testing shape file generation
     '''    

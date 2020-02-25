@@ -620,7 +620,7 @@ class GPano():
 
     def readRoadSeedsPts_csv(self, file_path):
         df = pd.read_csv(file_path)
-        return list(df.itertuples(index=False, name=False))
+        return list(df.itertuples(index=False, name=None))
 
     def getNextJson(self, jdata, pre_panoId=""):
         try:
@@ -723,6 +723,18 @@ class GPano():
             print("Error in getImageclipsfrmJson():", e)
 
     def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, zoom=5):
+        '''
+
+        :param lon: lon of a seed point.
+        :param lat: lat of a seed point.
+        :param saved_path:
+        :param yaw_list:
+        :param pitch_list:
+        :param steps:
+        :param polygon:
+        :param zoom:
+        :return:
+        '''
         lon = float(lon)
         lat = float(lat)
         if not isinstance(yaw_list, list):

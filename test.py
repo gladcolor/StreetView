@@ -157,7 +157,7 @@ if __name__ == '__main__':
     closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, g)
     cv2.imshow('MORPH_CLOSE2', closed)
 
-    opened = cv2.morphologyEx(closed, cv2.MORPH_OPEN, g)
+  opened = cv2.morphologyEx(closed, cv2.MORPH_OPEN, g)
     cv2.imshow('MORPH_OPEN2', opened)
 
     backtorgb = cv2.cvtColor(img_cv2, cv2.COLOR_GRAY2RGB)

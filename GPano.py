@@ -134,9 +134,6 @@ class GPano():
             prefix = row
             self.getPanoJPGfrmLonlat(lon, lat, saved_path, prefix, suffix)
 
-            # start_time = time.time()
-            # Cnt = 0
-            # Cnt_interval = 100
             Cnt += 1
 
             if Cnt % Cnt_interval == (Cnt_interval - 1):
@@ -144,7 +141,7 @@ class GPano():
         return statuses
 
     def readCoords_csv(self, file_path):
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, usecols=['POINT_X', 'POINT_Y'])
         return list(df.itertuples(index=False, name=None))
         # with open(file_path, 'r') as f:
         #     lines = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
@@ -255,6 +252,9 @@ class GPano():
 
         adcode = self.getPanoIDfrmLonlat(lon, lat)
 
+        prefix = str(prefix)
+        suffix = str(suffix)
+
         if str(adcode[0]) == str(0):
             print(adcode[0], "is not a PanoID.")
             return status
@@ -266,7 +266,7 @@ class GPano():
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
                           0] + '&output=tile&x=' + str(
-                    x) + '&y=' + str(0) + '&zoom=' + zoom + '&nbt&fover=2'
+                    x) + '&y=' + str(0) + '&zoom=' + str(zoom) + '&nbt&fover=2'
                 file = urllib.request.urlopen(url)
                 image = Image.open(file)
             except OSError:
@@ -279,7 +279,7 @@ class GPano():
                 url = 'https://geo' + str(
                     num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
                           0] + '&output=tile&x=' + str(
-                    0) + '&y=' + str(x) + '&zoom=4&nbt&fover=2'
+                    0) + '&y=' + str(x) + '&zoom=' + str(zoom) + '&nbt&fover=2'
                 # response = requests.get(url)
                 # image = Image.open(BytesIO(response.content))
                 file = urllib.request.urlopen(url)
@@ -298,7 +298,7 @@ class GPano():
                     url = 'https://geo' + str(
                         num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + adcode[
                               0] + '&output=tile&x=' + str(
-                        x) + '&y=' + str(y) + '&zoom=4&nbt&fover=2'
+                        x) + '&y=' + str(y) + '&zoom=' + str(zoom) + '&nbt&fover=2'
                     file = urllib.request.urlopen(url)
                     image = Image.open(file)
                     target.paste(image, (UNIT_SIZE * x, UNIT_SIZE * y, UNIT_SIZE * (x + 1), UNIT_SIZE * (y + 1)))
@@ -619,7 +619,7 @@ class GPano():
         pool.join()
 
     def readRoadSeedsPts_csv(self, file_path):
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, usecols=['POINT_X', 'POINT_Y'])
         return list(df.itertuples(index=False, name=None))
 
     def getNextJson(self, jdata, pre_panoId=""):
@@ -802,7 +802,7 @@ class GPano():
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
                     # print('yaw_list: ', yaw_list)
                     # print('Processing: ', panoId)
-                    hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
+                    hasDownloaded = self.fileExists(saved_path, panoId + ".json")
 
                     if yaw_list[0] == 'json_only':
                         hasDownloaded = self.fileExists(saved_path, panoId + ".json")
@@ -940,7 +940,7 @@ class GPano():
                     # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
                     # print(pt_lat, pt_lon)
 
-                    hasDownloaded = self.fileExists(saved_path, panoId + ".jpg")
+                    hasDownloaded = self.fileExists(saved_path, panoId + ".json")
                     # print('yaw_list : None', yaw_list)
                     if yaw_list[0] == 'json_only':
                         hasDownloaded = self.fileExists(saved_path, panoId + ".json")
@@ -1151,6 +1151,9 @@ class GPano():
 
         # print('lon/lat in panorama:', lon, lat)
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+        prefix = str(prefix)
+        if prefix != "":
+            prefix = prefix + '_'
 
         # print(idx, 'Heading angle between tree and panorama:', heading)
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')

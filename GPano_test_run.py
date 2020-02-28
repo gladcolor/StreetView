@@ -14,16 +14,21 @@ gsv = GPano.GSV_depthmap()
 
 def test_getPanoJPGfrmArea():
     print('started! ')
-    pts = gpano.readRoadSeedsPts_csv(r'X:\Shared drives\sidewalk\Street_trees\Philly\Philly_road_pts.csv')
+
+    # csv file needs POINT_X,POINT_Y.
+    pts = gpano.readRoadSeedsPts_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\Maryland_Road_Centerlines__Comprehensive\Maryland_Road_Centerlines_pts.csv')
     # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
     #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
-    coords = gpano.readCoords_csv(r'X:\Shared drives\sidewalk\Street_trees\Philly\Philly__boundary.csv')
+    coords = gpano.readCoords_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\maryland_bou.csv')
     polygon = gpano.formPolygon(coords)
-    saved_path = r'X:\Shared drives\Huan_reserach\StreetTree_research\trees'
+    saved_path = r'J:\Maryland\jsons'
     random.shuffle(pts)
 
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
-    gpano.getPanoJPGfrmArea_mp([0, 90, 180, 270], pts, saved_path, coords, zoom=4, Process_cnt=3)
+    gpano.getPanoJPGfrmArea_mp('json_only', pts, saved_path, coords, zoom=4, Process_cnt=8)
+
+
+# def get_trees():
 
 
 if __name__ == '__main__':

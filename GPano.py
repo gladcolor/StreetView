@@ -2,44 +2,48 @@
 Designed by Huan Ning, gladcolor@gmail.com, 2019.09.04
 
 """
-from pyproj import Proj, transform
 
 
-from scipy import interpolate
-
-import multiprocessing as mp
-import numpy as np
-
-from scipy import interpolate
-from math import *
-import pandas as pd
-import selenium
+# Python built-ins
 import os
 import time
-from io import BytesIO
-import pandas as pd
-import random
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from PIL import Image
-import requests
 import json
 import csv
 import math
+from math import *
 import sys
+import struct
 import base64
 import zlib
-import cv2
-import struct
-import matplotlib.pyplot as plt
-import PIL
+import multiprocessing as mp
+import sqlite3
+
+# Geospatial processing
+from pyproj import Proj, transform
+from geopy.distance import geodesic
 from shapely.geometry import Point, Polygon
-import csv
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import interpolate
 from skimage import io
-from PIL import features
+
+import selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+import PIL
+from PIL import Image, features
+import cv2
+
+from io import BytesIO
+import random
+
+import requests
 import urllib.request
 import urllib
-from geopy.distance import geodesic
+
 
 #
 WINDOWS_SIZE = '100, 100'
@@ -47,9 +51,9 @@ chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
-import sqlite3
 
-web_driver_path = r'K:\Research\StreetView\Google_street_view\chromedriver.exe'
+
+web_driver_path = r'chromedriver'
 driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 Process_cnt = 10
 
@@ -501,7 +505,7 @@ class GPano():
             return 0
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
-                         pitch=0, yaw=0):
+                         pitch=0, yaw=0, fov=90):
         # w maximum: 1024
         # h maximum: 768
         server_num = random.randint(0, 3)
@@ -517,7 +521,7 @@ class GPano():
             yaw = yaw + 360
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
-               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov=90"
+               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
 
         suffix = str(suffix)
         prefix = str(prefix)
@@ -1127,7 +1131,7 @@ class GPano():
         pool.close()
         pool.join()
 
-    def shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024, height=768, pitch=0):
+    def shootLonlat(self, ori_lon, ori_lat, saved_path='', polygon=None, views=1, prefix='', suffix='', width=1024, height=768, pitch=0, fov=90):
 
         # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
         try:
@@ -1140,7 +1144,7 @@ class GPano():
             lon = jdata['Location']['lng']
             lat = jdata['Location']['lat']
         else:
-            print("No Location in the Panojson file.")
+            # print("No Location in the Panojson file.")
             return 0, 0
 
         if panoid == 0:
@@ -1150,7 +1154,12 @@ class GPano():
         lat = float(lat)
 
         # print('lon/lat in panorama:', lon, lat)
-        heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+        lon_diff, lat_diff = ori_lon - polygon.centroid.x,  ori_lat - polygon.centroid.y
+        heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
+
+        if polygon is not None:
+            fov = self.get_fov(lon, lat, ori_lon, ori_lat, polygon)
+
         prefix = str(prefix)
         if prefix != "":
             prefix = prefix + '_'
@@ -1158,7 +1167,7 @@ class GPano():
         # print(idx, 'Heading angle between tree and panorama:', heading)
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
         image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=str(prefix) + panoid,
-                              pitch=pitch, yaw=heading)
+                              pitch=pitch, yaw=heading, fov=fov)
 
         if views == 1:
             return image, jpg_name
@@ -1194,6 +1203,26 @@ class GPano():
             # if saved_path != "":
             return images, jpg_names
 
+    def get_fov(self, lon, lat, ori_lon, ori_lat, polygon):
+        lon_diff, lat_diff = polygon.centroid.x - ori_lon, polygon.centroid.y - ori_lat
+        heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+
+        min_angle = 2 ** 32
+        max_angle = -2 ** 32
+        for point in list(polygon.exterior.coords):
+            angle = self.getDegreeOfTwoLonlat(lat + lat_diff, lon + lon_diff, point[1], point[0]) + 360
+            min_angle = min(min_angle, angle)
+            max_angle = max(max_angle, angle)
+            print(f"angle: {angle}")
+
+        min_diff = heading - (min_angle - 360)
+        max_diff = (max_angle - 360) - heading
+
+
+        fov = (int(max(min_diff, max_diff))) * 2
+        print(f"{min_angle - 360} - {heading} - {max_angle - 360}")
+        return (fov % 360) + 20
+
     def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
         try:
@@ -1220,7 +1249,7 @@ class GPano():
             ori_lon, ori_lat, prefix = ori_lonlats.pop(0)
             try:
                 self.shootLonlat(ori_lon, ori_lat, saved_path=saved_path, views=views, prefix=prefix, width=width,
-                                 height=height, pitch=0)
+                                 height=height, pitch=0, fov=90)
                 # calculate processing speed
                 Cnt += 1
                 if Cnt % Cnt_interval == (Cnt_interval - 1):

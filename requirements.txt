@@ -1,37 +1,12 @@
-from pyproj import Proj, transform
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib as mpl
-from scipy import interpolate
-import matplotlib.cm as cm
-import multiprocessing as mp
-import numpy as np
-import scipy.ndimage
-from scipy import interpolate
-from math import *
-import pandas as pd
-import selenium
-import os
-import time
-from io import BytesIO
-import pandas as pd
-import random
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from PIL import Image
-import requests
-import json
-import csv
-import math
-import sys
-import base64
-import zlib
-import cv2
-import struct
-import matplotlib.pyplot as plt
-import PIL
-from shapely.geometry import Point, Polygon
-import csv
-from skimage import io
-from PIL import features
-import urllib.request
-import urllib
+pyproj
+numpy
+scipy
+pandas
+selenium
+Pillow
+requests
+opencv-python
+matplotlib
+shapely
+geopy
+scikit-image

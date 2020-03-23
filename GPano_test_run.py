@@ -7,9 +7,19 @@ import matplotlib.pyplot as plt
 import glob
 import json
 import  sqlite3
+from tqdm import tqdm
+import geopandas as gpd
+import pandas as pd
+from shapely.geometry import Point, Polygon
+import shapely.wkt
+import os
+
 
 gpano = GPano.GPano()
 gsv = GPano.GSV_depthmap()
+
+
+
 
 
 def test_getPanoJPGfrmArea():
@@ -21,7 +31,7 @@ def test_getPanoJPGfrmArea():
     #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
     coords = gpano.readCoords_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\maryland_bou.csv')
     polygon = gpano.formPolygon(coords)
-    saved_path = r'J:\Maryland\jsons'
+    saved_path = r'J:\Maryland\jsons2'
     random.shuffle(pts)
 
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
@@ -31,5 +41,26 @@ def test_getPanoJPGfrmArea():
 # def get_trees():
 
 
+def download_buildings():
+    buildings = pd.read_csv(r"K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\footprints\building_attri2.csv", sep=',')
+
+    os.system("rm -rf I:\\Research\\House\\images\\*")
+    os.system("mkdir I:\\Research\\House\\images\\1.0 I:\\Research\\House\\images\\1.5 I:\\Research\\House\\images\\2.0 I:\\Research\\House\\images\\2.5 I:\\Research\\House\\images\\3.0 I:\\Research\\House\\images\\3.5 I:\\Research\\House\\images\\4.0 I:\\Research\\House\\images\\4.5")
+
+    for i in range(len(buildings)):
+        FID, area_m, ACCTID, story, GEOID, tract_pop,lon, lat, geometry = buildings.iloc[i]
+        geometry = shapely.wkt.loads(geometry)
+        print("Processing (FID): ", FID)
+        try:
+            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=f'I:\\Research\\House\\images\\{story}', prefix=ACCTID, width=576, height=768,  fov=90)
+
+             # shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024,
+             #                height=768, pitch=0):
+        except:
+            pass
+
+
+
 if __name__ == '__main__':
-    test_getPanoJPGfrmArea()
+    # test_getPanoJPGfrmArea()
+    download_buildings()

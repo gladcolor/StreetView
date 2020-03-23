@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import glob
 import json
 import  sqlite3
+from tqdm import tqdm
 
 gpano = GPano.GPano()
 gsv = GPano.GSV_depthmap()
@@ -30,7 +31,7 @@ def test_getPanoJPGfrmArea():
 def test_getPanosfrmLonlats_mp():
 
 
-    list_lonlat = pd.read_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\footprints\footprints.csv')
+    list_lonlat = pd.read_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\merge.csv')
     print(sys.getfilesystemencoding())
     print(sys.getdefaultencoding())
 
@@ -38,11 +39,13 @@ def test_getPanosfrmLonlats_mp():
     ns = mp.Manager().Namespace()
     ns.list_lonlat = list_lonlat
     print(len(list_lonlat))
-    for idx, row in list_lonlat[:10].iterrows():
-        mp_lonlat.append([row['POINT_X'], row['POINT_Y'], int(idx + 1)])
 
+    for idx, row in tqdm(list_lonlat[:].iterrows()):
+        mp_lonlat.append([row['Longitude'], row['Latitude'], str(row['ACCTID']) + '_' + str(row['class'])])
+        # mp_lonlat.append([row['Longitude'], row['Latitude'], str(row['ACCTID']) + '_' + str(row['class']))
+        # pass
     print(len(mp_lonlat))
-    gpano.shootLonlats_mp(mp_lonlat, saved_path=r'J:\Maryland\MS_building\images', Process_cnt=2)
+    gpano.shootLonlats_mp(mp_lonlat, saved_path=r'J:\Maryland\MS_building\images2', Process_cnt=10)
 
 
 if __name__ == '__main__':

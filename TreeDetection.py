@@ -9,6 +9,9 @@ from matplotlib.lines import Line2D
 import math
 import os
 import glob
+from GPano import GPano
+from GPano import GSV_depthmap
+from math import *
 
 class tree_detection():
 
@@ -24,7 +27,7 @@ class tree_detection():
 
             self.seg_cv2 = self.seg_cv2[int(self.seg_height * clip_up):, :]  # remove the top 1/3 image.
 
-            self.gsv_folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\tree_jpg'
+            self.gsv_folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0'
             self.img_gsv_filename = os.path.join(self.gsv_folder, os.path.basename(seg_file_path.replace('.png', '.jpg')))
             self.img_gsv_cv2 = cv2.imread(self.img_gsv_filename, cv2.IMREAD_UNCHANGED)
             self.gsv_height, self.gsv_width, self.gsv_channels = self.img_gsv_cv2.shape
@@ -127,6 +130,13 @@ class tree_detection():
         verifieds_x = []
         verifieds_y = []
 
+        try:
+
+            if len(self.contoursNONE) < 1:
+                return roots_all, widths
+        except:
+            return  roots_all, widths
+
         for cont_num, cont in enumerate(self.contoursNONE):
             try:
                 if len(cont) < 40:
@@ -218,7 +228,7 @@ class tree_detection():
         if isDraw:
             ax.scatter(verifieds_x, verifieds_y, color='red', s=20)
 
-            plt.savefig(os.path.join(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\Tree_detected2', \
+            plt.savefig(os.path.join(r'J:\temp\tree', \
                                      os.path.basename(self.seg_file_path)))
             # plt.show()
 
@@ -252,21 +262,92 @@ def test_getRoots():
     img_file0 = r'55931_-75.134294_40.023345_20_128'
     img_file0 = '55835_-75.11125_40.027203_20_141'
 
+    gsv = GSV_depthmap()
+    gpano = GPano()
+
 
     img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
-    folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Philly\Segmented_PSP\*.png'
+    folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png'
 
     files = glob.glob(folder)
     for file in files:
-        tree_detect = tree_detection(seg_file_path=file)
-        roots_all, widths = tree_detect.getRoots()
-        print(roots_all, widths)
+        try:
+            tree_detect = tree_detection(seg_file_path=file)
+            roots_all, widths = tree_detect.getRoots()
+
+            basename = os.path.basename(file)
+            basename = basename.replace(".png", '')
+            params = basename[:].split('_')
+
+            thumb_panoId = '_'.join(params[:(len(params) - 4)])
+
+            pano_lon = float(params[-4])
+            pano_lat = float(params[-3])
+
+            # thumb_panoId = gpano.getPanoIDfrmLonlat(pano_lon, pano_lat)
+            obj_json = gpano.getJsonfrmPanoID(thumb_panoId, dm=1)
+
+
+            pano_heading = obj_json["Projection"]['pano_yaw_deg']
+            pano_heading = math.radians(float(pano_heading))
+            pano_pitch = obj_json["Projection"]['tilt_pitch_deg']
+            pano_pitch = math.radians(float(pano_pitch))
+
+            print("params:", params)
+            # thumb_panoId = '_'.join(params[:(len(params) - 4)])
+
+
+            thumb_heading = math.radians(float(params[-1]))
+
+            thumb_theta0 = math.radians(float(params[-2]))
+
+            thumb_phi0 = thumb_heading - pano_heading
+
+            obj_json = gpano.getJsonfrmPanoID(thumb_panoId, dm=1)
+
+            pano_tilt_yaw = obj_json["Projection"]['tilt_yaw_deg']
+            pano_tilt_yaw = math.radians(float(pano_tilt_yaw))
+
+            fov = math.radians(90)
+            h = 768
+            w = 1024
+
+            fov_h = fov
+            fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
+
+
+            sphs = gsv.castesian_to_shperical0(thumb_theta0, \
+                                                thumb_phi0, pano_pitch, \
+                                                pano_tilt_yaw, fov_h, h, w)
+            sidewalk_sph_phi = sphs[roots_all[:, 0], roots_all[:, 1], 1]
+            sidewalk_sph_theta = sphs[roots_all[:, 0], roots_all[:, 1], 0]
+
+            # plt_x = [math.degrees(x) for x in sidewalk_sph_phi]
+            # plt_y = [math.degrees(x) for x in sidewalk_sph_theta]
+            # plt.scatter(sidewalk_sph_phi, sidewalk_sph_theta)
+            # plt.show()
+
+            sidewalk_sph = np.stack((sidewalk_sph_phi, sidewalk_sph_theta), axis=1)
+            # print('len of sidewalk_sph :', len(sidewalk_sph))
+            # print('sidewalk_sph[0]:', sidewalk_sph[0])
+            dm = gpano.getDepthmapfrmJson(obj_json)
+
+            pano_H = obj_json["Location"]['elevation_wgs84_m']
+
+            pointcloud = gsv.getPointCloud2(sidewalk_sph, thumb_heading, thumb_theta0, dm,
+                                             pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
+
+            print(roots_all, widths)
+
+            print(pointcloud)
 
 
     # plt.imshow(tree_detect.opened)
     # plt.scatter(roots_all[:, 0], roots_all[:, 1])
     # plt.show()
+        except:
+            print("Error: ", file)
 
 
 if __name__ == "__main__":

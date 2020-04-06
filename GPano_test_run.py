@@ -44,10 +44,21 @@ def test_getPanoJPGfrmArea():
 def download_buildings():
     buildings = pd.read_csv(r"K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\footprints\building_attri2.csv", sep=',')
 
+    buildings = buildings.iloc[(147337+50370+329436+201628+139335+331656):]
+
     os.system("rm -rf I:\\Research\\House\\images\\*")
     os.system("mkdir I:\\Research\\House\\images\\1.0 I:\\Research\\House\\images\\1.5 I:\\Research\\House\\images\\2.0 I:\\Research\\House\\images\\2.5 I:\\Research\\House\\images\\3.0 I:\\Research\\House\\images\\3.5 I:\\Research\\House\\images\\4.0 I:\\Research\\House\\images\\4.5")
 
-    for i in range(len(buildings)):
+    # Process_cnt = 10
+    # pool = mp.Pool(processes=Process_cnt)https://m.tsemporium.com/zh_cn/
+    #
+    # for i in range(Process_cnt):
+    #     pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, zoom))
+    # pool.close()
+    # pool.join()
+
+
+    for i in tqdm(range(len(buildings))):
         FID, area_m, ACCTID, story, GEOID, tract_pop,lon, lat, geometry = buildings.iloc[i]
         geometry = shapely.wkt.loads(geometry)
         print("Processing (FID): ", FID)
@@ -56,11 +67,12 @@ def download_buildings():
 
              # shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024,
              #                height=768, pitch=0):
-        except:
-            pass
+        except Exception as e:
+            print("Error in download_buildings(): ", e, FID)
 
 
 
 if __name__ == '__main__':
     # test_getPanoJPGfrmArea()
     download_buildings()
+

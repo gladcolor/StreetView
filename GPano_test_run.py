@@ -8,6 +8,7 @@ import glob
 import json
 import  sqlite3
 from tqdm import tqdm
+
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, Polygon
@@ -37,9 +38,35 @@ def test_getPanoJPGfrmArea():
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
     gpano.getPanoJPGfrmArea_mp('json_only', pts, saved_path, coords, zoom=4, Process_cnt=8)
 
+def test_getPanoJPGfrmArea_west_philly():
+    print('started! ')
+    pts = gpano.readRoadSeedsPts_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\vectors\west_philly\west_road_pts.cvs')
+    # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+    #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
+    coords = gpano.readCoords_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\vectors\west_philly\boundary.csv')
+    polygon = gpano.formPolygon(coords)
+    saved_path = r'J:\Research\Trees\west_philly\street_images'
+    random.shuffle(pts)
 
-# def get_trees():
+    # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
+    gpano.getPanoJPGfrmArea_mp([90, 270], pts,  saved_path, coords, fov=120, Process_cnt=10)
+    # remember to change fov=90 as default.
+    # getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
+    #                          pitch=0, yaw=0, fov=120): #
 
+
+def test_getPanoJPGfrmArea_philly():
+    print('started! ')
+    pts = gpano.readRoadSeedsPts_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\Philly_road_pts.csv')
+    # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+    #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
+    coords = gpano.readCoords_csv(r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\Philly__boundary.csv')
+    polygon = gpano.formPolygon(coords)
+    saved_path = r'X:\Shared drives\Group_research\Trunk_research\Datasets\Pilly\street_view'
+    random.shuffle(pts)
+
+    # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
+    gpano.getPanoJPGfrmArea_mp([60, 90, 120, 240, 270, 300], pts,  saved_path, coords, Process_cnt=10)
 
 def download_buildings():
     buildings = pd.read_csv(r"K:\OneDrive_NJIT\OneDrive - NJIT\Research\House\maryland\footprints\building_attri2.csv", sep=',')
@@ -74,5 +101,7 @@ def download_buildings():
 
 if __name__ == '__main__':
     # test_getPanoJPGfrmArea()
-    download_buildings()
+    # download_buildings()
+    # test_getPanoJPGfrmArea_philly()
+    test_getPanoJPGfrmArea_west_philly()
 

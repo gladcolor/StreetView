@@ -12,10 +12,21 @@ import glob
 from GPano import GPano
 from GPano import GSV_depthmap
 from math import *
+import multiprocessing as mp
+
+GSV_FOLDER = r''
+SEG_FOLDER = r''
+COLOR_FOLDER = r''
+
+SEG_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_seg\*.png'
+GSV_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_jpg2'
+COLOR_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_color'
+SAVED_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_detected'
+SAVED_FILE = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\Trees_img_only.csv'
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=8, kernel_list=[10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=8, kernel_list=[5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
 
         try:
             self.seg_file_path = seg_file_path
@@ -27,9 +38,37 @@ class tree_detection():
 
             self.seg_cv2 = self.seg_cv2[int(self.seg_height * clip_up):, :]  # remove the top 1/3 image.
 
-            self.gsv_folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0'
-            self.img_gsv_filename = os.path.join(self.gsv_folder, os.path.basename(seg_file_path.replace('.png', '.jpg')))
-            self.img_gsv_cv2 = cv2.imread(self.img_gsv_filename, cv2.IMREAD_UNCHANGED)
+            # self.gsv_folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0'
+            # self.img_gsv_filename = os.path.join(self.gsv_folder, os.path.basename(seg_file_path.replace('.png', '.jpg')))
+
+            # global SEG_FOLDER  # = r'J:\Research\Trees\west_trees_seg\*.png'
+            # global GSV_FOLDER  # = r'J:\Research\Trees\west_trees'
+            # global COLOR_FOLDER  # = r'J:\Research\Trees\west_trees_color'
+            # global SAVED_FOLDER  # = r'J:\Research\Trees\west_trees_detected'
+
+
+            self.gsv_folder = GSV_FOLDER
+            self.seg_folder = SEG_FOLDER
+            self.color_folder = COLOR_FOLDER
+
+            # read jpg files.
+            # self.img_gsv_filename = os.path.join(self.gsv_folder,
+            #                                      os.path.basename(seg_file_path.replace('.png', '.jpg')))
+            # self.img_gsv_cv2 = cv2.imread(self.img_gsv_filename, cv2.IMREAD_UNCHANGED)
+
+            # read png files.
+
+            if self.color_folder != "":
+                self.img_color_filename = os.path.join(self.color_folder,
+                                                 os.path.basename(seg_file_path.replace('.png', '_color.png')))
+                self.img_color_cv2 = cv2.imread(self.img_color_filename)
+
+            if self.gsv_folder != "":
+                self.img_gsv_filename = os.path.join(self.gsv_folder,
+                                                     os.path.basename(seg_file_path.replace('.png', '.jpg')))
+                self.img_gsv_cv2 = cv2.imread(self.img_gsv_filename)
+
+
             self.gsv_height, self.gsv_width, self.gsv_channels = self.img_gsv_cv2.shape
             # self.img_gsv_cv2 = self.img_gsv_cv2[int(self.seg_height * clip_up):, :]
             self.img_gsv_cv2 = cv2.cvtColor(self.img_gsv_cv2, cv2.COLOR_BGR2RGB)
@@ -69,8 +108,9 @@ class tree_detection():
 
             self.contoursNONE, hierarchy = cv2.findContours(self.opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-            # con = cv2.drawContours(self.opened, self.contoursNONE, -1, (255, 255, 100), 3)
-            #
+            con = cv2.drawContours(self.opened, self.contoursNONE, -1, (255, 255, 100), 3)
+
+
             # plt.imshow(con)
             # plt.show()
 
@@ -99,11 +139,43 @@ class tree_detection():
                     if sum_conv > threshold:
                         if self.sobel_h[row, col] < -1:
                             return True
-
-
         return False
 
-    def getRoots(self, prominence=20, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.5):
+
+    def conv_verify0(self, row, col):  # original, works.
+        sum_conv = 0
+
+        for kernel in self.kernel_list:
+            kernel_w = kernel
+            kernel_h = kernel_w * 1.5
+            threshold = kernel_h * 1.5
+            #         print(threshold)
+            if (row > kernel_h) and (col > kernel_w / 2):
+                if (row < self.seg_height) and (col < (self.seg_width - kernel_w / 2)):
+                    conved = self.sobel_v_abs[int(row - kernel_h):int(row), int(col - kernel_w / 2):int(col + kernel_w / 2)]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2
+
+                    if sum_conv > threshold:
+                        if self.sobel_h[row, col] < -1:
+                            return True
+        return False
+
+    def simplify_contour(self, contour):
+
+        left = contour[:, 0].min()
+        right = contour[:, 0].max()
+        x_range = right - left
+        simplified_con = np.zeros((right,))
+
+        for x in range(left, right):
+            simplified_con[x] = contour[contour[:, 0] == x][:, 1].max()
+
+        return simplified_con.astype(int)
+
+
+    # not simplify the contour
+    def getRoots0(self, prominence=20, width=10, distance=20, plateau_size=(0, 150), prom_ratio=0.25):
         """
         :param prominence:
         :param width:
@@ -119,9 +191,13 @@ class tree_detection():
         isDraw = 1
 
         if isDraw:
-            fig = plt.figure(figsize=(15, 10))
-            ax = fig.add_subplot()
-            plt.imshow(self.img_gsv_cv2)
+            fig = plt.figure(figsize=(24, 14))
+            ax_gsv = fig.add_subplot(121)
+            ax_color = fig.add_subplot(122)
+            ax_gsv.imshow(self.img_gsv_cv2)
+            ax_color.imshow(self.img_color_cv2)
+            plt.tight_layout()
+            # plt.show()
 
         roots_all = []
         widths = []
@@ -132,74 +208,83 @@ class tree_detection():
 
         try:
 
-            if len(self.contoursNONE) < 1:
+            if len(self.contoursNONE) < 1:   # no tree is found
                 return roots_all, widths
         except:
             return  roots_all, widths
 
-        for cont_num, cont in enumerate(self.contoursNONE):
+        for cont_num, cont in enumerate(self.contoursNONE):  # for each contour from openCV2
             try:
-                if len(cont) < 40:
+                if len(cont) < 40:    # ignore small contour (i.g. polygon)
                     continue
 
                 roots = []
                 print("Processing contours #:", cont_num)
 
+                # find peaks (i.g. roots).
                 peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=prominence, width=width, distance=distance,
                                                          plateau_size=plateau_size)
+
+
                 # print("cont:", cont)
                 # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=10, width=10, distance=20,
                 #                                          plateau_size=10)
 
-                peaks = cont[peaks_idx]
+                # simplified_con = self.simplify_contour(cont, )
+
+
+                peaks = cont[peaks_idx]   # get the col / row of peak
                 verifieds_idx = []
                 for i, peak in enumerate(peaks):
                     col = peak[0]
                     row = peak[1]
 
-                    if self.conv_verify(row, col):
+                    if self.conv_verify(row, col):    # check whether the peak fits to requirements
                         verifieds_x.append(col)
                         verifieds_y.append(row + self.gsv_height * self.clip_up)
                         verifieds_idx.append(i)
                         # print("Verified!", col, row)
 
-                peaks = peaks[verifieds_idx]
+                peaks = peaks[verifieds_idx]  # store the roots only
                 roots.append(peaks)
                 roots = np.concatenate(roots)
                 # roots_all.append(roots)
                 # print('\n', dic)
 
-                if len(peaks_idx) == 0:
+                if len(peaks_idx) == 0:   # if no roots
                     continue
 
-                prominences = dic['prominences']
+                prominences = dic['prominences']   # height of peak (i.g. root)
 
-                DBH_row = (roots[:, 1] - prominences * prom_ratio).astype(int)
+                DBH_row = (roots[:, 1] - prominences[verifieds_idx] * prom_ratio).astype(int)  # measure dimater in these rows
                 # DBH_row = (roots[:, 1] - prominence).astype(int)
 
+                #peaks_widths = dic['peaks_widths']
+                #peaks_prominences = dic['prominences']
+
                 # if isDraw:
-                #     ax.scatter(peaks[:, 0], peaks[:, 1] , color='red', s=50)
-                # plt.show()
+                #     # ax.hlines(y=dic["width_heights"] + self.gsv_height * self.clip_up, xmin=dic["left_ips"], xmax=dic["right_ips"], color="C1")
+                #
+                #     ax.scatter(peaks[:,0], peaks[:,1], color='red', s=50)
+                #plt.show()
 
 
-
-                for idx, r in enumerate(DBH_row):
+                for idx, r in enumerate(DBH_row):  # measure each trunk
 
                     # print('\nr:', r)
 
                     line_x = []
                     line_y = []
 
-                    DBH_idx = np.argwhere(self.contoursNONE[cont_num][:, 1] == r)
+                    DBH_idx = np.argwhere(self.contoursNONE[cont_num][:, 1] == r)    # get cols.
 
-                    t = [x[0] for x in DBH_idx]
+                    t = [x[0] for x in DBH_idx]  # get cols.
 
-
-                    DBH_x = self.contoursNONE[cont_num][:, 0][t]
+                    DBH_x = self.contoursNONE[cont_num][:, 0][t]  # get cols.
 
                     # remove the adjacent pixels
-                    temp = [DBH_x[0]]
-                    for x in range(1, len(DBH_x)):
+                    temp = [DBH_x[0]]  # the most left col
+                    for x in range(1, len(DBH_x)):   # find the right col
                         if (DBH_x[x] - DBH_x[x - 1]) > 1:
                             temp.append(DBH_x[x])
                     DBH_x = temp
@@ -207,11 +292,188 @@ class tree_detection():
 
                     # print('DBH_x: ', DBH_x)
                     #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
-                    w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
+                    # w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
                     #         print("w:", w)
 
+                    MAX_DBH = 180 # maximum DBH, pixels
+                    # if abs(roots[idx, 0] - DBH_x[0]) < (MAX_DBH / 2):   # remove the left edge of trunk is more than 80 pixels, ignore it.
+                    if (DBH_x[-1] - DBH_x[0]) < MAX_DBH:  # remove the left edge of trunk is more than 80 pixels, ignore it.
 
-                    if abs(DBH_x[0] - roots[idx, 0]) < 80:
+                        roots_all.append(peaks[idx])
+                        widths.append(DBH_x[1] - DBH_x[0])
+                        line_x.append(DBH_x[1])
+                        line_x.append(DBH_x[0])
+                        line_y.append(r + self.gsv_height * self.clip_up)
+                        line_y.append(r + self.gsv_height * self.clip_up)
+
+                        if isDraw:
+                            ax_color.add_line(Line2D(line_x, line_y, color='r'))
+                            ax_gsv.add_line(Line2D(line_x, line_y, color='r'))
+            except Exception as e:
+                print("Error in getRoots():", e)
+                continue
+
+        if isDraw:  # draw results
+            # ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
+            ax_color.scatter(verifieds_x, verifieds_y, color='red', s=40)
+            ax_gsv.scatter(verifieds_x, verifieds_y, color='red', s=40)
+
+            plt.savefig(os.path.join(SAVED_FOLDER, \
+                                     os.path.basename(self.seg_file_path).replace(".png", ".png")))
+            # plt.show()
+            # fig.clf()
+            # plt.clf(fig)
+            plt.close('all')
+            #
+
+        if len(roots_all) > 0:
+            roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
+            roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
+            # plt.show()
+
+        return roots_all, widths
+
+    def getRoots(self, prominence=10, width=5, distance=20, plateau_size=(0, 150), prom_ratio=0.25):
+        """
+        :param prominence:
+        :param width:
+        :param distance:
+        :param plateau_size:
+        :param prom_ratio: ratio of prominence, up from root points. E.g., when prominence = 100, root point at Row # 200, \
+                           prom_ratio = 0.2, the program will measure the DBH at Row # 200 -   prominence * prom_ratio  \
+                           = 160
+        :return: root points (cols, rows), widths of trees
+
+        DBH: Diameter at breast height
+        """
+        isDraw = 1
+
+        if isDraw:
+            fig = plt.figure(figsize=(16, 8))
+            ax_gsv = fig.add_subplot()
+            ax_seg = fig.add_subplot()
+            # plt.imshow(self.img_gsv_cv2)
+            plt.imshow(ax_gsv)
+            plt.show()
+
+        roots_all = []
+        widths = []
+        # self.contoursNONE = self.contoursNONE[2:]
+
+        verifieds_x = []
+        verifieds_y = []
+
+        try:
+
+            if len(self.contoursNONE) < 1:  # no tree is found
+                return roots_all, widths
+        except:
+            return roots_all, widths
+
+        for cont_num, cont in enumerate(self.contoursNONE):  # for each contour from openCV2
+            try:
+                if len(cont) < 40:  # ignore small contour (i.g. polygon)
+                    continue
+
+                roots = []
+                print("Processing contours #:", cont_num)
+
+                # find peaks (i.g. roots).
+                # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=prominence, width=width,
+                #                                          distance=distance,
+                #                                          plateau_size=plateau_size)
+
+                # print("cont:", cont)
+                # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=10, width=10, distance=20,
+                #                                          plateau_size=10)
+
+                simplified_con = self.simplify_contour(cont)
+                
+
+
+                peaks_idx, dic = scipy.signal.find_peaks(simplified_con, prominence=prominence, width=width,
+                                                         distance=distance,
+                                                         plateau_size=plateau_size)
+
+                # if len(peaks_idx) > 0:
+                #     print(peaks_idx)
+                # else:
+                #     print("Not peaks idx.")
+
+                # peaks = cont[peaks_idx]  # get the col / row of peak
+
+                peaks = np.concatenate((peaks_idx.reshape(-1, 1), simplified_con[peaks_idx].reshape(-1, 1)), axis=1) # get the col / row of peak
+
+                ax.plot(peaks, 'o')
+
+                ax.plot(simplified_con, 'x')
+                # plt.show()
+
+                verifieds_idx = []
+
+                for i, peak in enumerate(peaks):
+                    col = peak[0]
+                    row = peak[1]
+
+                    if self.conv_verify(row, col):  # check whether the peak fits to requirements
+                        verifieds_x.append(col)
+                        verifieds_y.append(row + self.gsv_height * self.clip_up)
+                        verifieds_idx.append(i)
+                        # print("Verified!", col, row)
+
+                peaks = peaks[verifieds_idx]  # store the roots only
+                roots.append(peaks)
+                roots = np.concatenate(roots)
+                # roots_all.append(roots)
+                # print('\n', dic)
+
+                if len(peaks_idx) == 0:  # if no roots
+                    continue
+
+                prominences = dic['prominences']  # height of peak (i.g. root)
+
+                DBH_row = (roots[:, 1] - prominences[verifieds_idx] * prom_ratio).astype(
+                    int)  # measure dimater in these rows
+                # DBH_row = (roots[:, 1] - prominence).astype(int)
+
+                # peaks_widths = dic['peaks_widths']
+                # peaks_prominences = dic['prominences']
+
+                if isDraw:
+                    ax.hlines(y=dic["width_heights"] + self.gsv_height * self.clip_up, xmin=dic["left_ips"],
+                              xmax=dic["right_ips"], color="C1")
+
+                    ax.scatter(peaks, simplified_con[peaks], color='red', s=50)
+                # plt.show()
+
+                for idx, r in enumerate(DBH_row):  # measure each trunk
+
+                    # print('\nr:', r)
+
+                    line_x = []
+                    line_y = []
+
+                    DBH_idx = np.argwhere(simplified_con == r)  # get cols.
+                    DBH_x = DBH_idx
+                    # t = [x[0] for x in DBH_idx]  # get cols.
+
+                    # DBH_x = simplified_con[DBH_idx]  # get cols.
+                    #
+                    # # remove the adjacent pixels
+                    # temp = [DBH_x[0]]  # the most left col
+                    # for x in range(1, len(DBH_x)):  # find the right col
+                    #     if (DBH_x[x] - DBH_x[x - 1]) > 1:
+                    #         temp.append(DBH_x[x])
+                    # DBH_x = temp
+
+                    # print('DBH_x: ', DBH_x)
+                    #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
+                    # w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
+                    #         print("w:", w)
+
+                    MAX_DBH = 180  # maximum DBH, pixels
+                    # if abs(roots[idx, 0] - DBH_x[0]) < (MAX_DBH / 2):   # remove the left edge of trunk is more than 80 pixels, ignore it.
+                    if (DBH_x[-1] - DBH_x[0]) < MAX_DBH:  # remove the left edge of trunk is more than 80 pixels, ignore it.
                         roots_all.append(peaks[idx])
                         widths.append(DBH_x[1] - DBH_x[0])
                         line_x.append(DBH_x[1])
@@ -225,56 +487,102 @@ class tree_detection():
                 print("Error in getRoots():", e)
                 continue
 
-        if isDraw:
-            ax.scatter(verifieds_x, verifieds_y, color='red', s=20)
+            if isDraw:
+                ax.scatter(verifieds_x, verifieds_y, color='red', s=20)
 
-            plt.savefig(os.path.join(r'J:\temp\tree', \
-                                     os.path.basename(self.seg_file_path)))
-            # plt.show()
+                plt.savefig(os.path.join(r'J:\Research\Trees\west_trees_detected', \
+                                         os.path.basename(self.seg_file_path).replace(".png", ".png")))
+                # plt.show()
 
-        if len(roots_all) > 0:
-            roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
-            roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
+            if len(roots_all) > 0:
+                roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
+                # roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
 
-            # if isDraw:   # draw results
-            #     ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
-            #     plt.show()
+                if isDraw:   # draw results
+                    ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
+                    plt.show()
 
-        return roots_all, widths
+            return roots_all, widths
 
-def test_getRoots():
+def getRoors_mp(Prcesses_cnt = 1):
+    # gsv = GSV_depthmap()
+    # gpano = GPano()
 
-    img_file0 = r'56666_-75.135652_39.978263_20_102'
-    img_file0 = r'56615_-75.135871_39.977264_20_148'
-    img_file0 = r'56507_-75.142394_40.007453_20_134'
-    img_file0 = r'56436_-75.139345_40.019191_20_223'
-    img_file0 = r'56431_-75.139869_40.016782_20_305'
-    img_file0 = r'56389_-75.134487_39.993348_20_227'
-    img_file0 = r'56323_-75.138984_40.010789_20_237'
-    img_file0 = r'56279_-75.137075_39.981078_20_79'
-    img_file0 = r'56781_-75.116041_40.027007_20_353'  # failed
-    img_file0 = r'55019_-75.074928_40.028516_20_27'  # failed
-    img_file0 = r'56231_-75.134955_40.019275_20_319'
-    img_file0 = r'56072_-75.135019_39.975304_20_211'
-    img_file0 = '55953_-75.138752_40.021529_20_126'
-    img_file0 = '55960_-75.139287_40.021254_20_204'
-    img_file0 = '55926_-75.13393_40.023424_20_190'
-    img_file0 = r'55931_-75.134294_40.023345_20_128'
-    img_file0 = '55835_-75.11125_40.027203_20_141'
+    # global SEG_FOLDER  # = r'J:\Research\Trees\west_trees_seg\*.png'
+    # global GSV_FOLDER  # = r'J:\Research\Trees\west_trees'
+    # global COLOR_FOLDER #= r'J:\Research\Trees\west_trees_color'
+    # global SAVED_FOLDER# = r'J:\Research\Trees\west_trees_detected'
+
+    folder = SEG_FOLDER
+    files = glob.glob(folder)[:4567]
+
+    files_mp = mp.Manager().list()
+    for f in files:
+        files_mp.append(f)
+
+    pool = mp.Pool(processes=Prcesses_cnt)
+
+    # print(pool)
+    # print("files_mp:", files_mp[0])
+    write = open(SAVED_FILE, 'w')
+    write.writelines('X,Y,H,D,F\n')
+    write.close()
+
+    for i in range(Prcesses_cnt):
+        pool.apply_async(test_getRoots, args=(files_mp,), callback=callback_write)
+    pool.close()
+    pool.join()
+
+
+def callback_write(lines):
+    with open(SAVED_FILE, 'a+') as f:
+        f.writelines(str(lines))
+
+def test_getRoots(files):
+    # print("files: ", files)
+    # img_file0 = r'56666_-75.135652_39.978263_20_102'
+    # img_file0 = r'56615_-75.135871_39.977264_20_148'
+    # img_file0 = r'56507_-75.142394_40.007453_20_134'
+    # img_file0 = r'56436_-75.139345_40.019191_20_223'
+    # img_file0 = r'56431_-75.139869_40.016782_20_305'
+    # img_file0 = r'56389_-75.134487_39.993348_20_227'
+    # img_file0 = r'56323_-75.138984_40.010789_20_237'
+    # img_file0 = r'56279_-75.137075_39.981078_20_79'
+    # img_file0 = r'56781_-75.116041_40.027007_20_353'  # failed
+    # img_file0 = r'55019_-75.074928_40.028516_20_27'  # failed
+    # img_file0 = r'56231_-75.134955_40.019275_20_319'
+    # img_file0 = r'56072_-75.135019_39.975304_20_211'
+    # img_file0 = '55953_-75.138752_40.021529_20_126'
+    # img_file0 = '55960_-75.139287_40.021254_20_204'
+    # img_file0 = '55926_-75.13393_40.023424_20_190'
+    # img_file0 = r'55931_-75.134294_40.023345_20_128'
+    # img_file0 = r'55835_-75.11125_40.027203_20_141'
 
     gsv = GSV_depthmap()
     gpano = GPano()
 
 
-    img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
+    # img_file = f'K:\\OneDrive_NJIT\\OneDrive - NJIT\\Research\\Trees\\datasets\\Philly\\Segmented_PSP\\{img_file0}.png'
 
-    folder = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\jpg_pitch0\segmented_1024\*.png'
+    # folder = r'J:\Research\Trees\west_trees_seg\*.png'
+    folder = SEG_FOLDER
 
-    files = glob.glob(folder)
-    for file in files:
+    # files = glob.glob(folder)[4567:]
+
+    results_lines = ''
+
+    # writer = open(r'J:\Research\Trees\trees_only.txt', 'a')
+    # writer.writelines("X,Y,H,D,F\n")
+
+    while len(files) > 0:
+    # for file in files:
+        file = files.pop(0)
+
+
+
         try:
             tree_detect = tree_detection(seg_file_path=file)
-            roots_all, widths = tree_detect.getRoots()
+            roots_all, widths = tree_detect.getRoots0()
 
             basename = os.path.basename(file)
             basename = basename.replace(".png", '')
@@ -285,9 +593,8 @@ def test_getRoots():
             pano_lon = float(params[-4])
             pano_lat = float(params[-3])
 
-            # thumb_panoId = gpano.getPanoIDfrmLonlat(pano_lon, pano_lat)
+            # thumb_panoId, _, _ = gpano.getPanoIDfrmLonlat(pano_lon, pano_lat)
             obj_json = gpano.getJsonfrmPanoID(thumb_panoId, dm=1)
-
 
             pano_heading = obj_json["Projection"]['pano_yaw_deg']
             pano_heading = math.radians(float(pano_heading))
@@ -316,39 +623,70 @@ def test_getRoots():
             fov_h = fov
             fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
 
+            pixel_idx = np.argwhere(np.array(Image.open(file)) > -1)  #
+
 
             sphs = gsv.castesian_to_shperical0(thumb_theta0, \
                                                 thumb_phi0, pano_pitch, \
                                                 pano_tilt_yaw, fov_h, h, w)
-            sidewalk_sph_phi = sphs[roots_all[:, 0], roots_all[:, 1], 1]
-            sidewalk_sph_theta = sphs[roots_all[:, 0], roots_all[:, 1], 0]
+            sph_phi = sphs[pixel_idx[:, 0], pixel_idx[:, 1], 1]
+            sph_theta = sphs[pixel_idx[:, 0], pixel_idx[:, 1], 0]
 
             # plt_x = [math.degrees(x) for x in sidewalk_sph_phi]
             # plt_y = [math.degrees(x) for x in sidewalk_sph_theta]
             # plt.scatter(sidewalk_sph_phi, sidewalk_sph_theta)
             # plt.show()
 
-            sidewalk_sph = np.stack((sidewalk_sph_phi, sidewalk_sph_theta), axis=1)
+            sph = np.stack((sph_phi, sph_theta), axis=1)
             # print('len of sidewalk_sph :', len(sidewalk_sph))
             # print('sidewalk_sph[0]:', sidewalk_sph[0])
-            dm = gpano.getDepthmapfrmJson(obj_json)
+            dm = gsv.getDepthmapfrmJson(obj_json)
 
             pano_H = obj_json["Location"]['elevation_wgs84_m']
 
-            pointcloud = gsv.getPointCloud2(sidewalk_sph, thumb_heading, thumb_theta0, dm,
+            pointcloud = gsv.getPointCloud2(sph, thumb_heading, thumb_theta0, dm,
                                              pano_lon, pano_lat, pano_H, pano_heading, pano_pitch)
 
-            print(roots_all, widths)
+            print(pointcloud.shape)
 
-            print(pointcloud)
+            # print(pointcloud[-10:])
+
+            print(roots_all, widths)
+            if len(roots_all) > 0:
+                roots_xyz = pointcloud[roots_all[:, 1] * w + roots_all[:, 0] -1]
+                roots_xyz = roots_xyz[roots_xyz[:,  3] < 20 * 3]
+                for t in roots_xyz:
+
+                    # writer.writelines(f"{t[0]},{t[1]},{t[2]},{t[3]},{os.path.basename(file)}\n")
+                    results_lines += (f"{t[0]},{t[1]},{t[2]},{t[3]},{os.path.basename(file)}\n")
+                    print("Trees: ", f"{t[0]}, {t[1]}, {t[2]}, {t[3]}")
+
+            # writer.flush()
+            # writer.flush()
+            # typically the above line would do. however this is used to ensure that the file is written
+            # os.fsync(writer.fileno())
+
 
 
     # plt.imshow(tree_detect.opened)
     # plt.scatter(roots_all[:, 0], roots_all[:, 1])
     # plt.show()
-        except:
-            print("Error: ", file)
-
+        except Exception as e:
+            print("Error: ", e, file)
+    # writer.close()
+    return results_lines
 
 if __name__ == "__main__":
-    test_getRoots()
+
+    # global SEG_FOLDER
+    # global GSV_FOLDER
+    # global COLOR_FOLDER
+    # global SAVED_FOLDER
+
+    SEG_FOLDER   = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_seg\*.png'
+    GSV_FOLDER   = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_jpg2'
+    COLOR_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_color'
+    SAVED_FOLDER = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_detected'
+    SAVED_FILE   = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\Trees_img_only.csv'
+    # test_getRoots()
+    getRoors_mp(Prcesses_cnt=1)

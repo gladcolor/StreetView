@@ -500,7 +500,7 @@ class GPano():
             return 0
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
-                         pitch=0, yaw=0, fov=90):
+                         pitch=0, yaw=0, fov=120):
         # w maximum: 1024
         # h maximum: 768
         server_num = random.randint(0, 3)
@@ -721,7 +721,7 @@ class GPano():
         except Exception as e:
             print("Error in getImageclipsfrmJson():", e)
 
-    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, zoom=5):
+    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, fov=90, zoom=5):
         '''
         :param lon: lon of a seed point.
         :param lat: lat of a seed point.
@@ -1057,7 +1057,7 @@ class GPano():
 
         return lonlats
 
-    def getPanoJPGfrmArea(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4):
+    def getPanoJPGfrmArea(self, yaw_list, seed_pts, saved_path, boundary_vert, fov=90,zoom=4):
 
         pts_cnt = len(seed_pts)
         polygon = self.formPolygon(boundary_vert)
@@ -1101,7 +1101,7 @@ class GPano():
             print("Error in getPanoFrmArea(), will restart: ", e, os.getpid())
             self.getPanoJPGfrmArea(yaw_list, seed_pts, saved_path, boundary_vert)
 
-    def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, zoom=4, Process_cnt=4):
+    def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, fov=90, zoom=4, Process_cnt=4):
         seed_pts_mp = mp.Manager().list()
         for seed in seed_pts:
             seed_pts_mp.append(seed)
@@ -1109,7 +1109,7 @@ class GPano():
         pool = mp.Pool(processes=Process_cnt)
 
         for i in range(Process_cnt):
-            pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, zoom))
+            pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, fov, zoom))
         pool.close()
         pool.join()
 
@@ -1696,7 +1696,7 @@ class GSV_depthmap(object):
             print("Error in getJsonDepthmapsfrmLonlats_mp():", str(e))
 
     def lonlat_to_proj(self, lon, lat, out_epsg=6565,  in_epsg=4326):
-        # DVRPC 6564 meter   # NJ: 2824
+        # DVRPC 6564 meter   6565:ft  # NJ: 2824
         # return transform(Proj(init='epsg:4326'), Proj(init='epsg:3857'), lon, lat)
         return transform(Proj('epsg:'+str(in_epsg)), Proj('epsg:'+str(out_epsg)), lat, lon)
 

@@ -26,7 +26,7 @@ SAVED_FILE = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\T
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.0, kernel_morph=8, kernel_list=[5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.4, kernel_morph=3, kernel_list=[5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
 
         try:
             self.seg_file_path = seg_file_path
@@ -209,6 +209,190 @@ class tree_detection():
 
         return False, 0
 
+    def conv_verify(self, row, col):
+        sum_conv = 0
+
+        for kernel in self.kernel_list:
+            kernel_w = kernel
+            ratio = 1.5
+            if kernel < 20:
+                ratio = 1.5
+            kernel_h = kernel_w * ratio
+            threshold = kernel_h * ratio
+            #         print(threshold)
+
+
+            # print(f"Conv_verify(), left: {left}, right: {right}, up: {up}, bottom: {bottom}")
+
+            if (row > kernel_h) and (col > kernel_w / 2):
+                if col < (self.seg_width - kernel_w / 2):
+                    # conved = self.sobel_v_abs[up: bottom, left: right]
+
+                    # the root is in the middle
+                    left = max(0, int(col - kernel_w / 2))
+                    right = min(self.seg_width, int(col + kernel_w / 2))
+                    up = max(0, int(row - kernel_h))
+                    bottom = row
+
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2 # the edge is 2 pixel width
+
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+                    if sum_conv > threshold:
+                        if sobel_h < -1:    # if in the maximum point
+                            return True, kernel_w
+
+                    # the root is in the left
+                    left = col
+                    right =col + kernel_w
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2 # the edge is 2 pixel width
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+
+                    if sum_conv > threshold:
+                        if sobel_h < -1:
+                            return True, kernel_w
+
+                    # the root is in the right
+                    left = col - kernel_w
+                    right =col
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2  # the edge is 2 pixel width
+
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+
+                    if sum_conv > threshold:
+                        if sobel_h < -1:
+                            return True, kernel_w
+
+
+
+        return False, 0
+
+    def conv_verify(self, row, col):
+        sum_conv = 0
+
+        for kernel in self.kernel_list:
+            kernel_w = kernel
+            ratio = 1.5
+            if kernel < 20:
+                ratio = 1.5
+            kernel_h = kernel_w * ratio
+            threshold = kernel_h * ratio
+            #         print(threshold)
+
+
+            # print(f"Conv_verify(), left: {left}, right: {right}, up: {up}, bottom: {bottom}")
+
+            if (row > kernel_h) and (col > kernel_w / 2):
+                if col < (self.seg_width - kernel_w / 2):
+                    # conved = self.sobel_v_abs[up: bottom, left: right]
+
+                    # the root is in the middle
+                    left = max(0, int(col - kernel_w / 2))
+                    right = min(self.seg_width, int(col + kernel_w / 2))
+                    up = max(0, int(row - kernel_h))
+                    bottom = row
+
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2 # the edge is 2 pixel width
+
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+                    if sum_conv > threshold:
+                        if sobel_h < -1:    # if in the maximum point
+                            return True, kernel_w
+
+                    # the root is in the left
+                    left = col
+                    right =col + kernel_w
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2 # the edge is 2 pixel width
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+
+                    if sum_conv > threshold:
+                        if sobel_h < -1:
+                            return True, kernel_w
+
+                    # the root is in the right
+                    left = col - kernel_w
+                    right =col
+                    conved = self.sobel_v_bin[up: bottom, left: right]
+                    conved = np.where(conved > 0, 1, 0)
+                    sum_conv = np.sum(conved) / 2  # the edge is 2 pixel width
+
+                    sobel_h = self.sobel_h[row, col]
+                    print(f"Conv_verify(), col: {col}, row: {row}, sobel_h: {sobel_h}")
+                    print(f"Conv_verify(), kernel: {kernel}, threshold: {threshold}, sum_conv: {sum_conv}")
+
+                    if sum_conv > threshold:
+                        if sobel_h < -1:
+                            return True, kernel_w
+
+
+
+        return False, 0
+
+
+    def conv_verify_simplify(self, row, col, simplified_contour):
+        try:
+            for kernel in self.kernel_list:  # build a set of boxes, if the peak-point match one box, it is a root.
+                kernel_w = kernel
+                ratio = 1.5
+                if kernel > 50:
+                    ratio = 1
+                if kernel > 50:
+                    ratio = 0.7
+
+                kernel_h = kernel_w * ratio
+                # threshold = kernel_h  #* ratio
+                #         print(threshold)
+
+                # if the root is in the middle
+                left = max(0, int(col - kernel_w / 1))
+                right = min(self.seg_width-1, int(col + kernel_w / 1))
+                up = max(0, int(row - kernel_h))
+                bottom = row
+
+                # check the left side
+                lowest_row = simplified_contour[left, 1]
+                lowest_row = max(lowest_row, up)
+                left_height = bottom - lowest_row + 1
+
+                # check the right side
+                lowest_row = simplified_contour[right, 1]
+                lowest_row = max(lowest_row, up)
+                right_height = bottom - lowest_row + 1
+
+                if (left_height > kernel_h) and (right_height > kernel_h):
+                    # find the width
+                    r_lip = col
+                    l_lip = col
+
+                    while simplified_contour[r_lip, 1] > up:
+                        r_lip += 1
+                    while simplified_contour[l_lip, 1] > up:
+                        l_lip -= 1
+                    width = r_lip - l_lip
+                    return True, width
+
+            return False, 0
+        except Exception as e:
+            print("Error in conv_verify_simplify(): ", e)
 
     def conv_verify0(self, row, col):  # original, works.
         sum_conv = 0
@@ -237,16 +421,18 @@ class tree_detection():
         x_range = right - left
         simplified_con = np.zeros((width, 2))
 
+        min_y = contour[:, 1].min()
+
         for x in range(left, right):
             simplified_con[x, 1] = contour[contour[:, 0] == x][:, 1].max()
             simplified_con[x, 0] = x
 
         for x in range(0, left):
-            simplified_con[x, 1] = 0
+            simplified_con[x, 1] = min_y
             simplified_con[x, 0] = x
 
         for x in range(right, width):
-            simplified_con[x, 1] = 0
+            simplified_con[x, 1] = min_y
             simplified_con[x, 0] = x
 
         return simplified_con.astype(int)
@@ -424,7 +610,7 @@ class tree_detection():
 
             plt.savefig(os.path.join(SAVED_FOLDER, \
                                      os.path.basename(self.seg_file_path).replace(".png", ".png")))
-            plt.show()
+            # plt.show()
             # fig.clf()
             # plt.clf(fig)
             plt.close('all')
@@ -434,6 +620,7 @@ class tree_detection():
             roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
             roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
             # plt.show()
+
 
         return roots_all, widths
 
@@ -459,28 +646,29 @@ class tree_detection():
             ax_gsv = fig.add_subplot(121)
             ax_color = fig.add_subplot(122)
             ax_gsv.imshow(self.img_gsv_cv2)
-            # ax_color.imshow(self.img_color_cv2)
-            ax_color.imshow(self.sobel_v_bin)
-            plt.tight_layout()
+            ax_color.imshow(self.img_color_cv2)
+            # ax_color.imshow(self.sobel_v_bin)
+            # plt.tight_layout()
             # plt.show()
 
+        # return these values
         roots_all = []
         widths = []
-        # self.contoursNONE = self.contoursNONE[2:]
+        DBH_points = []
 
-        verifieds_x = []
-        verifieds_y = []
 
         try:
-
             if len(self.contoursNONE) < 1:  # no tree is found
                 return roots_all, widths
         except:
-            return roots_all, widths
+            print("Not countour. \n")
+            return roots_all, widths, DBH_points
 
         for cont_num, cont in enumerate(self.contoursNONE):  # for each contour from openCV2
             try:
-                if len(cont) < 40:  # ignore small contour (i.g. polygon)
+                verifieds_x = []
+                verifieds_y = []
+                if len(cont) < 200:  # ignore small contour (i.g. polygon)
                     continue
 
                 roots = []
@@ -488,145 +676,90 @@ class tree_detection():
 
                 simplified_con = self.simplify_contour(cont)
 
-                # find peaks (i.g. roots).
-                # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=prominence, width=width,
-                #                                          distance=distance,
-                #                                          plateau_size=plateau_size)
-
                 peaks_idx, dic = scipy.signal.find_peaks(simplified_con[:, 1], prominence=prominence, width=width,
                                                          distance=distance,
                                                          plateau_size=plateau_size)
+                print(f"Found {len(peaks_idx)} peaks at: {peaks_idx} . \n")
 
-                # print("cont:", cont)
-                # peaks_idx, dic = scipy.signal.find_peaks(cont[:, 1], prominence=10, width=10, distance=20,
-                #                                          plateau_size=10)
-
-                # simplified_con = self.simplify_contour(cont)
-
-                peaks = cont[peaks_idx]  # get the col / row of peak
+                peaks_simplified = simplified_con[peaks_idx]  # get the col / row of peak
 
                 if isDraw:  # draw peaks
                     # ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
-                    ax_color.scatter(peaks[:, 0], peaks[:, 1] + self.gsv_height * self.clip_up, color='cyan', s=40)
-                    ax_gsv.scatter(peaks[:, 0], peaks[:, 1] + self.gsv_height * self.clip_up, color='cyan', s=40)
-                    ax_color.plot(simplified_con[:, 0], simplified_con[:, 1])
+
+                    ax_gsv.scatter(  peaks_simplified[:, 0], peaks_simplified[:, 1] + self.gsv_height * self.clip_up, color='cyan', s=40)
+                    ax_color.scatter(peaks_simplified[:, 0], peaks_simplified[:, 1] + self.gsv_height * self.clip_up, color='cyan', s=40)
+                    # ax_color.plot(simplified_con)
+
+                    properties = dic
+                    x = simplified_con[:, 1] +  self.gsv_height * self.clip_up
+                    # ax_color.scatter(simplified_con)
+                    xx = x
+                    min_in_xx = xx.min()
+                    # np.minimum(xx, min_in_xx)
+                    xx[xx == min_in_xx] = 0
+                    # ax_color.plot(xx)
+                    ax_color.plot(peaks_idx, x[peaks_idx], "x")
+                    # ax_color.vlines(x=peaks_idx, ymin=x[peaks_idx] - properties["prominences"], ymax = x[peaks_idx], color = "C1")
+                    # ax_color.hlines(y=properties["width_heights"] + self.gsv_height * self.clip_up, xmin=properties["left_ips"], xmax = properties["right_ips"], color = "C1")
 
                 verifieds_idx = []
                 verified_kernels = []
-                for i, peak in enumerate(peaks):
+                for i, peak in enumerate(peaks_simplified):
                     col = peak[0]
                     row = peak[1]
-                    verified, kernel = self.conv_verify(row, col)
+                    verified, kernel = self.conv_verify_simplify(row, col, simplified_con)
                     if verified:  # check whether the peak fits to requirements
                         verifieds_x.append(col)
                         verifieds_y.append(row + self.gsv_height * self.clip_up)
                         verifieds_idx.append(i)
                         verified_kernels.append(kernel)
-                        # print("Verified!", col, row)
+                        roots_all.append(peak)
 
-                peaks = peaks[verifieds_idx]  # store the roots only
+                peaks = peaks_simplified[verifieds_idx]  # store the roots only
                 roots.append(peaks)
                 roots = np.concatenate(roots)
-                # roots_all.append(roots)
-                # print('\n', dic)
+
+                print('roots: ', roots)
 
                 if len(peaks_idx) == 0:  # if no roots
                     continue
 
-                prominences = dic['prominences']  # height of peak (i.g. root)
-
-                # DBH_row = (roots[:, 1] - prominences[verifieds_idx] * prom_ratio).astype(int)  # measure dimater in these rows
-                DBH_row = (roots[:, 1] - verified_kernels).astype(int)
-
-                # peaks_widths = dic['peaks_widths']
-                # peaks_prominences = dic['prominences']
-
-                # if isDraw:
-                #     # ax.hlines(y=dic["width_heights"] + self.gsv_height * self.clip_up, xmin=dic["left_ips"], xmax=dic["right_ips"], color="C1")
-                #
-                #     ax.scatter(peaks[:,0], peaks[:,1], color='red', s=50)
-                # plt.show()
-
-                for idx, r in enumerate(DBH_row):  # measure each trunk
-
-                    # print('\nr:', r)
-                    root_x = verifieds_x[idx]
-                    kernel = verified_kernels[idx]
-                    # store the left & right ends for drawing widths.
-                    line_x = []
-                    line_y = []
-
-                    # get the columns of possible left & right ends
-                    DBH_idx = np.argwhere(self.contoursNONE[cont_num][:, 1] == r)  # get the nodes in this r (row).
-                    t = [x[0] for x in DBH_idx]  # convert it to 1-D list.
-                    DBH_x = self.contoursNONE[cont_num][:, 0][t]  # get cols of these nodes.
-
-                    # remove the columns beyond the kernel
-                    temp = []  # t
-                    for x in DBH_x:
-                        if (x >= (root_x - kernel)) and (x <= (root_x + kernel)):
-                            temp.append(x)
-                    DBH_x = temp
-
-                    # remove the adjacent pixels
-                    temp = [DBH_x[0]]  # the most left col
-                    for x in range(1, len(DBH_x)):  # find the right col
-                        if (DBH_x[x] - DBH_x[x - 1]) > 1:
-                            temp.append(DBH_x[x])
-                    DBH_x = temp
-
-                    # print('DBH_x: ', DBH_x)
-                    #         print('width: ', abs(DBH_x[1] - DBH_x[0]))
-                    # w = math.tan(math.radians(40)) * prominences[idx] * prom_ratio
-                    #         print("w:", w)
-
-                    MAX_DBH = 180  # maximum DBH, pixels
-                    # if abs(roots[idx, 0] - DBH_x[0]) < (MAX_DBH / 2):   # remove the left edge of trunk is more than 80 pixels, ignore it.
-                    if (DBH_x[-1] - DBH_x[
-                        0]) < MAX_DBH:  # remove the left edge of trunk is more than 80 pixels, ignore it.
-
-                        roots_all.append(peaks[idx])
-                        widths.append(DBH_x[1] - DBH_x[0])
-                        line_x.append(DBH_x[1])
-                        line_x.append(DBH_x[0])
-                        line_y.append(r + self.gsv_height * self.clip_up)
-                        line_y.append(r + self.gsv_height * self.clip_up)
-
-                        if isDraw:
-                            ax_color.add_line(Line2D(line_x, line_y, color='r'))
-                            ax_gsv.add_line(Line2D(line_x, line_y, color='r'))
-                            # ax_color.plot(simplified_con[:, 0], simplified_con[:, 1])
+                if isDraw:  # draw results
+                    for idx, x in enumerate(verifieds_x):
+                        kernel = verified_kernels[idx]
+                        # pass
+                        line_x = [x - kernel / 2, x + kernel / 2]
+                        line_y = [verifieds_y[idx], verifieds_y[idx]]
+                        ax_color.add_line(Line2D(line_x, line_y, color='red'))
+                        ax_color.scatter(verifieds_x, verifieds_y, color='y', s=40, marker='+')
+                        ax_gsv.scatter(verifieds_x, verifieds_y, color='red', s=40)
 
             except Exception as e:
                 print("Error in getRoots0():", e)
                 continue
 
+
+
         if isDraw:  # draw results
-            # ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
-            ax_color.scatter(verifieds_x, verifieds_y, color='red', s=40, marker='+')
+            try:
+                # ax.scatter(roots_all[:, 0], roots_all[:, 1], color='red', s=12)
 
-            ax_gsv.scatter(verifieds_x, verifieds_y, color='red', s=40)
-
-            for idx, x in enumerate(verifieds_x):
-                kernel = verified_kernels[idx]
-                line_x = [x - kernel / 2, x + kernel / 2]
-                line_y = [verifieds_y[idx], verifieds_y[idx]]
-                ax_color.add_line(Line2D(line_x, line_y, color='b'))
-
-            plt.savefig(os.path.join(SAVED_FOLDER, \
-                                     os.path.basename(self.seg_file_path).replace(".png", ".png")))
-            plt.show()
-            # fig.clf()
-            # plt.clf(fig)
-            plt.close('all')
+                plt.savefig(os.path.join(SAVED_FOLDER, \
+                                         os.path.basename(self.seg_file_path).replace(".png", ".png")))
+                # plt.show()
+                # fig.clf()
+                # plt.clf(fig)
+                plt.close('all')
+            except Exception as e:
+                print("Error in Drawing:", e)
             #
 
         if len(roots_all) > 0:
-            roots_all = np.concatenate(roots_all).reshape((len(widths), -1))
+            roots_all = np.concatenate(roots_all).reshape((len(roots_all), -1))
             roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
             # plt.show()
-
-        return roots_all, widths
+        print(f"All roots: {roots_all}")
+        return roots_all, widths, DBH_points
 
 
     def getRoots(self, prominence=10, width=5, distance=20, plateau_size=(0, 150), prom_ratio=0.25):
@@ -800,7 +933,7 @@ class tree_detection():
 
             return roots_all, widths
 
-def getRoors_mp(Prcesses_cnt = 1):
+def getRoors_mp(Prcesses_cnt = 5):
     # gsv = GSV_depthmap()
     # gpano = GPano()
 
@@ -810,7 +943,7 @@ def getRoors_mp(Prcesses_cnt = 1):
     # global SAVED_FOLDER# = r'J:\Research\Trees\west_trees_detected'
 
     folder = SEG_FOLDER
-    files = glob.glob(folder)[1:]
+    files = glob.glob(folder)[0:]
     # files = [r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_seg\7ad_9O5myatNpEMeyfhS0w_-75.765702_45.283713_0_135.41.png']
 
     files_mp = mp.Manager().list()
@@ -880,7 +1013,7 @@ def test_getRoots(files):
         try:
             tree_detect = tree_detection(seg_file_path=file)
             # roots_all, widths = tree_detect.getRoots0()
-            roots_all, widths = tree_detect.getRoots_simplified()
+            roots_all, widths, DBH_points = tree_detect.getRoots_simplified()
 
             basename = os.path.basename(file)
             basename = basename.replace(".png", '')

@@ -28,9 +28,9 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from skimage import io
 
-import selenium
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+# import selenium
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
 
 import PIL
 from PIL import Image, features
@@ -45,16 +45,16 @@ import urllib
 
 
 #
-WINDOWS_SIZE = '100, 100'
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-Loading_time = 5
+# WINDOWS_SIZE = '100, 100'
+# chrome_options = Options()
+# chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+# Loading_time = 5
 
 
-web_driver_path = r'chromedriver'
-driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
-Process_cnt = 10
+# web_driver_path = r'chromedriver'
+# driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+# Process_cnt = 10
 
 """
 Read Me 

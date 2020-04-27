@@ -80,9 +80,9 @@ def seg_files(folder, seg_path='', color_path=''):
 
 if __name__ == '__main__':
 
-    folder =     r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_jpg2\*.jpg'
-    seg_path =   r"K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_seg"
-    color_path = r"K:\OneDrive_NJIT\OneDrive - NJIT\Research\Trees\datasets\Ottawa\tree_color"
+    folder =     r'K:\Research\Trees\NewYorkCity_test\google_street_images\*.jpg'
+    seg_path =   r"K:\Research\Trees\NewYorkCity_test\tree_seg"
+    color_path = r"K:\Research\Trees\NewYorkCity_test\tree_color"
 
     seg_files(folder, seg_path=seg_path, color_path=color_path)
 

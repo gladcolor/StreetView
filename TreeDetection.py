@@ -403,19 +403,19 @@ class tree_detection():
         try:
 
             if (contour[:, 1].min() > 1):
-                return False, -1, -1   # error, not a tree.
+                return False, -1, -1, -1   # error, not a tree.
             # fine the peak at contour
             con_peak_idx = np.argwhere((contour[:, 1] == row) & (contour[:, 0] == col))   # intersect with peak col
             if len(con_peak_idx) < 0:
                 print("Cannot get the peak at contour")
-                return False, -1, -1
+                return False, -1, -1, -1
 
             close_edge_limit = 3  # pixel
             if (col > (self.gsv_width - close_edge_limit)) or (col < close_edge_limit):
-                return False, -1, -1
+                return False, -1, -1, -1
 
-            if (row < self.gsv_height * (0.5 - self.clip_up) ):  # if in the upper part, return false.
-                return False, -1, -1
+            if (row < self.gsv_height * (0.6 - self.clip_up) ):  # if in the upper part, return false.
+                return False, -1, -1, -1
 
             # travasal the contour from the peak point, left, right side taks turns.  OpenCV store nodes of conture counter-clock
             con_peak_idx = con_peak_idx[0][0]
@@ -424,7 +424,9 @@ class tree_detection():
 
             step_cnt = 3
             segment_interval = 3
+
             segments = [0 for x in range(1 + int(self.gsv_width/segment_interval))] # using a harizon line to cut the contour, then store the width of the intersect
+            segments = np.array(segments)
             segment = 0
                           # the interval is 3 pixels. E.g., 0, 1, 2 will be stored at segments[0], 3, 4, 5 will be stored at segments[1]
             measurements = []  # the index is the height from the peak
@@ -433,7 +435,7 @@ class tree_detection():
             increase_ratio = [0 for x in range(self.gsv_height)]
             max_height = 0
             current_height = 0
-            mid_DBH = col  # middle of DBH
+            mid_DBHs = [0 for x in range(self.gsv_height)]  # middle of DBH
 
             while (step_cnt < len(contour)) and (segment < self.MAX_DBH):
                 left = left % len(contour)
@@ -456,6 +458,8 @@ class tree_detection():
                 max_height = max(max_height, current_height)
                 if current_height > 0:
                     measurements[current_height] = segment
+                    mid_DBH = int((contour[right][0] + contour[left][0])/2)
+                    mid_DBHs[current_height] = mid_DBH
                     if current_height > 1:
                         if measurements[current_height-1] > 0:
                             increase_ratio[current_height] = (segment - measurements[current_height-1]) / measurements[current_height-1]
@@ -483,6 +487,7 @@ class tree_detection():
                 #       current_height)
 
             measurements = measurements[:current_height]
+            mid_DBHs = mid_DBHs[:current_height]
             measurements = np.array(measurements)
             max_segment_idx = np.argmax(measurements)
             # if measurements[max_segment_idx] > 2 * np.median(measurements):
@@ -494,6 +499,8 @@ class tree_detection():
             print("current height:", current_height)
             measurements = measurements[:current_height]
             increase_ratio = increase_ratio[:current_height]
+            max_segment = np.max(measurements)
+            # segments = segments[0:ceil(max_segment/3)]
 
             sort_index = np.argsort(segments)
             sort_index = sort_index[::-1]   # index of mass
@@ -508,7 +515,7 @@ class tree_detection():
             RATIO_THRESHOLD = 1.4 # a trunk should have height/DBH larger than this threshold.
             h_w_ratios = np.array(h_w_ratios)
 
-            mass_segment = sort_index[0] * 3 + 3
+            mass_segment = sort_index[0] * 3
 
             over_thres = np.argwhere(h_w_ratios[int(mass_segment * RATIO_THRESHOLD):] > RATIO_THRESHOLD)
             print("len of  over_thres:", len(over_thres))
@@ -522,6 +529,11 @@ class tree_detection():
 
             mass_seg2 = []
             mass_cnt = max(segments)
+
+            max_idx  =  np.argmax(segments)
+            mass_cnt_enlarge = max(segments)
+            if (max_idx > 1) and (max_idx < (len(segments) - 1)):
+                mass_cnt_enlarge = segments[(max_idx - 1): (max_idx + 2)].sum()
             mean_width = 0
             for h in range(5, len(measurements)):
                 mean_width = measurements[3:h].mean()
@@ -533,28 +545,33 @@ class tree_detection():
 
                 # verify  the mass
 
-                area = measurements[:h].sum()
-                h_time2 = int(mean_width * 2)
-                h_time2 = min(h_time2, len(measurements))
+                # area = measurements[:h].sum()
+                # h_time2 = int(mean_width * 2)
+                # h_time2 = min(h_time2, len(measurements))
 
                 measurement = measurements[h]
 
                 #  compare to the mass_segment
-                compare = abs((measurement - mass_segment) / mass_segment)
-                compare_range =  [-0.1, 0.1]
+                # compare = ((measurement - mass_segment) / mass_segment)
+                # compare_range =  [-0.1, 0.1]
+                #
+                # if (compare > compare_range[0]) and (compare < compare_range[1]):
+                #     mass_seg2.append(measurement)
 
-                if (compare > compare_range[0]) and (compare < compare_range[1]):
+                compare = abs(measurement - mass_segment)
+                compare_range =  4
+                if compare < compare_range:
                     mass_seg2.append(measurement)
 
-                clib_ratio = 1.5
+                clib_ratio = 3
 
                 MIN_DBH = 10
 
-                if (measurement > mean_width * 2) and (mean_width > MIN_DBH) and (h/mean_width > 2):
+                if (measurement > mean_width * 3) and (mean_width > MIN_DBH) and (h/mean_width > 3):
                     break
 
-                if (measurement < mean_width * clib_ratio) or (mean_width < MIN_DBH) or (len(mass_seg2) < mass_cnt):
-                    print("climb up, measurements[h], mean_width, h:", measurement, mean_width, h)
+                if (measurement < mean_width * clib_ratio) or (mean_width < MIN_DBH) or (len(mass_seg2) < mass_cnt_enlarge):
+                    # print("climb up, measurements[h], mean_width, h:", measurement, mean_width, h)
                     climb = h
 
                 else:
@@ -564,16 +581,27 @@ class tree_detection():
                 #     print("Verified measurements[h], mean_width, h:", measurements[h], mean_width, h)
                 #     climb = h
 
+            if mean_width > 50:
+                RATIO_THRESHOLD = 1.2
+
+            if mean_width > 60:
+                RATIO_THRESHOLD = 1
+
             if (climb > 0) and ((climb/mean_width) > RATIO_THRESHOLD):
 
                 measure_row = row - int(climb/2)
                 qualified_width = measurements[int(climb / 2)]
+                measure_col = mid_DBHs[int(climb / 2)]
 
                 if qualified_width > mean_width * 1.5:
                     qualified_width = measurements[int(climb / 3)]
                     measure_row = row - int(climb / 3)
-                print("qualified_width, measure_row:", qualified_width, measure_row)
-                return True, qualified_width, measure_row #+ self.gsv_height * self.clip_up
+                    measure_col = mid_DBHs[int(climb / 3)]
+
+                if qualified_width > 8:
+                    qualified_width = qualified_width - 2
+                print("qualified_width, measure_row, measure_col:", qualified_width, measure_row, measure_col)
+                return True, qualified_width, measure_row, measure_col #+ self.gsv_height * self.clip_up
 
                 # temporaly close
                 # if (mean_increase_ratio < 0.05) and (h>30) and((row - h + self.gsv_height*self.clip_up) > ( 0.5 * self.gsv_height) ):
@@ -600,7 +628,7 @@ class tree_detection():
             print("measurements[]:", measurements)
             #
 
-            return False, 0, 0
+            return False, -1, -1, -1
         except Exception as e:
             print("Error in conv_verify_stepping(): ", e)
             print("row, col, con_peak_idx, left, right, current_height:", row, col, con_peak_idx,  left, right, current_height)
@@ -867,16 +895,18 @@ class tree_detection():
         roots_all = []
         widths_all = []
         DBH_points = []
+        DBH_rows_all = []
+        DBH_cols_all = []
 
 
         try:
             if len(self.contoursNONE) < 1:  # no tree is found
-                return roots_all, widths_all, DBH_points
+                return roots_all, widths_all, DBH_rows_all, DBH_cols_all
 
 
         except:
             print("Not countour. \n")
-            return roots_all, widths_all, DBH_points
+            return roots_all, widths_all,  DBH_rows_all, DBH_cols_all
 
         for cont_num, cont in enumerate(self.contoursNONE):  # for each contour from openCV2
             try:
@@ -886,6 +916,8 @@ class tree_detection():
 
                 verifieds_x = []
                 verifieds_y = []
+                DBH_rows = []
+                DBH_cols = []
                 if len(cont) < 80:  # ignore small contour (i.g. polygon)
                     continue
 
@@ -939,16 +971,22 @@ class tree_detection():
                     if (col > (self.gsv_width - close_edge_limit)) or (col < close_edge_limit):
                         continue
 
-                    verified, width, measured_row = self.conv_verify_stepping(row, col, simplified_con, cont)
+                    verified, width, measured_row, measured_col = self.conv_verify_stepping(row, col, simplified_con, cont)
                     if verified:  # check whether the peak fits to requirements
                         verifieds_x.append(col)
-                        verifieds_y.append(row + self.gsv_height * self.clip_up)
+                        verifieds_y.append(row + int(self.gsv_height * self.clip_up))
                         verifieds_idx.append(i)
                         widths.append(width)
                         roots_all.append(peak)
-                        widths_all.append(peak)
-                        DBH_points.append(peak)
-                        measured_rows.append(measured_row + self.gsv_height * self.clip_up)
+                        widths_all.append(width)
+                        DBH_rows.append(measured_row + int(self.gsv_height * self.clip_up))
+                        DBH_cols.append(measured_col)
+
+                        DBH_rows_all.append(int(measured_row + self.gsv_height * self.clip_up))
+                        DBH_cols_all.append(measured_col)
+
+
+                        measured_rows.append(measured_row +int(self.gsv_height * self.clip_up))
 
 
                 # Have not found roots, return the lowest point
@@ -975,8 +1013,13 @@ class tree_detection():
                         roots_all.append(lowest_point)
                         widths_all.append(0)
                         DBH_points.append(lowest_point)
+                        DBH_rows.append(row + int(self.gsv_height * self.clip_up))
+                        DBH_cols.append(col)
                         measured_row = 0
-                        measured_rows.append(measured_row + self.gsv_height * self.clip_up)
+                        measured_rows.append(measured_row + int(self.gsv_height * self.clip_up))
+
+                        DBH_rows_all.append(measured_row + int(self.gsv_height * self.clip_up))
+                        DBH_cols_all.append(measured_col)
 
 
                 # if len(peaks_idx) == 0:  # if no roots
@@ -985,9 +1028,10 @@ class tree_detection():
                 if isDraw:  # draw results
                     for idx, x in enumerate(verifieds_x):
                         width = widths[idx]
-                        # pass
-                        line_x = [x - width / 2, x + width / 2]
-                        line_y = [measured_rows[idx], measured_rows[idx]]
+                        col2 = DBH_cols[idx]
+                        row2 = DBH_rows[idx]
+                        line_x = [col2 - width / 2, col2 + width / 2]
+                        line_y = [row2, row2]
                         ax_color.add_line(Line2D(line_x, line_y, color='red'))
                         ax_color.scatter(verifieds_x, verifieds_y, color='y', s=40, marker='+')
                         ax_gsv.scatter(verifieds_x, verifieds_y, color='red', s=40)
@@ -1018,14 +1062,14 @@ class tree_detection():
 
         if len(roots_all) > 0:
             roots_all = np.concatenate(roots_all).reshape((len(roots_all), -1))
-            roots_all[:, 1] = roots_all[:, 1] + self.gsv_height * self.clip_up
+            roots_all[:, 1] = roots_all[:, 1] + int(self.gsv_height * self.clip_up)
 
 
 
             # plt.show()
         print(f"All roots: {roots_all}")
         print(f"All widths: {widths_all}")
-        return roots_all, widths_all, DBH_points
+        return roots_all, widths_all, DBH_rows_all, DBH_cols_all
 
 
     def getRoots(self, prominence=10, width=5, distance=30, plateau_size=(0, 150), prom_ratio=0.25):
@@ -1199,7 +1243,7 @@ class tree_detection():
 
             return roots_all, widths
 
-def getRoors_mp(Prcesses_cnt = 7):
+def getRoors_mp(Prcesses_cnt = 5):
     # gsv = GSV_depthmap()
     # gpano = GPano()
 
@@ -1221,7 +1265,7 @@ def getRoors_mp(Prcesses_cnt = 7):
     # print(pool)
     # print("files_mp:", files_mp[0])
     write = open(SAVED_FILE, 'w')
-    write.writelines('X,Y,H,D,Width,DBH_points,F\n')
+    write.writelines('X,Y,H,D,Width,col,row,File\n')
     write.close()
 
     for i in range(Prcesses_cnt):
@@ -1273,13 +1317,14 @@ def test_getRoots(files):
     while len(files) > 0:
     # for file in files:
         file = files.pop(0)
+        saved_txt = open(os.path.join(SAVED_FOLDER, os.path.basename(file).replace(".png", '.txt')), 'w')
 
         print("Processing: ", file)
 
         try:
             tree_detect = tree_detection(seg_file_path=file)
             # roots_all, widths = tree_detect.getRoots0()
-            roots_all, widths, DBH_points = tree_detect.getRoots_simplified()
+            roots_all, widths, rows, cols = tree_detect.getRoots_simplified()
 
             basename = os.path.basename(file)
             basename = basename.replace(".png", '')
@@ -1356,25 +1401,35 @@ def test_getRoots(files):
                 for idx, t in enumerate(roots_xyz):
                     # writer.writelines(f"{t[0]},{t[1]},{t[2]},{t[3]},{os.path.basename(file)}\n")
                     # widths, DBH_points
-                    distance = t[2]
+                    row = rows[idx]
+                    col = cols[idx]
+                    distance = t[3]
                     theta = roots_sph_thetas[idx]
                     R_circle = distance  * math.cos(theta)
                     DBH = widths[idx]  * 2 * R_circle * math.pi / (1024*4) * 30.48 # centimeter
-                    results_lines += (f"{t[0]},{t[1]},{t[2]},{t[3]},{DBH},DBH_points,{os.path.basename(file)}\n")
-                    print("Trees: ", f"{t[0]}, {t[1]}, {t[2]}, {t[3]},{DBH},DBH_points")
+                    X = "{:.3f}".format(t[0])
+                    Y ="{:.3f}".format(t[1])
+                    H = "{:.3f}".format( t[2])
+                    D = "{:.3f}".format( t[3])
+                    DBH = "{:.3f}".format(DBH)
+
+                    results_lines += f"{X},{Y},{H},{D},{DBH},{col},{row},{os.path.basename(file)}\n"
+                    print("Trees: ", f"{t[0]:.3f}, {t[1]:.3f}, {t[2]:.3f}, {t[3]:.3f},{DBH},{col},{row}")
+                    saved_txt.writelines(f"{t[0]:.3f},{t[1]:.3f},{t[2]:.3f},{t[3]:.3f},{DBH},{col},{row},{os.path.basename(file)}\n")
 
             # writer.flush()
             # writer.flush()
             # typically the above line would do. however this is used to ensure that the file is written
             # os.fsync(writer.fileno())
 
-
-
     # plt.imshow(tree_detect.opened)
     # plt.scatter(roots_all[:, 0], roots_all[:, 1])
     # plt.show()
         except Exception as e:
             print("Error: ", e, file)
+
+        saved_txt.close()
+
     # writer.close()
     return results_lines
 

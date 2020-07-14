@@ -37,7 +37,7 @@ SAVED_FILE = r'K:\Research\Trees\NewYorkCity_test\Trees.csv'
 
 class tree_detection():
 
-    def __init__(self, seg_file_path, tree_label=4, clip_up=0.45, kernel_morph=3, kernel_list=[5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
+    def __init__(self, seg_file_path, tree_label=4, clip_up=0.3, kernel_morph=3, kernel_list=[5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 120, 150, 180, 200]):
 
         try:
             self.MAX_DBH = 180
@@ -1294,7 +1294,7 @@ def setup_logging(default_path='log_config.yaml', logName='info.log', default_le
 
 
 logger = logging.getLogger("LOG.file")
-def getRoors_mp(Prcesses_cnt = 10):
+def getRoors_mp(Prcesses_cnt = 1):
     # gsv = GSV_depthmap()
     # gpano = GPano()
 

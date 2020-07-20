@@ -167,7 +167,6 @@ class tree_detection():
             threshold = kernel_h * ratio
             #         print(threshold)
 
-
             # print(f"Conv_verify(), left: {left}, right: {right}, up: {up}, bottom: {bottom}")
 
             if (row > kernel_h) and (col > kernel_w / 2):

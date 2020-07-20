@@ -42,8 +42,12 @@ import random
 import requests
 import urllib.request
 import urllib
-
-
+import logging
+logging.basicConfig(level=logging.INFO,
+                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                filename='Pano.log',
+                filemode='w')
 #
 # WINDOWS_SIZE = '100, 100'
 # chrome_options = Options()
@@ -93,7 +97,7 @@ class GPano():
         url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
-    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):
+    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):  #Bearing from point B to A,
 
         """
         Args:
@@ -544,6 +548,54 @@ class GPano():
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
             return 0, jpg_name
+
+
+    def getImagefrmPolygons(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
+                         pitch=0, yaw=0, fov=120):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        lon = round(lon, 7)
+        lat = round(lat, 7)
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
+
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            # print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                else:
+                    # print(url1)
+                    pass
+                return image, jpg_name
+
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+            return 0, jpg_name
+
 
     def getImageclipfrmPano(self, panoId, saved_path='', prefix='', suffix='', width=1024, height=768, pitch=0, yaw=0):
         # w maximum: 1024
@@ -1125,7 +1177,10 @@ class GPano():
         pool.close()
         pool.join()
 
-    def shootLonlat(self, ori_lon, ori_lat, saved_path='', polygon=None, views=1, prefix='', suffix='', width=1024, height=768, pitch=0, fov=90):
+    def shootLonlat(self, ori_lon, ori_lat, saved_path='', polygon=None, views=1, prefix='', suffix='', width=1024, height=768, pitch=0, fov=90, distance_threshold=99999):
+        # ori_lon: target lon
+        # ori_lat: targe lat
+        # distance_threshold: meters
 
         # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
         try:
@@ -1147,12 +1202,20 @@ class GPano():
         lon = float(lon)
         lat = float(lat)
 
+        distance = geodesic((lat, lon), (ori_lat, ori_lon)).meters
+
+        if distance > distance_threshold:
+            logging.info("{}, {} is away from the road, distance: ".format(ori_lon, ori_lat, distance))
+            return 0, 0
+
         # print('lon/lat in panorama:', lon, lat)
         # lon_diff, lat_diff = ori_lon - polygon.centroid.x,  ori_lat - polygon.centroid.y
-        heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
+        heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
         if polygon is not None:
-            fov = self.get_fov(lon, lat, ori_lon, ori_lat, polygon)
+            new_fov = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
+            fov = min(new_fov, 120)
+            heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
             # fov, heading = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
             # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
 
@@ -1164,6 +1227,8 @@ class GPano():
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
         image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=str(prefix) + panoid,
                               pitch=pitch, yaw=heading, width=width, height=height, fov=fov)
+
+        logging.info(jpg_name)
 
         if views == 1:
             return image, jpg_name
@@ -1193,13 +1258,16 @@ class GPano():
                                           pitch=pitch, yaw=heading)
                     images.append(image)
                     jpg_names.append(jpg_name)
+
+                    logging.info(jpg_name)
+
                 except Exception as e:
                     print("Error in processing links in shootLonlat():", e)
                     continue
             # if saved_path != "":
             return images, jpg_names
 
-    def get_fov(self, lon, lat, ori_lon, ori_lat, polygon):
+    def get_fov(self, lon, lat, ori_lon, ori_lat, polygon):   # degraded
         lon_diff, lat_diff = polygon.centroid.x - ori_lon, polygon.centroid.y - ori_lat
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
@@ -1220,27 +1288,33 @@ class GPano():
         return int((fov * 1.2)) % 360
 
     def get_fov2(self, lon, lat, ori_lon, ori_lat, polygon):
-        lon_diff, lat_diff = polygon.centroid.x - ori_lon, polygon.centroid.y - ori_lat
+        # lon_diff, lat_diff = polygon.centroid.x - ori_lon, polygon.centroid.y - ori_lat
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
+
+        def getDiffAngle(target_agnle, point_angle):
+            diff = abs(point_angle - target_agnle)
+            if diff > 180:  # degree
+                diff = 360 - diff
+            return diff
 
         min_angle = 2 ** 32
         max_angle = -2 ** 32
         for point in list(polygon.exterior.coords):
-            angle = self.getDegreeOfTwoLonlat(ori_lat, ori_lon, point[1], point[0]) + 360
-            min_angle = min(min_angle, angle)
-            max_angle = max(max_angle, angle)
+            angle = self.getDegreeOfTwoLonlat(ori_lat, ori_lon, point[1], point[0])
+            diff = getDiffAngle(heading, angle)
+            # min_angle = min(min_angle, angle)
+            max_diff = max(max_angle, angle)
             # print(f"angle: {angle}")
 
         # heading = int(((max_angle - 360) - (min_angle - 360)) / 2)
-
-        min_diff = heading - (min_angle - 360)
-        max_diff = (max_angle - 360) - heading
+        logging.info("max, min: {}".format(max_diff))
 
 
-        fov = (int(max(min_diff, max_diff))) * 2
+        fov = int(max_diff) * 2
+        fov = max(fov, 10) # google does not support fov < 10.
         # print(f"{min_angle - 360} - {heading} - {max_angle - 360}")
         # return fov, central bearing
-        return (fov % 360) + 20, int(((max_angle - 360) - (min_angle - 360)) / 2)
+        return int(fov * 1.2)
 
 
 

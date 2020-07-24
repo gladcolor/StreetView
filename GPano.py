@@ -17,6 +17,7 @@ import zlib
 import multiprocessing as mp
 import sqlite3
 
+
 # Geospatial processing
 from pyproj import Proj, transform
 from geopy.distance import geodesic
@@ -27,7 +28,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import interpolate
 from skimage import io
-
+import yaml
 # import selenium
 # from selenium import webdriver
 # from selenium.webdriver.chrome.options import Options
@@ -43,11 +44,12 @@ import requests
 import urllib.request
 import urllib
 import logging
-logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                filename='Pano.log',
-                filemode='w')
+
+# logging.basicConfig(level=logging.INFO,
+#                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+#                 datefmt='%a, %d %b %Y %H:%M:%S',
+#                 filename='Pano.log',
+#                 filemode='w')
 #
 # WINDOWS_SIZE = '100, 100'
 # chrome_options = Options()
@@ -55,7 +57,27 @@ logging.basicConfig(level=logging.INFO,
 # chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 # Loading_time = 5
 
+import logging.config
 
+
+
+def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
+    path = default_path
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            if logName !='':
+                config["handlers"]["file"]['filename'] = logName
+            logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
+
+# log_txt_name = r'K:\Research\Tagme\tagme\src\assets\log.log'
+yaml_path = 'log_config.yaml'
+setup_logging(yaml_path)
+        # logger.info(os.path.basename(file))
+
+logger = logging.getLogger('console_only')
 # web_driver_path = r'chromedriver'
 # driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 # Process_cnt = 10
@@ -1217,7 +1239,7 @@ class GPano():
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
         if polygon is not None:
-            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon)
+            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= prefix + "_" + panoid + "_" + str(heading) + '_shooting.png')
             # new_fov = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
             # fov = min(new_fov, 120)
             # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
@@ -1272,6 +1294,8 @@ class GPano():
             # if saved_path != "":
             return images, jpg_names
 
+
+
     def getNearest(self, point, points_list):  # points: x, y, numpy array
         delta = points_list - point
         #     print(delta)
@@ -1324,12 +1348,158 @@ class GPano():
 
 
         fov = int(max_diff) * 2
-        fov = max(fov, 10) # google does not support fov < 10.
+        fov = max(int(fov * 1.2), 10) # google does not support fov < 10.
         # print(f"{min_angle - 360} - {heading} - {max_angle - 360}")
         # return fov, central bearing
-        return int(fov * 1.2)
+        return fov
 
-    def get_fov4edge(self, viewpoint, car_heading, polygon):  # get the fov angle for the nearest edge of a shapely polygon
+    def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name=''):  # get the fov angle for the nearest edge of a shapely polygon
+
+        geometry = polygon.exterior.coords
+        geometry = np.array(geometry)
+
+        PI = math.pi
+
+        # pprint.pprint(geometry)
+
+        lon = geometry[:, 0].mean()
+        lat = geometry[:, 1].mean()
+
+        csr_string = f"+proj=tmerc +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m +no_defs"
+
+        local_csr = Proj(csr_string)
+
+        inProj = Proj(init='epsg:4326')  # WGS84
+
+        # viewpoint = (-76.5300865, 39.2907584)
+
+        lon = viewpoint[0]
+        lat = viewpoint[1]
+
+        path_angle = car_heading  # degree of the heading of mapping car
+        # path_angle = radians(path_angle)
+        path_angle = 90 - (path_angle % 180)  # range: -90 to 90 degree
+        # print('\npath_angle:\n', path_angle)
+
+        geometry_prj = transform(inProj, local_csr, geometry[:, 0], geometry[:, 1])
+
+        viewpoint = transform(inProj, local_csr, viewpoint[0], viewpoint[1])
+        # print(viewpoint)
+        # print(geometry_prj)
+
+        simplified = Polygon(zip(geometry_prj[0], geometry_prj[1]))
+
+        # simplified = simplified.simplify(1, preserve_topology=False)
+        simplified = simplified.minimum_rotated_rectangle
+
+        simplified_coords = simplified.exterior.coords
+        simplified_coords = np.array(simplified_coords)
+
+
+        xs = simplified_coords[:, 0]
+        ys = simplified_coords[:, 1]
+
+        mid_points = [(xs[i] + xs[i + 1], ys[i] + ys[i + 1]) for i in range(0, len(simplified_coords) - 1)]
+        mid_points = np.array(mid_points) / 2
+
+        # print("\nmid_points:\n", mid_points)
+
+        # slopes = [(ys[i] - ys[i + 1]) / (xs[i] - xs[i + 1]) for i in range(0, len(simplified_coords) - 1)]
+        # print("\nslopes:")
+        # pprint.pprint(slopes)
+
+        # edge_angles = np.arctan(slopes)
+        # edge_angles = np.degrees(edge_angles)
+        # print("\nedge_angles:\n", edge_angles)
+
+        # slope_diff = np.array(slopes) - tan(PI / 2 - path_angle)
+        # slope_diff_abs = np.abs(slope_diff)
+
+        # angle_diff = np.abs(np.array(edge_angles) - path_angle)
+        # print("\nangle_diff: \n", angle_diff)
+        # angle_diff = angle_diff % 90
+        # angle_diff = angle_diff % -180
+        # angle_diff = np.abs(angle_diff - 180)
+
+        # print("\nangle_diff after % 180 degree: \n", angle_diff)
+
+        # angle_diff_sorted = np.argsort(angle_diff)
+        # print("\nangle_diff_sorted:", angle_diff_sorted)
+
+        # slopes_sorted = np.argsort(slope_diff_abs)
+        # print("\nslopes_sorted:", slopes_sorted)
+
+        # find the nearest from the top-half parallel lines
+        # top_half_parallels = mid_points[angle_diff_sorted[:ceil(len(angle_diff_sorted) / 2)]]
+        # print("\ntop_half_parallels:\n ", top_half_parallels)
+        nearest_idx, nearest_distance = self.getNearest(viewpoint, mid_points)
+        # print("\nnearest_idx, nearest_distance: ", nearest_idx, nearest_distance)
+
+        # neartest_edge_id = angle_diff_sorted[nearest_idx]
+        # print("neartest_edge_id: ", neartest_edge_id)
+
+        point1 = simplified_coords[nearest_idx]
+        point2 = simplified_coords[nearest_idx + 1]
+
+        angle1 = viewpoint - point1
+        angle1 = np.arctan2(angle1[1], angle1[0])
+
+        angle2 = viewpoint - point2
+        angle2 = np.arctan2(angle2[1], angle2[0])
+
+        # print('\nangle1, angle2:', angle1, angle2)
+
+        fov = degrees(abs(angle1 - angle2))
+        if fov > 180:
+            fov = 360 - fov
+
+        fov = int(fov * 1.5)
+        if fov > 120:
+            fov = 120   # the max vertical / horizaontal fov is limited within 120 degrees.
+            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
+
+        # print('\nfov(degrees):', fov)
+
+        fig = plt.figure(figsize=(576/72, 768/72))
+
+        plt.axis("equal")
+
+        plt.plot(xs, ys)
+        plt.scatter(mid_points[:, 0], mid_points[:, 1], color='y')
+        plt.scatter(mid_points[nearest_idx, 0], mid_points[nearest_idx, 1], color='r')
+        plt.scatter(viewpoint[0], viewpoint[1], color='r')
+
+        plt.scatter(point1[0], point1[1], color='c')
+        plt.scatter(point2[0], point2[1], color='c')
+
+        lines_x = [point1[0], viewpoint[0], point2[0]]
+        lines_y = [point1[1], viewpoint[1], point2[1]]
+
+        plt.plot(lines_x, lines_y)
+        arrow_x = cos(radians(90 - car_heading))
+        arrow_y = sin(radians(90 - car_heading))
+        plt.arrow(viewpoint[0], viewpoint[1], arrow_x * 10, arrow_y * 10, head_width=0.5)
+
+        saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house1'
+        saved_path = os.path.join(saved_path, file_name)
+        plt.savefig(saved_path)
+        plt.close(fig)
+
+        # print("number of points, edges: ", len(geometry), len(mid_points))
+        #
+        # print("\nslope, tan(): ", tan(PI / 2 - path_angle))
+
+        to_lon, to_lat = transform(local_csr, inProj, mid_points[nearest_idx, 0],
+                                       mid_points[nearest_idx, 1])
+
+        heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
+
+        gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
+        logging.info("GSV usl: %s", gsv_url)
+
+        return heading, max(10, fov) # google street view support fov > 10 degree only
+
+    def get_fov4edge0(self, viewpoint, car_heading, polygon, saved_path='', file_name=''):  # get the fov angle for the nearest edge of a shapely polygon
 
         geometry = polygon.exterior.coords
         geometry = np.array(geometry)
@@ -1362,7 +1532,11 @@ class GPano():
         # print(geometry_prj)
 
         simplified = Polygon(zip(geometry_prj[0], geometry_prj[1]))
-        simplified = simplified.simplify(1, preserve_topology=False)
+
+        # simplified = simplified.simplify(1, preserve_topology=False)
+        simplified = simplified.minimum_rotated_rectangle
+
+
         simplified_coords = simplified.exterior.coords
         simplified_coords = np.array(simplified_coords)
 
@@ -1423,11 +1597,16 @@ class GPano():
         fov = degrees(abs(angle1 - angle2))
         if fov > 180:
             fov = 360 - fov
+
+        fov = int(fov * 1.5)
         if fov > 120:
-            fov = 120
+            fov = 120   # the max vertical / horizaontal fov is limited within 120 degrees.
+            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
+
         # print('\nfov(degrees):', fov)
 
-        # fig = plt.figure(figsize=(7, 7))
+        fig = plt.figure(figsize=(576/72, 768/72))
+
         plt.axis("equal")
 
         plt.plot(xs, ys)
@@ -1442,17 +1621,28 @@ class GPano():
         lines_y = [point1[1], viewpoint[1], point2[1]]
 
         plt.plot(lines_x, lines_y)
+        arrow_x = cos(radians(90 - car_heading))
+        arrow_y = sin(radians(90 - car_heading))
+        plt.arrow(viewpoint[0], viewpoint[1], arrow_x * 10, arrow_y * 10, head_width=0.5)
 
-        plt.show()
+        saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house1'
+        saved_path = os.path.join(saved_path, file_name)
+        plt.savefig(saved_path)
+        plt.close(fig)
 
         # print("number of points, edges: ", len(geometry), len(mid_points))
         #
         # print("\nslope, tan(): ", tan(PI / 2 - path_angle))
 
-        heading = self.getDegreeOfTwoLonlat(lon, lat, top_half_parallels[nearest_idx, 0],
-                                       top_half_parallels[nearest_idx, 1])  # #Bearing from point B to A,
+        to_lon, to_lat = transform(local_csr, inProj, top_half_parallels[nearest_idx, 0],
+                                       top_half_parallels[nearest_idx, 1])
 
-        return heading, max(10, int(fov)) # google street view support fov > 10 degree only
+        heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
+
+        gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
+        logging.info("GSV usl: %s", gsv_url)
+
+        return heading, max(10, fov) # google street view support fov > 10 degree only
 
     def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"

@@ -178,12 +178,12 @@ def shoot_baltimore():
     # gpano.shootLonlats_mp(lonlats_mp, saved_path, Process_cnt=1, views=3, suffix='', width=1024, height=768)
 
 def download_buildings_baltimore():
-    shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\data\vacant_house.shp'
+    shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\data\vacant_building.shp'
 
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     buildings = fiona.open(shape_file)
 
-    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house'
+    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house1'
 
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
@@ -200,7 +200,7 @@ def download_buildings_baltimore():
     center_x = 0;
     centre_y = 0;
 
-
+    buildings = buildings[:]
     for i in tqdm(range(len(buildings))):
         # FID, area_m, ACCTID, story, GEOID, tract_pop,lon, lat, geometry = buildings.iloc[i]
         # geometry = shapely.wkt.loads(geometry)
@@ -208,6 +208,7 @@ def download_buildings_baltimore():
 
         try:
             geometry = buildings[i]['geometry']['coordinates']
+            row_id = buildings[i]['properties']['row_id_1']
             print("Processing (FID): ", i)
             geometry = np.array(geometry).squeeze(0)
 
@@ -227,8 +228,8 @@ def download_buildings_baltimore():
 
             distance_threshold = 100
 
-            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix='', width=576, height=768,  fov=90, distance_threshold=distance_threshold)
-
+            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix=str(row_id), width=576, height=768,  fov=90, distance_threshold=distance_threshold)
+            logging.info("row_id: %s", row_id)
              # shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024,
              #                height=768, pitch=0):
         except Exception as e:

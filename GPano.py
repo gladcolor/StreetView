@@ -97,7 +97,7 @@ class GPano():
         url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
-    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):  #Bearing from point B to A,
+    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):  #Bearing from point A to B (first to second),
 
         """
         Args:
@@ -108,7 +108,7 @@ class GPano():
             default: the basis of heading direction is north
             https://blog.csdn.net/zhuqiuhui/article/details/53180395
             This article shows the similar method
-            Bearing from point B to A,
+            Bearing from point A to B,
             https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
         """
         radLatA = math.radians(float(latA))
@@ -547,7 +547,7 @@ class GPano():
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
             print(url1)
-            return 0, jpg_name
+            return 0, 0
 
 
     def getImagefrmPolygons(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
@@ -1185,16 +1185,20 @@ class GPano():
         # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
         try:
             jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
+            if 'Location' in jdata:
+                panoid = jdata['Location']['panoId']
+                lon = jdata['Location']['lng']
+                lat = jdata['Location']['lat']
+                car_heading = float(jdata['Projection']['pano_yaw_deg'])
+            else:
+                # print("No Location in the Panojson file.")
+                return 0, 0
 
         except Exception as e:
             print("Error in getting json in shootLonlat():", e)
-        if 'Location' in jdata:
-            panoid = jdata['Location']['panoId']
-            lon = jdata['Location']['lng']
-            lat = jdata['Location']['lat']
-        else:
-            # print("No Location in the Panojson file.")
             return 0, 0
+
+
 
         if panoid == 0:
             print("No PanoID return for location: ", ori_lon, ori_lat)
@@ -1213,9 +1217,10 @@ class GPano():
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
         if polygon is not None:
-            new_fov = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
-            fov = min(new_fov, 120)
-            heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
+            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon)
+            # new_fov = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
+            # fov = min(new_fov, 120)
+            # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
             # fov, heading = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
             # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
 
@@ -1267,6 +1272,14 @@ class GPano():
             # if saved_path != "":
             return images, jpg_names
 
+    def getNearest(self, point, points_list):  # points: x, y, numpy array
+        delta = points_list - point
+        #     print(delta)
+        delta_squre = delta[:, 0] ** 2 + delta[:, 1] ** 2
+        roots = delta_squre ** 0.5
+        min_idx = roots.argmin()
+        return min_idx, roots.min()
+
     def get_fov(self, lon, lat, ori_lon, ori_lat, polygon):   # degraded
         lon_diff, lat_diff = polygon.centroid.x - ori_lon, polygon.centroid.y - ori_lat
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
@@ -1316,7 +1329,130 @@ class GPano():
         # return fov, central bearing
         return int(fov * 1.2)
 
+    def get_fov4edge(self, viewpoint, car_heading, polygon):  # get the fov angle for the nearest edge of a shapely polygon
 
+        geometry = polygon.exterior.coords
+        geometry = np.array(geometry)
+
+        # pprint.pprint(geometry)
+
+        lon = geometry[:, 0].mean()
+        lat = geometry[:, 1].mean()
+
+        csr_string = f"+proj=tmerc +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m +no_defs"
+
+        local_csr = Proj(csr_string)
+
+        inProj = Proj(init='epsg:4326')  # WGS84
+
+        # viewpoint = (-76.5300865, 39.2907584)
+
+        lon = viewpoint[0]
+        lat = viewpoint[1]
+
+        path_angle = car_heading  # degree of the heading of mapping car
+        # path_angle = radians(path_angle)
+        path_angle = 90 - (path_angle % 180)  # range: -90 to 90 degree
+        # print('\npath_angle:\n', path_angle)
+
+        geometry_prj = transform(inProj, local_csr, geometry[:, 0], geometry[:, 1])
+
+        viewpoint = transform(inProj, local_csr, viewpoint[0], viewpoint[1])
+        # print(viewpoint)
+        # print(geometry_prj)
+
+        simplified = Polygon(zip(geometry_prj[0], geometry_prj[1]))
+        simplified = simplified.simplify(1, preserve_topology=False)
+        simplified_coords = simplified.exterior.coords
+        simplified_coords = np.array(simplified_coords)
+
+        PI = 3.14159265
+        xs = simplified_coords[:, 0]
+        ys = simplified_coords[:, 1]
+
+        mid_points = [(xs[i] + xs[i + 1], ys[i] + ys[i + 1]) for i in range(0, len(simplified_coords) - 1)]
+        mid_points = np.array(mid_points) / 2
+
+        # print("\nmid_points:\n", mid_points)
+
+        slopes = [(ys[i] - ys[i + 1]) / (xs[i] - xs[i + 1]) for i in range(0, len(simplified_coords) - 1)]
+        # print("\nslopes:")
+        # pprint.pprint(slopes)
+
+        edge_angles = np.arctan(slopes)
+        edge_angles = np.degrees(edge_angles)
+        # print("\nedge_angles:\n", edge_angles)
+
+        # slope_diff = np.array(slopes) - tan(PI / 2 - path_angle)
+        # slope_diff_abs = np.abs(slope_diff)
+
+        angle_diff = np.abs(np.array(edge_angles) - path_angle)
+        # print("\nangle_diff: \n", angle_diff)
+        # angle_diff = angle_diff % 90
+        # angle_diff = angle_diff % -180
+        # angle_diff = np.abs(angle_diff - 180)
+
+        # print("\nangle_diff after % 180 degree: \n", angle_diff)
+
+        angle_diff_sorted = np.argsort(angle_diff)
+        # print("\nangle_diff_sorted:", angle_diff_sorted)
+
+        # slopes_sorted = np.argsort(slope_diff_abs)
+        # print("\nslopes_sorted:", slopes_sorted)
+
+        # find the nearest from the top-half parallel lines
+        top_half_parallels = mid_points[angle_diff_sorted[:ceil(len(angle_diff_sorted) / 2)]]
+        # print("\ntop_half_parallels:\n ", top_half_parallels)
+        nearest_idx, nearest_distance = self.getNearest(viewpoint, top_half_parallels)
+        # print("\nnearest_idx, nearest_distance: ", nearest_idx, nearest_distance)
+
+        neartest_edge_id = angle_diff_sorted[nearest_idx]
+        # print("neartest_edge_id: ", neartest_edge_id)
+
+        point1 = simplified_coords[neartest_edge_id]
+        point2 = simplified_coords[neartest_edge_id + 1]
+
+        angle1 = viewpoint - point1
+        angle1 = np.arctan2(angle1[1], angle1[0])
+
+        angle2 = viewpoint - point2
+        angle2 = np.arctan2(angle2[1], angle2[0])
+
+        # print('\nangle1, angle2:', angle1, angle2)
+
+        fov = degrees(abs(angle1 - angle2))
+        if fov > 180:
+            fov = 360 - fov
+        if fov > 120:
+            fov = 120
+        # print('\nfov(degrees):', fov)
+
+        # fig = plt.figure(figsize=(7, 7))
+        plt.axis("equal")
+
+        plt.plot(xs, ys)
+        plt.scatter(mid_points[:, 0], mid_points[:, 1], color='y')
+        plt.scatter(top_half_parallels[nearest_idx, 0], top_half_parallels[nearest_idx, 1], color='r')
+        plt.scatter(viewpoint[0], viewpoint[1], color='r')
+
+        plt.scatter(point1[0], point1[1], color='c')
+        plt.scatter(point2[0], point2[1], color='c')
+
+        lines_x = [point1[0], viewpoint[0], point2[0]]
+        lines_y = [point1[1], viewpoint[1], point2[1]]
+
+        plt.plot(lines_x, lines_y)
+
+        plt.show()
+
+        # print("number of points, edges: ", len(geometry), len(mid_points))
+        #
+        # print("\nslope, tan(): ", tan(PI / 2 - path_angle))
+
+        heading = self.getDegreeOfTwoLonlat(lon, lat, top_half_parallels[nearest_idx, 0],
+                                       top_half_parallels[nearest_idx, 1])  # #Bearing from point B to A,
+
+        return heading, max(10, int(fov)) # google street view support fov > 10 degree only
 
     def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"

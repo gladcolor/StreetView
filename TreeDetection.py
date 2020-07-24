@@ -1293,6 +1293,7 @@ def setup_logging(default_path='log_config.yaml', logName='info.log', default_le
 
 
 logger = logging.getLogger("LOG.file")
+
 def getRoors_mp(Prcesses_cnt = 1):
     # gsv = GSV_depthmap()
     # gpano = GPano()

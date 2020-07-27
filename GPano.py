@@ -1199,7 +1199,7 @@ class GPano():
         pool.close()
         pool.join()
 
-    def shootLonlat(self, ori_lon, ori_lat, saved_path='', polygon=None, views=1, prefix='', suffix='', width=1024, height=768, pitch=0, fov=90, distance_threshold=99999):
+    def shootLonlat(self, ori_lon, ori_lat, saved_path='', polygon=None, views=1, prefix='', suffix='', width=1024, height=768, pitch=0, fov=90, distance_threshold=99999, r_tree=None):
         # ori_lon: target lon
         # ori_lat: targe lat
         # distance_threshold: meters
@@ -1239,12 +1239,10 @@ class GPano():
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
         if polygon is not None:
-            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= prefix + "_" + panoid + "_" + str(heading) + '_shooting.png')
-            # new_fov = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
-            # fov = min(new_fov, 120)
-            # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
-            # fov, heading = self.get_fov2(lon, lat, ori_lon, ori_lat, polygon)
-            # heading = self.getDegreeOfTwoLonlat(lat, lon, polygon.centroid.y, polygon.centroid.x)
+            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= prefix + "_" + panoid + "_" + str(heading) + '_shooting.png', r_tree=r_tree)
+            if fov < 0:   # if get the long side, exit
+                return 0, 0
+
 
         prefix = str(prefix)
         if prefix != "":
@@ -1353,7 +1351,7 @@ class GPano():
         # return fov, central bearing
         return fov
 
-    def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name=''):  # get the fov angle for the nearest edge of a shapely polygon
+    def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name='', r_tree=None):  # get the fov angle for the nearest edge of a shapely polygon
 
         geometry = polygon.exterior.coords
         geometry = np.array(geometry)
@@ -1404,30 +1402,10 @@ class GPano():
 
         # print("\nmid_points:\n", mid_points)
 
-        # slopes = [(ys[i] - ys[i + 1]) / (xs[i] - xs[i + 1]) for i in range(0, len(simplified_coords) - 1)]
-        # print("\nslopes:")
-        # pprint.pprint(slopes)
+        edge_lengths = [(ys[i] - ys[i + 1])**2 + (xs[i] - xs[i + 1])**2 for i in range(0, len(simplified_coords) - 1)]
+        edge_lengths = np.array(edge_lengths)
+        edge_lengths = edge_lengths**0.5
 
-        # edge_angles = np.arctan(slopes)
-        # edge_angles = np.degrees(edge_angles)
-        # print("\nedge_angles:\n", edge_angles)
-
-        # slope_diff = np.array(slopes) - tan(PI / 2 - path_angle)
-        # slope_diff_abs = np.abs(slope_diff)
-
-        # angle_diff = np.abs(np.array(edge_angles) - path_angle)
-        # print("\nangle_diff: \n", angle_diff)
-        # angle_diff = angle_diff % 90
-        # angle_diff = angle_diff % -180
-        # angle_diff = np.abs(angle_diff - 180)
-
-        # print("\nangle_diff after % 180 degree: \n", angle_diff)
-
-        # angle_diff_sorted = np.argsort(angle_diff)
-        # print("\nangle_diff_sorted:", angle_diff_sorted)
-
-        # slopes_sorted = np.argsort(slope_diff_abs)
-        # print("\nslopes_sorted:", slopes_sorted)
 
         # find the nearest from the top-half parallel lines
         # top_half_parallels = mid_points[angle_diff_sorted[:ceil(len(angle_diff_sorted) / 2)]]
@@ -1435,8 +1413,10 @@ class GPano():
         nearest_idx, nearest_distance = self.getNearest(viewpoint, mid_points)
         # print("\nnearest_idx, nearest_distance: ", nearest_idx, nearest_distance)
 
-        # neartest_edge_id = angle_diff_sorted[nearest_idx]
-        # print("neartest_edge_id: ", neartest_edge_id)
+        # if get the long side:
+        if edge_lengths[nearest_idx] > edge_lengths.mean() * 1.5:
+            logging.info("Got the long side of building, exit.")
+            return -1, -1
 
         point1 = simplified_coords[nearest_idx]
         point2 = simplified_coords[nearest_idx + 1]
@@ -1460,30 +1440,34 @@ class GPano():
 
         # print('\nfov(degrees):', fov)
 
-        fig = plt.figure(figsize=(576/72, 768/72))
+        isSaveFig = True
 
-        plt.axis("equal")
+        if isSaveFig:
 
-        plt.plot(xs, ys)
-        plt.scatter(mid_points[:, 0], mid_points[:, 1], color='y')
-        plt.scatter(mid_points[nearest_idx, 0], mid_points[nearest_idx, 1], color='r')
-        plt.scatter(viewpoint[0], viewpoint[1], color='r')
+            fig = plt.figure(figsize=(576/72, 768/72))
 
-        plt.scatter(point1[0], point1[1], color='c')
-        plt.scatter(point2[0], point2[1], color='c')
+            plt.axis("equal")
 
-        lines_x = [point1[0], viewpoint[0], point2[0]]
-        lines_y = [point1[1], viewpoint[1], point2[1]]
+            plt.plot(xs, ys)
+            plt.scatter(mid_points[:, 0], mid_points[:, 1], color='y')
+            plt.scatter(mid_points[nearest_idx, 0], mid_points[nearest_idx, 1], color='r')
+            plt.scatter(viewpoint[0], viewpoint[1], color='r')
 
-        plt.plot(lines_x, lines_y)
-        arrow_x = cos(radians(90 - car_heading))
-        arrow_y = sin(radians(90 - car_heading))
-        plt.arrow(viewpoint[0], viewpoint[1], arrow_x * 10, arrow_y * 10, head_width=0.5)
+            plt.scatter(point1[0], point1[1], color='c')
+            plt.scatter(point2[0], point2[1], color='c')
 
-        saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house1'
-        saved_path = os.path.join(saved_path, file_name)
-        plt.savefig(saved_path)
-        plt.close(fig)
+            lines_x = [point1[0], viewpoint[0], point2[0]]
+            lines_y = [point1[1], viewpoint[1], point2[1]]
+
+            plt.plot(lines_x, lines_y)
+            arrow_x = cos(radians(90 - car_heading))
+            arrow_y = sin(radians(90 - car_heading))
+            plt.arrow(viewpoint[0], viewpoint[1], arrow_x * 10, arrow_y * 10, head_width=0.5)
+
+            # saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\boston\building_images3'
+            saved_path = os.path.join(saved_path, file_name)
+            plt.savefig(saved_path)
+            plt.close(fig)
 
         # print("number of points, edges: ", len(geometry), len(mid_points))
         #
@@ -3526,6 +3510,8 @@ class GSV_depthmap(object):
     #         print("Error in constructRawPointsCloud2():", e)
     #
     #     return raw_pointsCloud  # ,pointsColor
+
+
 
 
 if __name__ == '__main__':

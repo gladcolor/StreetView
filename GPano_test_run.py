@@ -17,6 +17,8 @@ import shapely.wkt
 import os
 import fiona
 
+
+
 import logging
 import sys
 import pprint
@@ -109,7 +111,7 @@ def download_buildings_boston():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     buildings = fiona.open(shape_file)
 
-    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\boston\building_images2'
+    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\boston\building_images3'
 
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
@@ -151,7 +153,7 @@ def download_buildings_boston():
 
             lat, lon = geometry.centroid.y, geometry.centroid.x
 
-            distance_threshold = 100
+            distance_threshold = 50 # meter
 
             ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix='', width=576, height=768,  fov=90, distance_threshold=distance_threshold)
 
@@ -159,6 +161,64 @@ def download_buildings_boston():
              #                height=768, pitch=0):
         except Exception as e:
             print("Error in download_buildings_boston(): ", e, i)
+
+def download_buildings_houston():
+    shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\houston\building_in_flood_houson.shp'
+
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+    buildings = fiona.open(shape_file)
+
+    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\houston\street_images'
+
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+    # os.system("mkdir I:\\Research\\House\\images\\1.0 I:\\Research\\House\\images\\1.5 I:\\Research\\House\\images\\2.0 I:\\Research\\House\\images\\2.5 I:\\Research\\House\\images\\3.0 I:\\Research\\House\\images\\3.5 I:\\Research\\House\\images\\4.0 I:\\Research\\House\\images\\4.5")
+
+    # Process_cnt = 10
+    # pool = mp.Pool(processes=Process_cnt)https://m.tsemporium.com/zh_cn/
+    #
+    # for i in range(Process_cnt):
+    #     pool.apply_async(self.getPanoJPGfrmArea, args=(yaw_list, seed_pts_mp, saved_path, boundary_vert, zoom))
+    # pool.close()
+    # pool.join()
+
+    center_x = 0;
+    centre_y = 0;
+
+
+    for i in tqdm(range(len(buildings))):
+        # FID, area_m, ACCTID, story, GEOID, tract_pop,lon, lat, geometry = buildings.iloc[i]
+        # geometry = shapely.wkt.loads(geometry)
+
+
+        try:
+            geometry = buildings[i]['geometry']['coordinates']
+            print("Processing (FID): ", i)
+            geometry = np.array(geometry).squeeze(0)
+
+            x = geometry[:, 0].mean()
+            y = geometry[:, 1].mean()
+
+            inProj = Proj('epsg:3857')  # NAD83 / Massachusetts Mainland (ftUS)
+            outProj = Proj('epsg:4326')
+
+            # lon, lat = transform(inProj, outProj, x, y)
+
+            geometry = transform(inProj, outProj, geometry[:, 0], geometry[:, 1])  # return lat, lon
+
+            geometry = Polygon(zip(geometry[1], geometry[0]))
+
+            lat, lon = geometry.centroid.y, geometry.centroid.x
+
+            distance_threshold = 50 # meter
+
+            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix='', width=576, height=768,  fov=90, distance_threshold=distance_threshold)
+
+             # shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024,
+             #                height=768, pitch=0):
+        except Exception as e:
+            print("Error in download_buildings_boston(): ", e, i)
+
 
 def shoot_baltimore():
     csv_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\data\Vacant_Buildings.csv'
@@ -178,12 +238,12 @@ def shoot_baltimore():
     # gpano.shootLonlats_mp(lonlats_mp, saved_path, Process_cnt=1, views=3, suffix='', width=1024, height=768)
 
 def download_buildings_baltimore():
-    shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\data\vacant_building.shp'
+    shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\data\non_vacant_buildings.shp'
 
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     buildings = fiona.open(shape_file)
 
-    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\street_images_house1'
+    saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\vacant_house\non_vacant_images'
 
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
@@ -208,7 +268,8 @@ def download_buildings_baltimore():
 
         try:
             geometry = buildings[i]['geometry']['coordinates']
-            row_id = buildings[i]['properties']['row_id_1']
+            row_id = buildings[i]['properties']['objectid_1']
+            row_id = int(row_id)
             print("Processing (FID): ", i)
             geometry = np.array(geometry).squeeze(0)
 
@@ -240,6 +301,7 @@ if __name__ == '__main__':
     # download_buildings()
     # test_getPanoJPGfrmArea_philly()
     # download_buildings_boston()
+    download_buildings_houston()
     # shoot_baltimore()
-    download_buildings_baltimore()
+    # download_buildings_baltimore()
 

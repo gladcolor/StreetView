@@ -501,7 +501,7 @@ class GPano():
         if data == 0:
             return 0, 0, 0
         if 'Location' in data:
-            return (data['Location']['panoId'], data['Location']['lng'], data['Location']['lat'])
+            return (data['Location']['panoId'], float(data['Location']['lng']), float(data['Location']['lat']))
         else:
             return 0, 0, 0
 

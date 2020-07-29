@@ -1479,7 +1479,7 @@ class GPano():
         heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
 
         gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
-        logging.info("GSV usl: %s", gsv_url)
+        # logging.info("GSV usl: %s", gsv_url)
 
         return heading, max(10, fov) # google street view support fov > 10 degree only
 

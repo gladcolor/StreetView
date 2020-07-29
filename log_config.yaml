@@ -1,0 +1,41 @@
+version: 1
+formatters:
+  brief:
+    format: "%(asctime)s - %(message)s"
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s"
+handlers:
+  console:
+    class : logging.StreamHandler
+    formatter: simple
+    level   : INFO
+#    level   : DEBUG
+    stream  : ext://sys.stdout
+  file:
+    class : logging.FileHandler
+    formatter: simple
+    level: DEBUG
+    filename: debug.log
+    mode: w
+  error:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: simple
+    filename: error.log
+    maxBytes: 10485760
+    backupCount: 20
+    encoding: utf8
+loggers:
+  main.core:
+    level: DEBUG
+    handlers: [console, file, error]
+  LOG.file:
+    level: DEBUG
+    handlers: [file]
+  console_only:
+    level: DEBUG
+    handlers: [file]
+
+root:
+  level: DEBUG
+  handlers: [console]

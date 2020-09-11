@@ -270,6 +270,7 @@ def download_buildings_baltimore():
             geometry = buildings[i]['geometry']['coordinates']
             row_id = buildings[i]['properties']['objectid_1']
             row_id = int(row_id)
+            row_id = str(row_id)
             print("Processing (FID): ", i)
             geometry = np.array(geometry).squeeze(0)
 
@@ -289,7 +290,7 @@ def download_buildings_baltimore():
 
             distance_threshold = 100
 
-            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix=str(row_id), width=576, height=768,  fov=90, distance_threshold=distance_threshold)
+            ret = gpano.shootLonlat(lon, lat, polygon=geometry, saved_path=saved_path, prefix=str(row_id), width=768, height=768,  fov=90, distance_threshold=distance_threshold)
             logging.info("row_id: %s", row_id)
              # shootLonlat(self, ori_lon, ori_lat, saved_path='', views=1, prefix='', suffix='', width=1024,
              #                height=768, pitch=0):

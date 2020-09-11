@@ -3,7 +3,7 @@ formatters:
   brief:
     format: "%(asctime)s - %(message)s"
   simple:
-    format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(lineno)d - %(message)s"
 handlers:
   console:
     class : logging.StreamHandler

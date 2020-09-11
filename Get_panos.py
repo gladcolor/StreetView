@@ -48,6 +48,22 @@ def test_getPanosfrmLonlats_mp():
     gpano.shootLonlats_mp(mp_lonlat, saved_path=r'J:\Maryland\MS_building\images2', Process_cnt=10)
 
 
+
+def getPanoJPGs_philadelphia():
+    print('started! ')
+    pts = gpano.readRoadSeedsPts_csv(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_county\road_seeds.csv')
+    # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+    #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
+    coords = gpano.readCoords_csv(r'D:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_county\essex_vet.csv')
+    polygon = gpano.formPolygon(coords)
+    saved_path = r'G:\My Drive\Sidewalk_extraction\Essex\jsons'
+    random.shuffle(pts)
+
+    # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
+    gpano.getPanoJPGfrmArea_mp('json_only', pts,  saved_path, coords, Process_cnt=1)
+
+
+
 if __name__ == '__main__':
     try:
         # test_getPanoJPGfrmArea()

@@ -29,9 +29,9 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from skimage import io
 import yaml
-# import selenium
-# from selenium import webdriver
-# from selenium.webdriver.chrome.options import Options
+import selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 import PIL
 from PIL import Image, features
@@ -45,17 +45,17 @@ import urllib.request
 import urllib
 import logging
 
-# logging.basicConfig(level=logging.INFO,
-#                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-#                 datefmt='%a, %d %b %Y %H:%M:%S',
-#                 filename='Pano.log',
-#                 filemode='w')
-#
-# WINDOWS_SIZE = '100, 100'
-# chrome_options = Options()
-# chrome_options.add_argument("--headless")
-# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-# Loading_time = 5
+logging.basicConfig(level=logging.INFO,
+                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                filename='Pano.log',
+                filemode='w')
+
+WINDOWS_SIZE = '100, 100'
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+Loading_time = 5
 
 import logging.config
 
@@ -78,9 +78,9 @@ setup_logging(yaml_path)
         # logger.info(os.path.basename(file))
 
 logger = logging.getLogger('console_only')
-# web_driver_path = r'chromedriver'
-# driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
-# Process_cnt = 10
+web_driver_path = r'chromedriver'
+driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+Process_cnt = 10
 
 """
 Read Me 
@@ -443,7 +443,7 @@ class GPano():
         pool.join()
 
     # Obtain a panomara_ID according to lon/lat.
-    def getPanoIDfrmLonlat0(self, lon: float, lat: float, ) -> (str, float, float):
+    def getPanoIDfrmLonlat(self, lon: float, lat: float, ) -> (str, float, float):
         """ Obtain panomara_id from lat/lon.
             Use selenium to obtain the new url, which contains the panomara_id
             Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
@@ -488,7 +488,7 @@ class GPano():
             print("Error in getPanoIDfrmLonlat()0", e)
 
     # Finished!
-    def getPanoIDfrmLonlat(self, lon, lat):
+    def getPanoIDfrmLonlat0(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
         # print(url)
         r = requests.get(url)
@@ -1238,15 +1238,14 @@ class GPano():
         # lon_diff, lat_diff = ori_lon - polygon.centroid.x,  ori_lat - polygon.centroid.y
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
-        if polygon is not None:
-            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= prefix + "_" + panoid + "_" + str(heading) + '_shooting.png', r_tree=r_tree)
-            if fov < 0:   # if get the long side, exit
-                return 0, 0
-
-
         prefix = str(prefix)
         if prefix != "":
             prefix = prefix + '_'
+
+        if polygon is not None:
+            heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= str(prefix) + "_" + panoid + "_" + str(heading) + '_shooting.png', r_tree=r_tree)
+            if fov < 0:   # if get the long side, exit
+                return 0, 0
 
         # print(idx, 'Heading angle between tree and panorama:', heading)
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
@@ -1352,8 +1351,13 @@ class GPano():
         return fov
 
     def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name='', r_tree=None):  # get the fov angle for the nearest edge of a shapely polygon
-
+        # viewopint: in lon/lat
         geometry = polygon.exterior.coords
+
+        centroid_x, centroid_y = polygon.centroid.xy
+        centroid_x = centroid_x[0]
+        centroid_y = centroid_y[0]
+
         geometry = np.array(geometry)
 
         PI = math.pi
@@ -1415,8 +1419,8 @@ class GPano():
 
         # if get the long side:
         if edge_lengths[nearest_idx] > edge_lengths.mean() * 1.5:
-            logging.info("Got the long side of building, exit.")
-            return -1, -1
+            logging.info("Got the long side of building, but not exit, please check!")
+            # return -1, -1
 
         point1 = simplified_coords[nearest_idx]
         point2 = simplified_coords[nearest_idx + 1]
@@ -1427,20 +1431,12 @@ class GPano():
         angle2 = viewpoint - point2
         angle2 = np.arctan2(angle2[1], angle2[0])
 
-        # print('\nangle1, angle2:', angle1, angle2)
+        distance1 = geodesic((lat, lon), (point1[1], point1[0])).meters
+        distance2 = geodesic((lat, lon), (point2[1], point2[0])).meters
 
-        fov = degrees(abs(angle1 - angle2))
-        if fov > 180:
-            fov = 360 - fov
-
-        fov = int(fov * 1.5)
-        if fov > 120:
-            fov = 120   # the max vertical / horizaontal fov is limited within 120 degrees.
-            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
-
-        # print('\nfov(degrees):', fov)
 
         isSaveFig = True
+        # isSaveFig = False
 
         if isSaveFig:
 
@@ -1478,8 +1474,38 @@ class GPano():
 
         heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
 
-        gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
+
         # logging.info("GSV usl: %s", gsv_url)
+
+        fov = degrees(abs(angle1 - angle2))
+        if fov > 180:
+            fov = 360 - fov
+
+        if fov > 120:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("FOV is too large (%.2f degrees), set the heading toward to centroid!", fov)
+
+        if fov < 10:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("FOV is too small (%.2f degrees), set the heading toward to centroid!", fov)
+            fov = 60
+
+        #
+        # if fov < 10:
+        #     heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+        #     logging.info("FOV is too small (%s degrees), set the heading toward to centroid!", fov)
+        #     fov = 60
+
+        if (max(distance1, distance2) / (min(distance1, distance2) + 0.00000001)) > 2:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("The distances from the viewpoint to two corners is imbalanced, set the heading toward to centroid!")
+            fov = 60
+
+        fov = int(fov * 1.5)
+        if fov > 120:
+            fov = 120  # the max vertical / horizaontal fov is limited within 120 degrees.
+            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
+        # gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
 
         return heading, max(10, fov) # google street view support fov > 10 degree only
 

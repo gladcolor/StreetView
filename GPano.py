@@ -16,7 +16,7 @@ import base64
 import zlib
 import multiprocessing as mp
 import sqlite3
-
+from bs4 import BeautifulSoup
 
 # Geospatial processing
 from pyproj import Proj, transform
@@ -59,6 +59,8 @@ Loading_time = 5
 
 import logging.config
 
+f = open('Google_map_key.ini', 'r')
+MAP_KEY = f.readlines()[0]
 
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
@@ -443,7 +445,7 @@ class GPano():
         pool.join()
 
     # Obtain a panomara_ID according to lon/lat.
-    def getPanoIDfrmLonlat(self, lon: float, lat: float, ) -> (str, float, float):
+    def getPanoIDfrmLonlat1(self, lon: float, lat: float, ) -> (str, float, float):
         """ Obtain panomara_id from lat/lon.
             Use selenium to obtain the new url, which contains the panomara_id
             Initial url: https://www.google.com/maps/@39.9533555,-75.1544777,3a,90y,180h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192
@@ -481,11 +483,14 @@ class GPano():
                 pos2 = new_url.find(url_part2[:5])
                 PanoID = new_url[(pos1 + len(url_part1)):pos2]
                 # print(url)
-                print("getPanoIDfrmLonlat0() obtained new_url: ", new_url)
+                # print("getPanoIDfrmLonlat0() obtained new_url: ", new_url)
 
-            return PanoID, lon_pano, lat_pano  # if cannot find the panomara, return (0, 0, 0)
+            return PanoID, float(lon_pano), float(lat_pano)  # if cannot find the panomara, return (0, 0, 0)
         except Exception as e:
             print("Error in getPanoIDfrmLonlat()0", e)
+
+
+
 
     # Finished!
     def getPanoIDfrmLonlat0(self, lon, lat):
@@ -502,6 +507,37 @@ class GPano():
             return 0, 0, 0
         if 'Location' in data:
             return (data['Location']['panoId'], float(data['Location']['lng']), float(data['Location']['lat']))
+        else:
+            return 0, 0, 0
+
+
+    # Finished! Needs a google map key
+    def getPanoIDfrmLonlat(self, lon, lat):
+        # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+        url = f'https://maps.googleapis.com/maps/api/streetview/metadata?size=768x768&location={lat},{lon}&key={MAP_KEY}'
+               # https://maps.googleapis.com/maps/api/streetview/metadata?
+
+               # https://developers.google.com/maps/documentation/streetview/metadata
+        #  Usage of the Street View Image Metadata endpoint is not charged.
+
+        print(url)
+
+        # r = requests.get(url)
+
+        driver.get(url)
+        # time.sleep(1)
+        soup = BeautifulSoup(driver.page_source)
+        data = json.loads(soup.find("body").text)
+
+        #
+        # if not data:
+        #     panoId = self.getPanoIDfrmLonlat0(lon, lat)
+        #     print("data from getPanoIDfrmLonlat0(): ", panoId)
+        #
+        if data == 0:
+            return 0, 0, 0
+        if 'location' in data:
+            return (data['pano_id'], float(data['location']['lng']), float(data['location']['lat']))
         else:
             return 0, 0, 0
 
@@ -1175,7 +1211,7 @@ class GPano():
             print("Error in getPanoFrmArea(), will restart: ", e, os.getpid())
             self.getPanoJPGfrmArea(yaw_list, seed_pts, saved_path, boundary_vert)
 
-    def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, fov=90, zoom=4, Process_cnt=4):
+    def getPanoJPGfrmArea_mp(self, yaw_list, seed_pts, saved_path, boundary_vert, fov=90, zoom=5, Process_cnt=4):
         seed_pts_mp = mp.Manager().list()
         for seed in seed_pts:
             seed_pts_mp.append(seed)
@@ -1204,13 +1240,13 @@ class GPano():
         # ori_lat: targe lat
         # distance_threshold: meters
 
-        # panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)
+        panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)  # changed
         try:
             jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
             if 'Location' in jdata:
-                panoid = jdata['Location']['panoId']
-                lon = jdata['Location']['lng']
-                lat = jdata['Location']['lat']
+                # panoid = jdata['Location']['panoId']
+                # lon = jdata['Location']['lng']
+                # lat = jdata['Location']['lat']
                 car_heading = float(jdata['Projection']['pano_yaw_deg'])
             else:
                 # print("No Location in the Panojson file.")
@@ -1667,7 +1703,7 @@ class GPano():
                     print("Error in getJsonfrmPanoID() saving json file.", e, panoId)
             return jdata
         except Exception as e:
-            print("Error in getJsonfrmPanoID():", e)
+            print("Error in getJsonfrmPanoID():", e, url)
             return 0
 
     def shootLonlats(self, ori_lonlats, saved_path, views=1, suffix='', width=1024, height=768, pitch=0):

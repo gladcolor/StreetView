@@ -62,13 +62,24 @@ def getPanoJPGs_philadelphia():
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
     gpano.getPanoJPGfrmArea_mp('json_only', pts,  saved_path, coords, Process_cnt=1)
 
+def getPanoJPGs_oceancity():
+    print('started! ')
+    pts = gpano.readRoadSeedsPts_csv(r'J:\Research\Resilience\data\OcenaCity\road_midpoints.csv')
+    # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
+    #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
+    coords = gpano.readCoords_csv(r'J:\Research\Resilience\data\OcenaCity\boudary_vertices.csv')
+    polygon = gpano.formPolygon(coords)
+    saved_path = r'J:\Research\Resilience\data\OcenaCity\panos2'
+    random.shuffle(pts)
 
+    # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
+    gpano.getPanoJPGfrmArea_mp(None, pts,  saved_path, coords, Process_cnt=5)
 
 if __name__ == '__main__':
     try:
         # test_getPanoJPGfrmArea()
-        test_getPanosfrmLonlats_mp()
+        getPanoJPGs_oceancity()
 
     except:
         # test_getPanoJPGfrmArea()
-        test_getPanosfrmLonlats_mp()
+        getPanoJPGs_oceancity()

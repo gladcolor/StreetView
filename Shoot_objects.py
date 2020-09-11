@@ -367,7 +367,7 @@ def shoot_oceancity_building():
         r_tree = None
 
         w = 768
-        h = 768
+        h = 1024
 
         if os.path.exists(rtree_path):
             r_tree = index.Rtree(rtree_path.replace(".idx", ''))

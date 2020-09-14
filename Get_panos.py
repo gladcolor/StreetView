@@ -64,16 +64,16 @@ def getPanoJPGs_philadelphia():
 
 def getPanoJPGs_oceancity():
     print('started! ')
-    pts = gpano.readRoadSeedsPts_csv(r'J:\Research\Resilience\data\OcenaCity\road_midpoints.csv')
+    pts = gpano.readRoadSeedsPts_csv(r'X:\My Drive\Research\StreetGraph\data\oceancity\road_ends.csv')
     # coords = GPano.GPano.readCoords_csv(GPano.GPano(),
     #                                     r'O:\OneDrive_NJIT\OneDrive - NJIT\Research\sidewalk\Essex_test\polygon_coords.csv')
-    coords = gpano.readCoords_csv(r'J:\Research\Resilience\data\OcenaCity\boudary_vertices.csv')
+    coords = gpano.readCoords_csv(r'X:\My Drive\Research\StreetGraph\data\oceancity\boudary_vertices.csv')
     polygon = gpano.formPolygon(coords)
-    saved_path = r'J:\Research\Resilience\data\OcenaCity\panos2'
+    saved_path = r'X:\My Drive\Research\StreetGraph\data\oceancity\panos'
     random.shuffle(pts)
 
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
-    gpano.getPanoJPGfrmArea_mp(None, pts,  saved_path, coords, Process_cnt=5)
+    gpano.getPanoJPGfrmArea_mp(None, pts,  saved_path, coords, Process_cnt=1)
 
 if __name__ == '__main__':
     try:

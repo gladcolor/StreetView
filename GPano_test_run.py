@@ -297,12 +297,47 @@ def download_buildings_baltimore():
         except Exception as e:
             print("Error in download_buildings_baltimore(): ", e, i)
 
+def clip_panos_ocean_city():
+    folder = r'J:\Research\Resilience\data\OcenaCity\panos2'
+    saved_path = r'J:\Research\Resilience\data\OcenaCity\pano_clips'
+    fov = 90   # degree
+    h_w_ratio = 3/4
+    yawList = [90, 270]
+    files = glob.glob(os.path.join(folder, "*.jpg"))
+    for idx, jpg in tqdm(enumerate(files)):
+        basename = os.path.basename(jpg)
+        # img = Image.open(jpg)
+        # img = np.array(img)
+        img = cv2.imread(jpg)
+        h_img, w_img, channel = img.shape
+        w = int(fov/360 * w_img)
+        h = int(w * h_w_ratio)
+        print("panorama shape:", img.shape)
+        fov_h = radians(90)
+
+        theta0 = 0
+        pano_pitch = 0
+
+        fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
+        for yaw in yawList:
+            rimg = gpano.clip_pano(theta0,
+                                   radians(yaw),
+                                   fov_h,
+                                   fov_v,
+                                   w,
+                                   img,
+                                   pano_pitch)
+            new_name = os.path.join(saved_path, basename)
+            cv2.imwrite('%s_%d_%d.jpg' % (new_name, theta0, yaw), rimg)
+
+
 if __name__ == '__main__':
+    clip_panos_ocean_city()
     # test_getPanoJPGfrmArea()
     # download_buildings()
     # test_getPanoJPGfrmArea_philly()
     # download_buildings_boston()
-    download_buildings_houston()
+    # download_buildings_houston()
     # shoot_baltimore()
     # download_buildings_baltimore()
 

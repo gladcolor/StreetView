@@ -94,6 +94,27 @@ Please implement all the methods. I have written some tips (not code) in the met
 
 
 class GPano():
+
+    def deg2rad(self, d):
+        return float(d) * np.pi / 180
+
+    def rotate_image(self, old_image):
+        (old_height, old_width, _) = old_image.shape
+        M = cv2.getRotationMatrix2D(((old_width - 1) / 2., (old_height - 1) / 2.), 270, 1)
+        rotated = cv2.warpAffine(old_image, M, (old_width, old_height))
+        return rotated
+
+    def xrotation(self, th):
+        c = np.cos(th)
+        s = np.sin(th)
+        return np.array([[1, 0, 0], [0, c, s], [0, -s, c]])
+
+    def yrotation(self, th):
+        c = np.cos(th)
+        s = np.sin(th)
+        return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+
     # Obtain a panomaro image from Google Street View Map
     def getPanoZoom0frmID(self, panoId, saved_path):
         url = r'http://maps.google.com/cbk?output=tile&zoom=0&x=0&y=0&panoid=' + panoId
@@ -807,7 +828,7 @@ class GPano():
         except Exception as e:
             print("Error in getLastJson(): ", e)
             print(links)
-            return "Error"
+            return 0
 
     def getImageclipsfrmJson(self, jdata, yaw_list=0, pitch_list=0, saved_path=''):
         try:
@@ -879,6 +900,10 @@ class GPano():
                     try:
 
                         jdata = self.getJsonfrmPanoID(next_panoId, dm=1)
+                        if jdata == 0:
+                            print("The road is dead end in Google Stree Map (forwarding, jdata == 0).")
+                            return lonlats
+
                     except Exception as e:
                         print("Error in getJsonfrmPanoID in  go_along_road_forward():", e)
                         print("Waiting for 5 seconds...")
@@ -1037,7 +1062,35 @@ class GPano():
 
                 try:
                     # print(panoId)
-                    jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path, dm=1)
+                    try:
+                        jdata = self.getJsonfrmPanoID(next_panoId, saved_path=saved_path, dm=1)
+                        if jdata == 0:
+                            print("The road is dead end in Google Stree Map (backwarding, jdata == 0).")
+                            return lonlats
+                    except Exception as e:
+                        print("Error in getJsonfrmPanoID in go_along_forward():", e)
+                        print("Waiting for 5 seconds...")
+                        time.sleep(5)
+                        next_json = self.getNextJson(jdata, pre_panoId)
+                        if next_Json == 0:
+                            return lonlats
+
+                        next_lon = next_Json["Location"]["lng"]
+                        next_lat = next_Json["Location"]["lat"]
+                        next_panoId = next_Json["Location"]["panoId"]
+                        pre_panoId = panoId
+
+                        step_cnt += 1
+                        next_pt = (next_lon, next_lat)
+                        if len(pre_panoId) < 10:
+                            return lonlats
+                        if panoId == 0:
+                            return lonlats
+
+                        print('step_cnt: ', step_cnt)
+                        continue
+
+
 
                     # print('jdata: ', jdata)
                     pt_lon = float(jdata["Location"]["lng"])
@@ -1073,21 +1126,6 @@ class GPano():
                         if not self.fileExists(saved_path, panoId + ".json"):
                             with open(json_name, 'w') as f:
                                 json.dump(jdata, f)
-                        else:
-                            next_Json = self.getLastJson(jdata, pre_panoId)
-                            next_lon = next_Json["Location"]["lng"]
-                            next_lat = next_Json["Location"]["lat"]
-                            next_panoId = next_Json["Location"]["panoId"]
-
-                            next_pt = (next_lon, next_lat)
-
-                            step_cnt += 1
-
-                            pre_panoId = panoId
-
-                            if len(pre_panoId) < 10:
-                                return lonlats
-
                     except Exception as e:
                         print("Error in go_along_road_backward() saving json file.", e, panoId)
 
@@ -1098,7 +1136,6 @@ class GPano():
                     elif yaw_list[0] == 'json_only':
                         pass
                     else:
-
                         self.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list,
                                                   saved_path=saved_path)
 
@@ -1125,9 +1162,6 @@ class GPano():
                     if step_cnt % 100 == 0:
                         print("Step count:", step_cnt)
 
-                        # start_time = time.time()
-                        # Cnt = 0
-                        # Cnt_interval = 100
 
                     Cnt += 1
                     if Cnt % Cnt_interval == (Cnt_interval - 1):
@@ -1140,23 +1174,25 @@ class GPano():
                     print("Error in go_along_road_backward(), pid:", e, os.getpid())
                     print("Waiting for 5 seconds...")
                     time.sleep(5)
+                    if len(pre_panoId) < 10:
+                        return lonlats
+
                     next_Json = self.getLastJson(jdata, pre_panoId)
+
                     if next_Json == 0:
                         return lonlats
+
                     next_lon = next_Json["Location"]["lng"]
                     next_lat = next_Json["Location"]["lat"]
                     next_panoId = next_Json["Location"]["panoId"]
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
-                    if len(pre_panoId) < 10:
-                        return lonlats
+
 
                     if panoId == 0:
                         return lonlats
                     pre_panoId = panoId
 
-                    if len(pre_panoId) < 10:
-                        return lonlats
 
                     print('step_cnt: ', step_cnt)
                     continue
@@ -1700,10 +1736,10 @@ class GPano():
                     with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
                         json.dump(jdata, f)
                 except Exception as e:
-                    print("Error in getJsonfrmPanoID() saving json file.", e, panoId)
+                    print("Error in getJsonfrmPanoID() saving json file, e, panoId:", e, panoId)
             return jdata
         except Exception as e:
-            print("Error in getJsonfrmPanoID():", e, url)
+            print("Error in getJsonfrmPanoID(), e, url:", e, url)
             return 0
 
     def shootLonlats(self, ori_lonlats, saved_path, views=1, suffix='', width=1024, height=768, pitch=0):
@@ -1941,7 +1977,7 @@ class GPano():
     #     else:
     #         return theta_phis
 
-    def clip_pano(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90):  # fov < 120
+    def clip_pano0(self, np_img, theta=0, phi=0, w=1024, h=768, fov=90):  # fov < 120
         if fov > 120:
             fov = 120
             print("Fov should be < 120 degree.")
@@ -2008,14 +2044,17 @@ class GPano():
 
         return img
 
-    def clip_pano2(self, theta0, phi0, fov_h, fov_v, width, img):  # fov < 120
+    def clip_pano(self, theta0, phi0, fov_h, fov_v, width, img, pitch):  # fov < 120
         """
           theta0 is pitch
           phi0 is yaw
           render view at (pitch, yaw) with fov_h by fov_v
           width is the number of horizontal pixels in the view
           """
-        m = np.dot(yrotation(phi0), xrotation(theta0))
+        m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
+
+        # Huan
+        # m = np.dot(yrotation(phi0), np.dot(xrotation(pitch), xrotation(theta0))
 
         (base_height, base_width, _) = img.shape
 
@@ -2049,8 +2088,6 @@ class GPano():
 
         new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
         return new_img
-
-
 
 
 class GSV_depthmap(object):

@@ -531,6 +531,28 @@ class GPano():
         else:
             return 0, 0, 0
 
+    # Finished! Needs a google map key
+    def getPanoIDfrmAddress(self, addr: str) -> (str, float, float):
+        # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
+        # addr = r"34 Asbury Rd, Ocean City, NJ"
+        # example: https://maps.googleapis.com/maps/api/streetview/metadata?&location=add&key=[api_key]
+        url = f'https://maps.googleapis.com/maps/api/streetview/metadata?size=768x768&location={addr}&key={MAP_KEY}'
+               # https://maps.googleapis.com/maps/api/streetview/metadata?
+
+               # https://developers.google.com/maps/documentation/streetview/metadata
+        #  Usage of the Street View Image Metadata endpoint is not charged.
+
+        print(url)
+        driver.get(url)
+        soup = BeautifulSoup(driver.page_source)
+        data = json.loads(soup.find("body").text)
+
+        if data == 0:
+            return 0, 0, 0
+        if 'location' in data:
+            return (data['pano_id'], float(data['location']['lng']), float(data['location']['lat']))
+        else:
+            return 0, 0, 0
 
     # Finished! Needs a google map key
     def getPanoIDfrmLonlat(self, lon, lat):

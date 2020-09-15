@@ -331,8 +331,35 @@ def clip_panos_ocean_city():
             cv2.imwrite('%s_%d_%d.jpg' % (new_name, theta0, yaw), rimg)
 
 
+def get_panoIDs_ocean_city_address():
+    address_txt = r'X:\My Drive\Research\StreetGraph\data\oceancity\property_address.txt'
+    folder = os.path.dirname(address_txt)
+    new_name = address_txt[:-4] + "_panoIds.csv"
+    saved_csv = os.path.join(folder, new_name)
+
+    f = open(address_txt, 'r')
+    addresses = f.readlines()
+    f.close()
+
+    f = open(saved_csv, 'w')
+    f.writelines("addr,panoIs,lon,lat" + '\n')
+
+    for idx, addr in tqdm(enumerate(addresses)):
+        addr = addr.replace("\n", '')
+        try:
+             panoIds, lon, lat = gpano.getPanoIDfrmAddress(addr)
+             print(f"{addr} : {panoIds}, {lon}, {lat} \n")
+             f.writelines(','.join([addr,str(panoIds), str(lon), str(lat)]) + "\n")
+        except Exception as e:
+            print("Error in get_panoIDs_ocean_city_address(), address, log:", addr, e)
+            continue
+
+    f.close()
+
 if __name__ == '__main__':
-    clip_panos_ocean_city()
+    get_panoIDs_ocean_city_address()
+
+    # clip_panos_ocean_city()
     # test_getPanoJPGfrmArea()
     # download_buildings()
     # test_getPanoJPGfrmArea_philly()

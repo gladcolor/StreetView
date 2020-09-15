@@ -73,7 +73,7 @@ def getPanoJPGs_oceancity():
     random.shuffle(pts)
 
     # self.gpano.getPanoJPGfrmArea(pts, saved_path, coords)
-    gpano.getPanoJPGfrmArea_mp(None, pts,  saved_path, coords, Process_cnt=1)
+    gpano.getPanoJPGfrmArea_mp(None, pts,  saved_path, coords, Process_cnt=5)
 
 if __name__ == '__main__':
     try:

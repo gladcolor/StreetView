@@ -845,15 +845,136 @@ def shoot_Baltimore_buildings():
     except Exception as e:
         logger.error("shoot_houston_building: %s", e)
 
-if __name__ == "__main__":
 
+def shoot_oceancity_building_with_panoId():
+    try:
+        shape_file = r'X:\My Drive\Research\StreetGraph\data\oceancity\vectors\ocean_parcel_panoid.shp'
+        saved_path = r'X:\My Drive\Research\StreetGraph\data\oceancity\images'
+
+        setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
+
+        inEPSG = 'EPSG:3424'
+        outEPSG = 'EPSG:4326'
+
+        rtree_path = shape_file.replace(".shp", '_rtree.idx')
+        r_tree = None
+
+        w = 768
+        h = 1024
+
+        if os.path.exists(rtree_path):
+            r_tree = index.Rtree(rtree_path.replace(".idx", ''))
+            logger.info("Loading the Rtree: %s", rtree_path)
+        else:
+            logger.info("Creating the Rtree: %s", rtree_path)
+            create_rtree(shape_file, inEPSG=inEPSG, outEPSG=outEPSG)
+
+            logger.info("Loading the Rtree: %s", rtree_path)
+            r_tree = index.Rtree(rtree_path.replace(".idx", ''))
+
+        # test = r_tree.intersection((-95.608977, 29.736570, -95.408977, 29.936570))
+
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+        buildings = fiona.open(shape_file)
+
+        transformer = Transformer.from_crs(inEPSG, outEPSG, always_xy=True)
+
+        # generate shaple.Polygons.
+        shoot_ply = shoot_polygons([])
+        start = 0
+        for idx in tqdm(range(start, len(buildings))):
+            try:
+                building = buildings[idx]
+
+                geometry = building['geometry']['coordinates']
+                ID = str(building['properties']['ID'])
+
+                logger.info("Processing polyogn # ID: %s", str(ID))
+
+                if len(geometry) > 1:
+                    logger.info('Polygon # %s have multiple (%d) parts.', idx, len(geometry))
+                    geometry = geometry[:1]
+                geometry = np.array(geometry).squeeze(0)
+
+                xs, ys = transformer.transform(geometry[:, 0], geometry[0:, 1])
+
+                polygon = Polygon(zip(xs, ys))
+
+                x, y = polygon.centroid.xy  # x is an array, the number is x[0]
+                x = x[0]
+                y = y[0]
+
+                logger.info("polygon.centroid: %f, %f", x, y)
+
+                # panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
+
+                panoId = building['properties']['panoIds']
+                lon = building['properties']['lon']
+                lat = building['properties']['lat']
+
+
+
+                if panoId == 0:
+                    logger.info("Cannot find a street view image at : %s, %s ", x, y)
+                    continue
+
+                viewpoint = np.array((lon, lat))
+                # triangle = getShooting_triangle(viewpoint, polygon)
+
+                min_rotated_rectangle = polygon.minimum_rotated_rectangle
+                # points_list = min_rotated_rectangle.exterior.coords
+
+                triangle, heading = getShooting_triangle(viewpoint, min_rotated_rectangle)
+                GSV_url = gpano.getGSV_url_frm_lonlat(lon, lat, heading)
+                logger.info("GSV url: %s", GSV_url)
+
+                # find intersects in the r-tree
+                bound = triangle.bounds
+                intersects = r_tree.intersection(bound)
+                intersects = list(intersects)
+
+                isIntersected = False
+                for inter in intersects:
+                    if inter == idx:
+                        continue
+                    building = buildings[inter]['geometry']
+                    building = fionaPolygon2shaple(building)
+                    building = shapelyReproject(transformer, building)
+                    isIntersected = triangle.intersects(building)
+                    if isIntersected:
+                        logger.info("Occluded by other houses.")
+                        break
+
+                if isIntersected:
+                    # logger.info("Occluded by other houses.")
+                    continue
+
+                ret = gpano.shootLonlat(lon, lat, polygon=min_rotated_rectangle, saved_path=saved_path, prefix=ID,
+                                        width=w,
+                                        height=h, fov=90)
+                # logger.info("Google Street View: %s", gpano.getGSV_url_frm_lonlat(lon, lat, ))
+
+                # logger.info("intersects: %s", intersects)
+
+            except Exception as e:
+                logger.error("Error in building polygons: %s", e)
+                continue
+
+
+
+
+    except Exception as e:
+        logger.error("shoot_philly_building: %s", e)
+
+if __name__ == "__main__":
+    shoot_oceancity_building_with_panoId()
     # shape_file = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\houston\building_in_flood_houson.shp'
     # rtree = rtree
 
     # shoot_houston_building()
     # shoot_philly_building()
 
-    shoot_oceancity_building()
+    # shoot_oceancity_building()
     # shoot_Boston_buildings()
     # shoot_Boston_buildings()
     # create_rtree(shape_file)

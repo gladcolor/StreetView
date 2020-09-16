@@ -9,6 +9,7 @@ import json
 import  sqlite3
 from tqdm import tqdm
 import multiprocessing as mp
+import Shoot_objects
 
 import geopandas as gpd
 import pandas as pd
@@ -16,12 +17,15 @@ from shapely.geometry import Point, Polygon
 import shapely.wkt
 import os
 import fiona
+from pyproj import Proj, transform, Transformer
 
-
+from tqdm import tqdm
 
 import logging
 import sys
 import pprint
+
+from rtree import index
 
 from pyproj import Proj, transform
 from geopy.distance import geodesic
@@ -356,8 +360,206 @@ def get_panoIDs_ocean_city_address():
 
     f.close()
 
+def get_PanoJPG_oceancity():
+    task_txt = r'X:\My Drive\Research\StreetGraph\data\oceancity\missing_panos.txt'
+    folder = os.path.dirname(task_txt)
+
+    saved_path = r'X:\My Drive\Research\StreetGraph\data\oceancity\panos'
+
+    f = open(task_txt, 'r')
+    tasks = f.readlines()
+    f.close()
+
+
+    for idx, task in tqdm(enumerate(tasks)):
+        panoId = task.replace("\n", '')
+        try:
+            gpano.getPanoJPGfrmPanoId(panoId, saved_path, zoom=5)
+            print(f"Processing: {idx}, {panoId}   \n")
+
+        except Exception as e:
+            print("Error in get_PanoJPG_oceancity, address, log:", panoId, e)
+            continue
+
+    f.close()
+
+
+
+def clip_panos_oceancity_with_panoId():
+    try:
+        shape_file = r'X:\My Drive\Research\StreetGraph\data\oceancity\vectors\ocean_parcel_panoid.shp'
+        saved_path = r'X:\My Drive\Research\StreetGraph\data\oceancity\images3'
+
+        pano_path = r'X:\My Drive\Research\StreetGraph\data\oceancity\panos'
+
+        setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
+
+        inEPSG = 'EPSG:3424'
+        outEPSG = 'EPSG:4326'
+
+        fov_h_degree = 90  # degree
+        fov_h_radian = radians(fov_h_degree)
+
+        h_w_ratio = 1
+
+
+
+
+        rtree_path = shape_file.replace(".shp", '_rtree.idx')
+        r_tree = None
+
+        if os.path.exists(rtree_path):
+            r_tree = index.Rtree(rtree_path.replace(".idx", ''))
+            logger.info("Loading the Rtree: %s", rtree_path)
+        else:
+            logger.info("Creating the Rtree: %s", rtree_path)
+            Shoot_objects.create_rtree(shape_file, inEPSG=inEPSG, outEPSG=outEPSG)
+
+            logger.info("Loading the Rtree: %s", rtree_path)
+            r_tree = index.Rtree(rtree_path.replace(".idx", ''))
+
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+        buildings = fiona.open(shape_file)
+
+        transformer = Transformer.from_crs(inEPSG, outEPSG, always_xy=True)
+
+        # generate shaple.Polygons.
+
+        start = 0
+        for idx in tqdm(range(start, len(buildings))):
+            try:
+                building = buildings[idx]
+
+                geometry = building['geometry']['coordinates']
+                ID = str(building['properties']['ID'])
+
+                logger.info("Processing polyogn # ID: %s", str(ID))
+
+                if len(geometry) > 1:
+                    logger.info('Polygon # %s have multiple (%d) parts.', idx, len(geometry))
+                    geometry = geometry[:1]
+                geometry = np.array(geometry).squeeze(0)
+
+                xs, ys = transformer.transform(geometry[:, 0], geometry[0:, 1])
+
+                polygon = Polygon(zip(xs, ys))
+
+                x, y = polygon.centroid.xy  # x is an array, the number is x[0]
+                x = x[0]
+                y = y[0]
+
+                logger.info("polygon.centroid: %f, %f", x, y)
+
+                # panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
+
+                panoId = building['properties']['panoIds']
+                lon = building['properties']['lon']
+                lat = building['properties']['lat']
+
+                if panoId == 0:
+                    logger.info("Cannot find a street view image at : %s, %s ", x, y)
+                    continue
+
+                viewpoint = np.array((lon, lat))
+                # triangle = getShooting_triangle(viewpoint, polygon)
+
+                min_rotated_rectangle = polygon.minimum_rotated_rectangle
+                # points_list = min_rotated_rectangle.exterior.coords
+
+
+
+                # triangle, heading = Shoot_objects.getShooting_triangle(viewpoint, min_rotated_rectangle)
+                heading = gpano.getDegreeOfTwoLonlat(lat, lon, y, x)
+                heading = round(heading, 2)
+                GSV_url = gpano.getGSV_url_frm_lonlat(lon, lat, heading)
+                logger.info("GSV url: %s", GSV_url)
+
+                # find intersects in the r-tree
+                # bound = triangle.bounds
+                # intersects = r_tree.intersection(bound)
+                # intersects = list(intersects)
+
+                # isIntersected = False
+                # for inter in intersects:
+                #     if inter == idx:
+                #         continue
+                #     building = buildings[inter]['geometry']
+                #     building = Shoot_objects.fionaPolygon2shaple(building)
+                #     building = Shoot_objects.shapelyReproject(transformer, building)
+                #     isIntersected = triangle.intersects(building)
+                #     if isIntersected:
+                #         logger.info("Occluded by other houses.")
+                #         break
+                #
+                # if isIntersected:
+                #     logger.info("Occluded by other houses.")
+                #     continue
+
+                json_file = os.path.join(pano_path, panoId + ".json")
+                jdata = json.load(open(json_file, 'r'))
+                pano_yaw = jdata["Projection"]['pano_yaw_deg']
+                pano_yaw = float(pano_yaw)
+                phi = float(heading) - pano_yaw
+
+                if phi > math.pi:
+                    phi = phi - 2 * math.pi
+                if phi < -math.pi:
+                    phi = phi + 2 * math.pi
+                phi = round(phi, 2)
+
+                car_heading = pano_yaw
+
+                _, fov = gpano.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path,
+                                                  file_name=str(ID) + "_" + panoId + "_" + str(
+                                                      heading) + '_shooting.png')
+
+                fov_h_degree = fov  # degree
+                fov_h_radian = radians(fov_h_degree)
+
+
+                # open panorama image
+                pano_file = os.path.join(pano_path, panoId + ".jpg")
+                img = cv2.imread(pano_file)
+                h_img, w_img, channel = img.shape
+                w = int(fov_h_degree / 360 * w_img)
+                h = int(w * h_w_ratio)
+                fov_v_radian = atan((h * tan((fov_h_radian / 2)) / w)) * 2
+                print("panorama shape:", img.shape)
+
+
+
+
+                theta0 = 0
+                pano_pitch = 0
+
+                rimg = gpano.clip_pano(theta0,
+                                       radians(phi),
+                                       fov_h_radian,
+                                       fov_v_radian,
+                                       w,
+                                       img,
+                                       pano_pitch)
+                basename = f"{ID}_{panoId}_{str(heading)}.jpg"
+                new_name = os.path.join(saved_path, basename)
+                cv2.imwrite(new_name, rimg)
+                # logger.info("Google Street View: %s", gpano.getGSV_url_frm_lonlat(lon, lat, ))
+
+                logger.info("Clipped: %s", new_name)
+
+            except Exception as e:
+                logger.error("Error in building polygons: %s", e)
+                continue
+
+
+
+
+    except Exception as e:
+        logger.error("shoot_philly_building: %s", e)
+
 if __name__ == '__main__':
-    get_panoIDs_ocean_city_address()
+
+    clip_panos_oceancity_with_panoId()
+    # get_panoIDs_ocean_city_address()
 
     # clip_panos_ocean_city()
     # test_getPanoJPGfrmArea()

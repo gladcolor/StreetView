@@ -22,6 +22,8 @@ from bs4 import BeautifulSoup
 from pyproj import Proj, transform
 from geopy.distance import geodesic
 from shapely.geometry import Point, Polygon
+from shapely.ops import nearest_points
+
 
 import numpy as np
 import pandas as pd
@@ -142,27 +144,30 @@ class GPano():
         url = f"https://www.google.com/maps/@{lat},{lon},3a,{fov}y,{heading}h,{tilt}t/data={url_part1}{url_part2}"
         return url
 
-    def getDegreeOfTwoLonlat(self, latA, lonA, latB, lonB):  #Bearing from point A to B (first to second),
+    def find_nearest_oint(self, polygon: Polygon, point: (float, float)) -> (float, float):
+        p1, p2 = nearest_points(poly, point)
+
+    def getDegreeOfTwoLonlat(self, latA, lonA, latTarget, lonTarget):  #Bearing from point A to B (first to second),
 
         """
         Args:
             point p1(latA, lonA)
-            point p2(latB, lonB)
+            point p2(latTarget, lonTarget)
         Returns:
             bearing between the two GPS points,
             default: the basis of heading direction is north
             https://blog.csdn.net/zhuqiuhui/article/details/53180395
             This article shows the similar method
-            Bearing from point A to B,
+            Bearing from point A to Target,
             https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
         """
         radLatA = math.radians(float(latA))
         radLonA = math.radians(float(lonA))
-        radLatB = math.radians(float(latB))
-        radLonB = math.radians(float(lonB))
-        dLon = radLonB - radLonA
-        y = math.sin(dLon) * cos(radLatB)
-        x = cos(radLatA) * sin(radLatB) - sin(radLatA) * cos(radLatB) * cos(dLon)
+        radLatTarget = math.radians(float(latTarget))
+        radLonTarget = math.radians(float(lonTarget))
+        dLon = radLonTarget - radLonA
+        y = math.sin(dLon) * cos(radLatTarget)
+        x = cos(radLatA) * sin(radLatTarget) - sin(radLatA) * cos(radLatTarget) * cos(dLon)
         brng = degrees(atan2(y, x))
         if brng < 0:
             brng = (brng + 360) #% 360
@@ -365,7 +370,7 @@ class GPano():
 
         return status
 
-    def getPanoJPGfrmPanoId(self, panoId, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
+    def getPanoJPGfrmPanoId(self, panoId, saved_path: str, prefix="", suffix="", zoom: int = 5) -> bool:
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
@@ -1444,7 +1449,7 @@ class GPano():
         # return fov, central bearing
         return fov
 
-    def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name='', r_tree=None):  # get the fov angle for the nearest edge of a shapely polygon
+    def get_fov4edge(self, viewpoint, car_heading, polygon, saved_path='', file_name='', inEPSG='EPSG:4326', r_tree=None):  # get the fov angle for the nearest edge of a shapely polygon
         # viewopint: in lon/lat
         geometry = polygon.exterior.coords
 
@@ -1529,6 +1534,54 @@ class GPano():
         distance2 = geodesic((lat, lon), (point2[1], point2[0])).meters
 
 
+
+
+        # print("number of points, edges: ", len(geometry), len(mid_points))
+        #
+        # print("\nslope, tan(): ", tan(PI / 2 - path_angle))
+
+        to_lon, to_lat = transform(local_csr, inProj, mid_points[nearest_idx, 0],
+                                       mid_points[nearest_idx, 1])
+
+        heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
+
+
+        # logging.info("GSV usl: %s", gsv_url)
+
+        fov = degrees(abs(angle1 - angle2))
+        if fov > 180:
+            fov = 360 - fov
+
+        if fov > 120:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("FOV is too large (%.2f degrees), set the heading toward to centroid!", fov)
+
+        if fov < 10:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("FOV is too small (%.2f degrees), set the heading toward to centroid!", fov)
+            # fov = 60
+
+        #
+        # if fov < 10:
+        #     heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+        #     logging.info("FOV is too small (%s degrees), set the heading toward to centroid!", fov)
+        #     fov = 60
+
+        if (max(distance1, distance2) / (min(distance1, distance2) + 0.00000001)) > 2:
+            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
+            logging.info("The distances from the viewpoint to two corners is imbalanced, set the heading toward to centroid!")
+            # fov = 60
+
+        if fov > 120:
+            fov = 120
+        else:
+            fov = int(fov * 1.5)
+            if fov > 90:
+                fov = 90  # the max vertical / horizaontal fov is limited within 120 degrees.
+            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
+        # gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
+        fov = round(fov, 2)
+
         isSaveFig = True
         # isSaveFig = False
 
@@ -1554,52 +1607,10 @@ class GPano():
             arrow_y = sin(radians(90 - car_heading))
             plt.arrow(viewpoint[0], viewpoint[1], arrow_x * 10, arrow_y * 10, head_width=0.5)
 
-            # saved_path = r'K:\OneDrive_NJIT\OneDrive - NJIT\Research\Resilience\data\boston\building_images3'
+            file_name  =  file_name.replace("_shooting", f"_fov_{str(fov)}_shooting")
             saved_path = os.path.join(saved_path, file_name)
             plt.savefig(saved_path)
             plt.close(fig)
-
-        # print("number of points, edges: ", len(geometry), len(mid_points))
-        #
-        # print("\nslope, tan(): ", tan(PI / 2 - path_angle))
-
-        to_lon, to_lat = transform(local_csr, inProj, mid_points[nearest_idx, 0],
-                                       mid_points[nearest_idx, 1])
-
-        heading = self.getDegreeOfTwoLonlat(lat, lon, to_lat, to_lon)  # #Bearing from point A to B,, (lat, lon)!
-
-
-        # logging.info("GSV usl: %s", gsv_url)
-
-        fov = degrees(abs(angle1 - angle2))
-        if fov > 180:
-            fov = 360 - fov
-
-        if fov > 120:
-            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
-            logging.info("FOV is too large (%.2f degrees), set the heading toward to centroid!", fov)
-
-        if fov < 10:
-            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
-            logging.info("FOV is too small (%.2f degrees), set the heading toward to centroid!", fov)
-            fov = 60
-
-        #
-        # if fov < 10:
-        #     heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
-        #     logging.info("FOV is too small (%s degrees), set the heading toward to centroid!", fov)
-        #     fov = 60
-
-        if (max(distance1, distance2) / (min(distance1, distance2) + 0.00000001)) > 2:
-            heading = self.getDegreeOfTwoLonlat(lat, lon, centroid_y, centroid_x)  # #Bearing from point A to B,, (lat, lon)!
-            logging.info("The distances from the viewpoint to two corners is imbalanced, set the heading toward to centroid!")
-            fov = 60
-
-        fov = int(fov * 1.5)
-        if fov > 120:
-            fov = 120  # the max vertical / horizaontal fov is limited within 120 degrees.
-            # if the width:height is 3:4, the maximum fov of width:height is 90:120 degrees
-        # gsv_url = self.getGSV_url_frm_lonlat(lon, lat, heading=heading, fov=fov)
 
         return heading, max(10, fov) # google street view support fov > 10 degree only
 

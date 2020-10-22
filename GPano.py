@@ -26,7 +26,7 @@ from shapely.ops import nearest_points
 
 
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import interpolate
 from skimage import io
@@ -60,8 +60,9 @@ chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
 
 import logging.config
-
 f = open('Google_map_key.ini', 'r')
+
+# f = open('/media/huan/HD4T/Research/StreetView/Google_street_view/Google_map_key.ini', 'r')
 MAP_KEY = f.readlines()[0]
 
 
@@ -83,6 +84,8 @@ setup_logging(yaml_path)
 
 logger = logging.getLogger('console_only')
 web_driver_path = r'chromedriver'
+
+# web_driver_path = r'/media/huan/HD4T/Research/StreetView/Google_street_view/chromedriver_linux64/chromedriver'
 driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 Process_cnt = 10
 
@@ -519,7 +522,7 @@ class GPano():
 
 
     # Finished!
-    def getPanoIDfrmLonlat0(self, lon, lat):
+    def getPanoIDfrmLonlat(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
         # print(url)
         r = requests.get(url)
@@ -560,7 +563,7 @@ class GPano():
             return 0, 0, 0
 
     # Finished! Needs a google map key
-    def getPanoIDfrmLonlat(self, lon, lat):
+    def getPanoIDfrmLonlat0(self, lon, lat):
         # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
         url = f'https://maps.googleapis.com/maps/api/streetview/metadata?size=768x768&location={lat},{lon}&key={MAP_KEY}'
                # https://maps.googleapis.com/maps/api/streetview/metadata?
@@ -2339,6 +2342,20 @@ class GSV_depthmap(object):
             return depthMap
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
+
+    def saveDepthMap_frm_panoId(self, panoId, saved_path):
+        jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1)
+
+
+        depthMap = self.getDepthmapfrmJson(jdata)
+
+        new_name = os.path.join(saved_path, panoId + ".tif")
+
+        if len(saved_path) > 0:
+            self.saveDepthmapImage(depthMap, new_name)
+
+        # return depthMap
+
 
     def saveDepthmapImage(self, depthMap, saved_file):
         im = depthMap["depthMap"]

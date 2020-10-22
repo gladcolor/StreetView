@@ -30,6 +30,7 @@ from rtree import index
 from pyproj import Proj, transform
 from geopy.distance import geodesic
 
+
 gpano = GPano.GPano()
 gsv = GPano.GSV_depthmap()
 
@@ -385,6 +386,53 @@ def get_PanoJPG_oceancity():
 
 
 
+def get_PanoJPG_Hampton():
+    shape_file = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\Hampton_Roads_Elevation_Certificates__NAVD_88_.shp'
+    saved_path = r'K:\Dataset\HamptonRoads\panoramas'
+
+    buildings = fiona.open(shape_file)
+
+
+    for idx, building in tqdm(enumerate(buildings)):
+
+        geometry = building['geometry']['coordinates']
+
+        ID = str(building['properties']['ID'])
+
+        setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
+
+        inEPSG = 'EPSG:2925'
+        outEPSG = 'EPSG:4326'
+
+        transformer = Transformer.from_crs(inEPSG, outEPSG, always_xy=True)
+        geometry = np.array(geometry).squeeze(0)
+
+        xs, ys = transformer.transform(geometry[:, 0], geometry[0:, 1])
+
+        polygon = Polygon(zip(xs, ys))
+
+        x, y = polygon.centroid.xy  # x is an array, the number is x[0]
+        x = x[0]
+        y = y[0]
+
+        logger.info("polygon.centroid: %f, %f", x, y)
+
+        panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
+
+
+        try:
+            gpano.getJsonfrmPanoID(panoId, dm=1, saved_path=saved_path)
+            gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
+
+            print(f"Processing: {idx}, {panoId}   \n")
+
+        except Exception as e:
+            print("Error in get_PanoJPG_Hampton, panoId, log:", panoId, e)
+            continue
+
+
+
+
 def clip_panos_oceancity_with_panoId():
     try:
         shape_file = r'X:\My Drive\Research\StreetGraph\data\oceancity\vectors\ocean_parcel_panoid.shp'
@@ -401,9 +449,6 @@ def clip_panos_oceancity_with_panoId():
         fov_h_radian = radians(fov_h_degree)
 
         h_w_ratio = 1
-
-
-
 
         rtree_path = shape_file.replace(".shp", '_rtree.idx')
         r_tree = None
@@ -425,7 +470,7 @@ def clip_panos_oceancity_with_panoId():
 
         # generate shaple.Polygons.
 
-        start = 0
+        start = 10000
         for idx in tqdm(range(start, len(buildings))):
             try:
                 building = buildings[idx]
@@ -556,10 +601,36 @@ def clip_panos_oceancity_with_panoId():
     except Exception as e:
         logger.error("shoot_philly_building: %s", e)
 
+def save_depthmap_frm_panoId(panoId, saved_path):
+    gsv.saveDepthMap_frm_panoId(panoId, saved_path)
+
+def convert_row_col_to_shperical(theta0, phi0, fov_h, height, width, tilt_pitch=None, tilt_yaw=None):
+    return gsv.castesian_to_shperical0(theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width)
+    # castesian_to_shperical0(self, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
+
+
 if __name__ == '__main__':
 
-    clip_panos_oceancity_with_panoId()
-    # get_panoIDs_ocean_city_address()
+    # result = convert_row_col_to_shperical(0, math.radians(90), math.radians(90), 4096, 4096)
+    # print(result.shape)
+    #
+    # beta = result[2101, 1491, 0]
+    # alpha = result[1856, 1491, 0]
+    # print(beta)
+    # print(alpha)
+    #
+    # print("beta:", math.degrees(beta))
+    # print("alpha:", math.degrees(alpha))
+
+    get_PanoJPG_Hampton()
+
+    print("Done")
+
+    # save_depthmap_frm_panoId("yrCaFogoA9xZBBydIBVaKQ", r"/media/huan/SSD/Datasets/ocean_city/temp")
+
+    # clip_panos_oceancity_with_panoId()
+
+
 
     # clip_panos_ocean_city()
     # test_getPanoJPGfrmArea()

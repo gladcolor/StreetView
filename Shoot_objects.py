@@ -27,7 +27,9 @@ import sys
 import pprint
 
 import pyproj
-from pyproj import Proj, transform, Transformer
+# from pyproj import Proj, transform, Transformer
+# from pyproj import #Proj, transform #, Transformer
+
 from geopy.distance import geodesic
 
 gpano = GPano.GPano()

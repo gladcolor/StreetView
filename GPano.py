@@ -60,9 +60,9 @@ chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
 
 import logging.config
-f = open('Google_map_key.ini', 'r')
+# f = open('Google_map_key.ini', 'r')
 
-# f = open('/media/huan/HD4T/Research/StreetView/Google_street_view/Google_map_key.ini', 'r')
+f = open('/media/huan/HD4T/Research/StreetView/Google_street_view/Google_map_key.ini', 'r')
 MAP_KEY = f.readlines()[0]
 
 
@@ -83,9 +83,9 @@ setup_logging(yaml_path)
         # logger.info(os.path.basename(file))
 
 logger = logging.getLogger('console_only')
-web_driver_path = r'chromedriver'
+# web_driver_path = r'chromedriver'
 
-# web_driver_path = r'/media/huan/HD4T/Research/StreetView/Google_street_view/chromedriver_linux64/chromedriver'
+web_driver_path = r'/media/huan/HD4T/Research/StreetView/Google_street_view/chromedriver_linux64/chromedriver'
 driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 Process_cnt = 10
 
@@ -177,7 +177,7 @@ class GPano():
         return brng
 
     def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
-        """ Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
+        """ Obtain panorama images from a list of lat/lon: [(lon, lat), ...]
         """
         statuses = []  # succeeded: 1; failed: 0
         # print(list_lonlat.pop(0))
@@ -294,7 +294,7 @@ class GPano():
 
         return status
 
-    def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 4) -> bool:
+    def getPanoJPGfrmLonlat(self, lon: float, lat: float, saved_path: str, prefix="", suffix="", zoom: int = 5) -> bool:
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
@@ -462,7 +462,7 @@ class GPano():
 
         return status
 
-    def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=4, Process_cnt=4):
+    def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=5, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
             Obtain panomara images from a list of lat/lon: [(lon, lat), ...]
         """
@@ -2352,9 +2352,9 @@ class GSV_depthmap(object):
         new_name = os.path.join(saved_path, panoId + ".tif")
 
         if len(saved_path) > 0:
-            self.saveDepthmapImage(depthMap, new_name)
+            img = self.saveDepthmapImage(depthMap, new_name)
 
-        # return depthMap
+        return img
 
 
     def saveDepthmapImage(self, depthMap, saved_file):
@@ -2370,6 +2370,8 @@ class GSV_depthmap(object):
         # img.save(saved_file.replace(".tif", 'noflip.tif'))
         # img = img.transpose(Image.FLIP_LEFT_RIGHT)
         img.save(saved_file)
+
+        return img
 
         # print(im)
 

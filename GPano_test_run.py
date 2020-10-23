@@ -302,6 +302,7 @@ def download_buildings_baltimore():
         except Exception as e:
             print("Error in download_buildings_baltimore(): ", e, i)
 
+
 def clip_panos_ocean_city():
     folder = r'J:\Research\Resilience\data\OcenaCity\panos2'
     saved_path = r'J:\Research\Resilience\data\OcenaCity\pano_clips'
@@ -334,6 +335,41 @@ def clip_panos_ocean_city():
                                    pano_pitch)
             new_name = os.path.join(saved_path, basename)
             cv2.imwrite('%s_%d_%d.jpg' % (new_name, theta0, yaw), rimg)
+
+
+def clip_panos_HamptonRoads():
+    folder = r'G:\My Drive\Research\StreetGraph\data\HamptonRoads\panoramas'
+    saved_path = r'G:\My Drive\Research\StreetGraph\data\HamptonRoads\pano_twosides'
+    fov = 90   # degree
+    h_w_ratio = 1
+    yawList = [90, 270]
+    files = glob.glob(os.path.join(folder, "*.jpg"))
+    for idx, jpg in tqdm(enumerate(files)):
+        basename = os.path.basename(jpg)
+        # img = Image.open(jpg)
+        # img = np.array(img)
+        img = cv2.imread(jpg)
+        h_img, w_img, channel = img.shape
+        w = int(fov/360 * w_img)
+        h = int(w * h_w_ratio)
+        print("panorama shape:", img.shape)
+        fov_h = radians(90)
+
+        theta0 = 0
+        pano_pitch = 0
+
+        fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
+        for yaw in yawList:
+            rimg = gpano.clip_pano(theta0,
+                                   radians(yaw),
+                                   fov_h,
+                                   fov_v,
+                                   w,
+                                   img,
+                                   pano_pitch)
+            new_name = os.path.join(saved_path, basename)
+            cv2.imwrite('%s_%d_%d.jpg' % (new_name.replace(".jpg"), theta0, yaw), rimg)
+
 
 
 def get_panoIDs_ocean_city_address():
@@ -386,6 +422,7 @@ def get_PanoJPG_oceancity():
 
 
 
+
 def get_PanoJPG_Hampton():
     shape_file = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\Hampton_Roads_Elevation_Certificates__NAVD_88_.shp'
     saved_path = r'K:\Dataset\HamptonRoads\panoramas'
@@ -395,9 +432,64 @@ def get_PanoJPG_Hampton():
 
     for idx, building in tqdm(enumerate(buildings)):
 
+        try:
+
+            geometry = building['geometry']['coordinates']
+
+            ID = str(building['properties']['ID'])
+
+            setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
+
+            inEPSG = 'EPSG:2925'
+            outEPSG = 'EPSG:4326'
+
+            transformer = Transformer.from_crs(inEPSG, outEPSG, always_xy=True)
+            geometry = np.array(geometry).squeeze(0)
+
+            xs, ys = transformer.transform(geometry[:, 0], geometry[0:, 1])
+
+            polygon = Polygon(zip(xs, ys))
+
+            x, y = polygon.centroid.xy  # x is an array, the number is x[0]
+            x = x[0]
+            y = y[0]
+
+            logger.info("polygon.centroid: %f, %f", x, y)
+
+            panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
+
+            json_name = os.path.join(saved_path, ID + "_" + panoId + '.jpg')
+            if os.path.exists(json_name):
+                print("File exists: ", json_name)
+                continue
+
+
+
+            gpano.getJsonfrmPanoID(panoId, dm=1, saved_path=saved_path)
+            gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
+
+            print(f"Processing: {idx}, {panoId}   \n")
+
+        except Exception as e:
+            print("Error in get_PanoJPG_Hampton, panoId, log:", panoId, e)
+            continue
+
+
+
+def get_PanoJPG_Hampton2():
+    shape_file = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\Hampton_Roads_Elevation_Certificates__NAVD_88_.shp'
+    saved_path = r'K:\Dataset\HamptonRoads\panoramas2'
+
+    buildings = fiona.open(shape_file)
+
+
+    for idx, building in tqdm(enumerate(buildings[3000:])):
+
         geometry = building['geometry']['coordinates']
 
         ID = str(building['properties']['ID'])
+
+        print("idx, ID:  ", idx, ID)
 
         setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
 
@@ -415,23 +507,20 @@ def get_PanoJPG_Hampton():
         x = x[0]
         y = y[0]
 
-        logger.info("polygon.centroid: %f, %f", x, y)
+        logger.info("ID: %s polygon.centroid: %f, %f", ID, x, y)
 
         panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
 
 
         try:
             gpano.getJsonfrmPanoID(panoId, dm=1, saved_path=saved_path)
-            gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
+            gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, prefix=ID, zoom=5)
 
             print(f"Processing: {idx}, {panoId}   \n")
 
         except Exception as e:
             print("Error in get_PanoJPG_Hampton, panoId, log:", panoId, e)
             continue
-
-
-
 
 def clip_panos_oceancity_with_panoId():
     try:
@@ -622,7 +711,7 @@ if __name__ == '__main__':
     # print("beta:", math.degrees(beta))
     # print("alpha:", math.degrees(alpha))
 
-    get_PanoJPG_Hampton()
+    get_PanoJPG_Hampton2()
 
     print("Done")
 

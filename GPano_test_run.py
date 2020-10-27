@@ -9,7 +9,7 @@ import json
 import  sqlite3
 from tqdm import tqdm
 import multiprocessing as mp
-import Shoot_objects
+# import Shoot_objects
 
 import geopandas as gpd
 import pandas as pd
@@ -17,7 +17,9 @@ from shapely.geometry import Point, Polygon
 import shapely.wkt
 import os
 import fiona
-from pyproj import Proj, transform, Transformer
+from pyproj import Proj, transform
+
+# from pyproj import Transformer
 
 from tqdm import tqdm
 
@@ -338,8 +340,8 @@ def clip_panos_ocean_city():
 
 
 def clip_panos_HamptonRoads():
-    folder = r'G:\My Drive\Research\StreetGraph\data\HamptonRoads\panoramas'
-    saved_path = r'G:\My Drive\Research\StreetGraph\data\HamptonRoads\pano_twosides'
+    folder = r'/media/huan/HD4T/Dataset/HamptonRoads/test'
+    saved_path = r'/media/huan/HD4T/Dataset/HamptonRoads/test/clipped'
     fov = 90   # degree
     h_w_ratio = 1
     yawList = [90, 270]
@@ -355,7 +357,7 @@ def clip_panos_HamptonRoads():
         print("panorama shape:", img.shape)
         fov_h = radians(90)
 
-        theta0 = 0
+        theta0 = -6.36
         pano_pitch = 0
 
         fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
@@ -368,7 +370,7 @@ def clip_panos_HamptonRoads():
                                    img,
                                    pano_pitch)
             new_name = os.path.join(saved_path, basename)
-            cv2.imwrite('%s_%d_%d.jpg' % (new_name.replace(".jpg"), theta0, yaw), rimg)
+            cv2.imwrite('%s_%d_%d.jpg' % (new_name.replace(".jpg", ""), theta0, yaw), rimg)
 
 
 
@@ -698,6 +700,76 @@ def convert_row_col_to_shperical(theta0, phi0, fov_h, height, width, tilt_pitch=
     # castesian_to_shperical0(self, theta0, phi0, tilt_pitch, tilt_yaw, fov_h, height, width):  # yaw: set the heading, pitch
 
 
+def getHouse_image_HamptonRoads():
+    saved_path = r'/media/huan/HD4T/Dataset/HamptonRoads/Google_thumbnails30'
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+
+    csv_file = r'/media/huan/HD4T/Dataset/HamptonRoads/Hampton_Roads_Elevation_Certificates__NAVD_88_-shp/lat-lon.csv'
+    df = pd.read_csv(csv_file)
+
+    for idx, row in df.iterrows():
+
+        ID = int(row['ID'])
+        h_LAT = row['LAT']
+        h_LON = row['LON']
+
+        print("idx, ID:  ", idx, ID)
+
+        setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
+
+
+
+        logger.info("ID: %s polygon.centroid: %f, %f", ID, h_LON, h_LAT)
+
+        # panoId, pano_lon, pano_lat = gpano.getPanoIDfrmLonlat(h_LON, h_LAT)
+
+
+
+        try:
+
+            jdata = gpano.getPanoJsonfrmLonat(h_LON, h_LAT)
+            panoid = jdata['Location']['panoId']
+            pano_lon = float(jdata['Location']['lng'])
+            pano_lat = float(jdata['Location']['lat'])
+            pano_yaw = float(jdata['Projection']['pano_yaw_deg'])
+
+            heading = gpano.getDegreeOfTwoLonlat(pano_lat, pano_lon, h_LAT, h_LON)
+
+            # determine toward to right or left
+            yaw_r = (pano_yaw + 90) % 360
+            yaw_l = (pano_yaw + 270) % 360
+            diff = [heading - yaw_r, heading - yaw_l]
+            # diff
+            diff_cos = [cos(radians(diff[0])), cos(radians(diff[1]))]
+            max_idx = np.argmax(diff_cos)
+            yaw = [yaw_r, yaw_l][max_idx]
+
+            fov = 30
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw-30, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw+30, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw-15, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw+15, fov=fov, height=768, width=768)
+
+
+            print(f"Processing: {idx},  \n")
+
+        except Exception as e:
+            print("Error in getHouse_image_HamptonRoads, panoId, log:", idx, e)
+            continue
+
+
 if __name__ == '__main__':
 
     # result = convert_row_col_to_shperical(0, math.radians(90), math.radians(90), 4096, 4096)
@@ -711,7 +783,11 @@ if __name__ == '__main__':
     # print("beta:", math.degrees(beta))
     # print("alpha:", math.degrees(alpha))
 
-    get_PanoJPG_Hampton2()
+    # get_PanoJPG_Hampton()
+
+    # clip_panos_HamptonRoads()
+
+    getHouse_image_HamptonRoads()
 
     print("Done")
 

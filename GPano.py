@@ -613,7 +613,7 @@ class GPano():
             return 0
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
-                         pitch=0, yaw=0, fov=120):
+                         pitch=0, yaw=0, fov=90):
         # w maximum: 1024
         # h maximum: 768
         server_num = random.randint(0, 3)
@@ -643,7 +643,9 @@ class GPano():
             file = urllib.request.urlopen(url1)
             image = Image.open(file)
 
-            jpg_name = os.path.join(saved_path, (prefix + str(lon) + '_' + str(lat) + '_' + str(pitch) + '_' +
+            # new_name = f"{prefix}{}_{}_{}{}{}"
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
                                                  str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
             if image.getbbox():
                 if saved_path != '':
@@ -1340,9 +1342,7 @@ class GPano():
         # lon_diff, lat_diff = ori_lon - polygon.centroid.x,  ori_lat - polygon.centroid.y
         heading = self.getDegreeOfTwoLonlat(lat, lon, ori_lat, ori_lon)
 
-        prefix = str(prefix)
-        if prefix != "":
-            prefix = prefix + '_'
+
 
         if polygon is not None:
             heading, fov = self.get_fov4edge((lon, lat), car_heading, polygon, saved_path=saved_path, file_name= str(prefix) + "_" + panoid + "_" + str(heading) + '_shooting.png', r_tree=r_tree)
@@ -1350,6 +1350,12 @@ class GPano():
                 return 0, 0
 
         # print(idx, 'Heading angle between tree and panorama:', heading)
+        fov = int(fov)
+
+        prefix = str(prefix) + f"_fov_{fov}_"
+        if prefix != "":
+            prefix = prefix + '_'
+
         # f.writelines(f"{ID},{ACCTID}{ori_lon},{ori_lat},{lon},{lat},{heading}" + '\n')
         image, jpg_name = self.getImagefrmAngle(lon, lat, saved_path=saved_path, prefix=str(prefix) + panoid,
                               pitch=pitch, yaw=heading, width=width, height=height, fov=fov)
@@ -1615,7 +1621,7 @@ class GPano():
             plt.savefig(saved_path)
             plt.close(fig)
 
-        return heading, max(10, fov) # google street view support fov > 10 degree only
+        return heading, max(30, fov) # google street view support fov > 30 degree only
 
     def get_fov4edge0(self, viewpoint, car_heading, polygon, saved_path='', file_name=''):  # get the fov angle for the nearest edge of a shapely polygon
 
@@ -2343,8 +2349,10 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
-    def saveDepthMap_frm_panoId(self, panoId, saved_path):
-        jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1)
+    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True):
+
+
+        jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1, saved_path=saved_path)
 
 
         depthMap = self.getDepthmapfrmJson(jdata)

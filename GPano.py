@@ -59,10 +59,12 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 Loading_time = 5
 
-import logging.config
-# f = open('Google_map_key.ini', 'r')
+import utils
 
-f = open('/media/huan/HD4T/Research/StreetView/Google_street_view/Google_map_key.ini', 'r')
+import logging.config
+f = open('Google_map_key.ini', 'r')
+
+# f = open('/media/huan/HD4T/Research/StreetView/Google_street_view/Google_map_key.ini', 'r')
 MAP_KEY = f.readlines()[0]
 
 
@@ -85,8 +87,10 @@ setup_logging(yaml_path)
 logger = logging.getLogger('console_only')
 # web_driver_path = r'chromedriver'
 
-web_driver_path = r'/media/huan/HD4T/Research/StreetView/Google_street_view/chromedriver_linux64/chromedriver'
-driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
+web_driver_path = r'chromedriver'
+
+# web_driver_path = r'/media/huan/HD4T/Research/StreetView/Google_street_view/chromedriver_linux64/chromedriver'
+# driver = webdriver.Chrome(executable_path=web_driver_path, chrome_options=chrome_options)
 Process_cnt = 10
 
 """
@@ -522,9 +526,9 @@ class GPano():
 
 
     # Finished!
-    def getPanoIDfrmLonlat(self, lon, lat):
+    def getPanoIDfrmLonlat0(self, lon, lat):
         url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
-        # print(url)
+        print(url)
         r = requests.get(url)
         data = self.getPanoJsonfrmLonat(lon, lat)
         #
@@ -563,9 +567,9 @@ class GPano():
             return 0, 0, 0
 
     # Finished! Needs a google map key
-    def getPanoIDfrmLonlat0(self, lon, lat):
+    def getPanoIDfrmLonlat2(self, lon, lat):
         # url = f'http://maps.google.com/cbk?output=json&ll={lat},{lon}'
-        url = f'https://maps.googleapis.com/maps/api/streetview/metadata?size=768x768&location={lat},{lon}&key={MAP_KEY}'
+        url = f'https://maps.googleapis.com/maps/api/streetview/metadata?&location={lat},{lon}&key={MAP_KEY}'
                # https://maps.googleapis.com/maps/api/streetview/metadata?
 
                # https://developers.google.com/maps/documentation/streetview/metadata
@@ -592,6 +596,28 @@ class GPano():
         else:
             return 0, 0, 0
 
+    def getPanoIDfrmLonlat(self, lon, lat):
+        url = "https://maps.googleapis.com/maps/api/js/GeoPhotoService.SingleImageSearch?pb=!1m5!1sapiv3!5sUS!11m2!1m1!1b0!2m4!1m2!3d{0:}!4d{1:}!2d50!3m10!2m2!1sen!2sGB!9m1!1e2!11m4!1m3!1e2!2b1!3e2!4m10!1e1!1e2!1e3!1e4!1e8!1e6!5m1!1e2!6m1!1e2&callback=_xdc_._v2mub5"
+        url = url.format(lat, lon)
+        resp =  requests.get(url, proxies=None)
+        line = resp.text.replace("/**/_xdc_._v2mub5 && _xdc_._v2mub5( ", "")[:-2]
+
+        if len(line) > 1000:
+            try:
+                jdata = json.loads(line)
+            except:
+                jdata = ""
+
+            panoId = jdata[1][1][1]
+            pano_lon = jdata[1][5][0][1][0][3]
+            pano_lat = jdata[1][5][0][1][0][2]
+
+            return panoId, pano_lon, pano_lat
+
+        else: # if there is no panorama
+            return 0, 0, 0
+
+
     def getPanoJsonfrmLonat(self, lon, lat):
         try:
             server_num = random.randint(0, 3)
@@ -611,6 +637,8 @@ class GPano():
         except Exception as e:
             print("Error in getPanoJsonfrmLonnat():", e)
             return 0
+
+
 
     def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
                          pitch=0, yaw=0, fov=90):
@@ -1311,6 +1339,10 @@ class GPano():
         panoid, lon, lat = self.getPanoIDfrmLonlat(ori_lon, ori_lat)  # changed
         try:
             jdata = self.getPanoJsonfrmLonat(ori_lon, ori_lat)
+            # image_date = jdata['Data'].get('image_date', "0000-00")
+            # if image_date < "2014-01":
+            #     print("Image is too old: ", image_date)
+            #     return 0, 0
             if 'Location' in jdata:
                 # panoid = jdata['Location']['panoId']
                 # lon = jdata['Location']['lng']
@@ -1768,7 +1800,7 @@ class GPano():
 
         return heading, max(10, fov) # google street view support fov > 10 degree only
 
-    def getJsonfrmPanoID(self, panoId, dm=0, saved_path=''):
+    def getJsonfrmPanoID0(self, panoId, dm=0, saved_path=''):
         url = f"http://maps.google.com/cbk?output=json&panoid={panoId}&dm={dm}"
         try:
             r = requests.get(url)
@@ -1783,6 +1815,39 @@ class GPano():
         except Exception as e:
             print("Error in getJsonfrmPanoID(), e, url:", e, url)
             return 0
+
+    def getJsonfrmPanoID(self, panoId, dm=1, saved_path=''):
+        url = "https://www.google.com/maps/photometa/v1?authuser=0&hl=zh-CN&pb=!1m4!1smaps_sv.tactile!11m2!2m1!1b1!2m2!1szh-CN!2sus!3m3!1m2!1e2!2s{}!4m57!1e1!1e2!1e3!1e4!1e5!1e6!1e8!1e12!2m1!1e1!4m1!1i48!5m1!1e1!5m1!1e2!6m1!1e1!6m1!1e2!9m36!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e3!2b1!3e2!1m3!1e3!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e1!2b0!3e3!1m3!1e4!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e3"
+        url = url.format(panoId)
+
+        try:
+            resp = requests.get(url, proxies=None)
+            line = resp.text.replace(")]}'\n", "")
+
+            try:
+                jdata = json.loads(line)
+                jdata = utils.compressJson(jdata)
+                jdata = utils.refactorJson(jdata)
+            except Exception as e:
+                jdata = 0  # if there is no panorama
+                print("Error in getJsonfrmPanoID(), e, url:", panoId, url, e)
+                return jdata
+
+            if saved_path != '':
+                try:
+                    with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
+                        json.dump(jdata, f)
+                except Exception as e:
+                    print("Error in getJsonfrmPanoID() saving json file, e, panoId:", e, panoId)
+
+            if dm == 0:
+                jdata['model']['depth_map'] = ''
+            return jdata
+
+        except Exception as e:
+            print("Error in getJsonfrmPanoID(), e, url:", panoId, url, e)
+            return 0
+
 
     def shootLonlats(self, ori_lonlats, saved_path, views=1, suffix='', width=1024, height=768, pitch=0):
         # prepare for calculating processing speed

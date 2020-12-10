@@ -479,13 +479,13 @@ def get_PanoJPG_Hampton():
 
 
 def get_PanoJPG_Hampton2():
-    shape_file = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\Hampton_Roads_Elevation_Certificates__NAVD_88_.shp'
-    saved_path = r'K:\Dataset\HamptonRoads\panoramas2'
+    shape_file = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\within_25m_SpatialJoin_.shp'
+    saved_path = r'K:\Dataset\HamptonRoads\Google_thumbnails_house_only_cleaned'
 
     buildings = fiona.open(shape_file)
 
 
-    for idx, building in tqdm(enumerate(buildings[3000:])):
+    for idx, building in tqdm(enumerate(buildings[0:])):
 
         geometry = building['geometry']['coordinates']
 
@@ -769,6 +769,195 @@ def getHouse_image_HamptonRoads():
             print("Error in getHouse_image_HamptonRoads, panoId, log:", idx, e)
             continue
 
+def go_along_road_forward_record_camera_height(lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=100, polygon=None, fov=90, zoom=5):
+    '''
+    :param lon: lon of a seed point.
+    :param lat: lat of a seed point.
+    :param saved_path:
+    :param yaw_list:
+    :param pitch_list:
+    :param steps:
+    :param polygon:
+    :param zoom:
+    :return:
+    '''
+    lon = float(lon)
+    lat = float(lat)
+    if not isinstance(yaw_list, list):
+        yaw_list = [yaw_list]
+
+    if not isinstance(pitch_list, list):
+        pitch_list = [pitch_list]
+
+
+    step_cnt = 0
+    next_pt = (lon, lat)
+    lonlats = []
+    next_panoId = gpano.getPanoIDfrmLonlat(lon, lat)[0]
+
+    if next_panoId == 0:
+        return lonlats
+
+    pre_panoId = ""
+
+    pt_lon = lon
+    pt_lat = lat
+
+    start_time = time.time()
+    Cnt = 0
+    Cnt_interval = 10
+
+    try:
+        while step_cnt < steps:
+
+            try:
+                try:
+
+                    jdata = gpano.getJsonfrmPanoID(next_panoId, dm=1)
+                    if jdata == 0:
+                        print("The road is dead end in Google Stree Map (forwarding, jdata == 0).")
+                        return lonlats
+
+                except Exception as e:
+                    print("Error in getJsonfrmPanoID in  go_along_road_forward():", e)
+                    print("Waiting for 5 seconds...")
+                    time.sleep(5)
+                    next_Json = gpano.getNextJson(jdata, pre_panoId)
+                    if next_Json == 0:
+                        return lonlats
+
+                    next_lon = next_Json["Location"]["lng"]
+                    next_lat = next_Json["Location"]["lat"]
+                    next_panoId = next_Json["Location"]["panoId"]
+                    pre_panoId = panoId
+
+                    step_cnt += 1
+                    next_pt = (next_lon, next_lat)
+                    if len(pre_panoId) < 10:
+                        return lonlats
+                    if panoId == 0:
+                        return lonlats
+
+                    print('step_cnt: ', step_cnt)
+                    continue
+
+                # print('jdata: ', jdata)
+                pt_lon = float(jdata["Location"]["lng"])
+                pt_lat = float(jdata["Location"]["lat"])
+                lonlats.append((pt_lon, pt_lat))
+                panoId = jdata["Location"]["panoId"]
+                heading = float(jdata["Projection"]["pano_yaw_deg"])
+                # print('yaw_list: ', yaw_list)
+                # print('Processing: ', panoId)
+                hasDownloaded = gpano.fileExists(saved_path, panoId + ".json")
+
+                if yaw_list[0] == 'json_only':
+                    hasDownloaded = gpano.fileExists(saved_path, panoId + ".json")
+
+                if hasDownloaded:
+                    print("File exists in forward(): ", saved_path, panoId + ".json")
+                    return lonlats
+                    # next_Json = self.getNextJson(jdata, pre_panoId)
+                    # next_lon = next_Json["Location"]["lng"]
+                    # next_lat = next_Json["Location"]["lat"]
+                    # next_panoId = next_Json["Location"]["panoId"]
+                    # step_cnt += 1
+                    # next_pt = (next_lon, next_lat)
+                    # pre_panoId = panoId
+                    # print('step_cnt: ', step_cnt)
+                    # continue
+
+                try:
+                    json_name = os.path.join(saved_path, panoId + '.json')
+                    if not gpano.fileExists(saved_path, panoId + ".json"):
+                        with open(json_name, 'w') as f:
+                            json.dump(jdata, f)
+                except Exception as e:
+                    print("Error in go_along_road_forward() saving json file.", e, panoId)
+
+                print('Processing: ', panoId)
+
+                if yaw_list[0] == None:
+                    # print('yaw_list : None', yaw_list)
+                    gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=zoom)
+                elif yaw_list[0] == 'json_only':
+                    # print("yaw_list: ", yaw_list)
+                    pass
+                else:
+                    # print("yaw_list: ", yaw_list)
+                    gpano.getImageclipsfrmJson(jdata=jdata, yaw_list=yaw_list, pitch_list=pitch_list,
+                                              saved_path=saved_path)
+
+                # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
+                # print(pt_lat, pt_lon)
+
+                next_Json = gpano.getNextJson(jdata, pre_panoId)
+                # print("next_Json: ", next_Json)
+
+                if next_Json == 0:
+                    print("The road is dead end in Google Stree Map.")
+                    return lonlats
+                else:
+                    next_lon = next_Json["Location"]["lng"]
+                    next_lat = next_Json["Location"]["lat"]
+                    next_panoId = next_Json["Location"]["panoId"]
+
+                    next_pt = (next_lon, next_lat)
+
+                step_cnt += 1
+
+                pre_panoId = panoId
+
+                # start_time = time.time()
+                # Cnt = 0
+                # Cnt_interval = 100
+
+                Cnt += 1
+                if Cnt % Cnt_interval == (Cnt_interval - 1):
+                    print(
+                        "Processing speed: {} steps / hour in forward(), pid: {}.".format(
+                            int(Cnt / (time.time() - start_time + 0.001) * 3600), os.getpid()))
+
+            except Exception as e:
+                print("Error in go_along_road_forward(), pid:", e, os.getpid())
+                print("Waiting for 5 seconds...")
+                time.sleep(5)
+                if len(pre_panoId) < 10:
+                    return lonlats
+                next_Json = gpano.getNextJson(jdata, pre_panoId)
+                if next_Json == 0:
+                    return lonlats
+
+                next_lon = next_Json["Location"]["lng"]
+                next_lat = next_Json["Location"]["lat"]
+                next_panoId = next_Json["Location"]["panoId"]
+                step_cnt += 1
+                next_pt = (next_lon, next_lat)
+                if panoId == 0:
+                    return lonlats
+                pre_panoId = panoId
+                print('step_cnt: ', step_cnt)
+                continue
+    except Exception as e:
+        print("Error in go_along_road_forwakd(), function will restart.", e, os.getpid())
+        gpano.go_along_road_forward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
+                                   zoom)
+    return lonlats
+
+def walk_forward():
+
+    saved_path = r'K:\Dataset\HamptonRoads\verify_camera_height'
+    yaw_list = 'json_only'
+    steps = 100
+    points_csv = r'K:\Dataset\Elevation_certificates\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp\lat-lon.csv'
+    df = pd.read_csv(points_csv)
+    lonlat_list = list(zip(df['LON'].to_list(), df["LAT"].to_list()))
+    for lonlat in lonlat_list:
+        try:
+            lon, lat = lonlat
+            go_along_road_forward_record_camera_height(lon, lat, saved_path, yaw_list=yaw_list, steps=100)
+        except:
+            continue
 
 if __name__ == '__main__':
 
@@ -787,7 +976,9 @@ if __name__ == '__main__':
 
     # clip_panos_HamptonRoads()
 
-    getHouse_image_HamptonRoads()
+    # getHouse_image_HamptonRoads()
+
+    walk_forward()
 
     print("Done")
 

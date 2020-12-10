@@ -469,8 +469,8 @@ def shoot_oceancity_building():
 
 def shoot_HamptonRoads_building():
     try:
-        shape_file = r'/media/huan/HD4T/Dataset/HamptonRoads/Hampton_Roads_Elevation_Certificates__NAVD_88_-shp/Hampton_Roads_Elevation_Certificates__NAVD_88_.shp'
-        saved_path = r'/media/huan/HD4T/Dataset/HamptonRoads/building_only_thumbnails'
+        shape_file = r'K:\Dataset\HamptonRoads\Hampton_Roads_Elevation_Certificates__NAVD_88_-shp/within_25m_SpatialJoin.shp'
+        saved_path = r'K:\Dataset\HamptonRoads\Google_thumbnails_house_only_cleaned'
 
         setup_logging(yaml_path, logName=shape_file.replace(".shp", "_info.log"))
 

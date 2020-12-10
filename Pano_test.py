@@ -107,9 +107,36 @@ def test_getJsonfrmPanoID():
     panoId, pano_lon, pano_lat = gpano.getPanoIDfrmLonlat(lon, lat)
     result = gpano.getJsonfrmPanoID(panoId)
     print(result)
+    print(result['Time_machine'])
+
+def test_go_along_road_forward():
+    csv_file = r'L:\Datasets\HamptonRoads\EC-lat-lon.csv'
+    df = pd.read_csv(csv_file)
+    for idx, row in df.iterrows():
+        lon = row['LON']
+        lat = row['LAT']
+        ID = int(row['ID'])
+        gpano = GPano.GPano()
+        saved_path = r'L:\Datasets\HamptonRoads\go_along'
+        # results = gpano.go_along_road_forward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
+        results = gpano.go_along_road_backward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
+
+        # go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, fov=90, zoom=5):
+        result_file_name = os.path.join(saved_path, str(ID) + "_backward.txt")
+        print(ID, len(results), results)
+        if len(results) > 0:
+            f = open(result_file_name, 'w')
+            for pano in results:
+                panoId = pano[0]
+                pano_lon = pano[1]
+                pano_lat = pano[2]
+                line = ','.join([str(i) for i in pano])
+                f.writelines(line + "\n")
+            f.close()
+        # print(result['Time_machine'])
 
 if __name__ == '__main__':
-    test_getJsonfrmPanoID()
+    test_go_along_road_forward()
 
 
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,

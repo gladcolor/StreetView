@@ -16,7 +16,7 @@ logging.basicConfig(filename="info.log", level=logging.INFO, format="%(asctime)s
 def refactorJson(jdata):
     newJson = {}
 
-    if len(jdata) < 1:
+    if len(str(jdata)) < 1000:
         return ""
 
     # restore the first level keys
@@ -24,14 +24,16 @@ def refactorJson(jdata):
     newJson['Projection'] = {}
     newJson['Location'] = {}
     newJson['Links'] = {}
+    newJson['Time_machine'] = {}
     newJson['model'] = {}
+
 
     # Data
     newJson['Data']['image_width'] = jdata[1][0][2][2][1]
     newJson['Data']['image_height'] = jdata[1][0][2][2][0]
     newJson['Data']['tile_width'] = jdata[1][0][2][3][1][0]
     newJson['Data']['tile_height'] = jdata[1][0][2][3][1][1]
-    newJson['Data']['image_date'] = jdata[1][0][6][7][0]
+    newJson['Data']['image_date'] = jdata[1][0][6][7]
     newJson['Data']['imagery_type'] =  jdata[1][0][0][0]
     newJson['Data']['copyright'] =  jdata[1][0][4][0][0][0][0]
 
@@ -51,18 +53,58 @@ def refactorJson(jdata):
     newJson['Location']['elevation_wgs84_m'] = ""
     newJson['Location']['description'] = jdata[1][0][3][2][0][0]
     newJson['Location']['streetRange'] = ''
-    newJson['Location']['region'] = ''
-    newJson['Location']['country'] = ''
+    newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
+    newJson['Location']['country'] =  jdata[1][0][5][0][1][4]
     newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
 
     # Links
     newJson['Links'] = getLinks(jdata)
 
+    # Time_machine
+    newJson['Time_machine'] = getTimeMachine(jdata)
 
     # model
     newJson['model']['depth_map'] = jdata[1][0][5][0][5][1][2]
 
     return newJson
+
+def getTimeMachine(jdata):
+    try:
+        pano_list = jdata[1][0][5][0][3][0]
+        dates = jdata[1][0][5][0][8]
+        timemachine_list = []
+        if dates is None:
+            return timemachine_list
+
+        for day in dates:
+            old_pano_dict = {}
+            idx = day[0]
+
+            raw_pano_info = pano_list[idx]
+
+            old_pano_dict['panoId'] = raw_pano_info[0][1]
+            old_pano_dict['image_date'] = day[1]
+
+            old_pano_dict["lng"] = raw_pano_info[2][0][3]
+            old_pano_dict['lat'] = raw_pano_info[2][0][2]
+            old_pano_dict['elevation_egm96_m'] = raw_pano_info[2][1][0]
+
+            old_pano_dict['heading_deg'] = raw_pano_info[2][2][0]
+            old_pano_dict['yaw_deg'] = raw_pano_info[2][2][1]
+            old_pano_dict['pitch_deg'] = raw_pano_info[2][2][2]
+
+            old_pano_dict['description'] = ''
+            if len(raw_pano_info) == 4:
+                old_pano_dict['description'] = raw_pano_info[3][2][0][0]
+
+            timemachine_list.append(old_pano_dict)
+            # print(link_dict)
+        return timemachine_list
+
+    except Exception as e:
+        logging.exception("Error in getLinks().")
+        return timemachine_list
+
 
 def getLinks(jdata):
     link_list = []

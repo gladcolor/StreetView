@@ -912,7 +912,7 @@ class GPano():
         except Exception as e:
             print("Error in getImageclipsfrmJson():", e)
 
-    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, fov=90, zoom=5):
+    def go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, fov=90, zoom=5, overwrite=False):
         '''
         :param lon: lon of a seed point.
         :param lat: lat of a seed point.
@@ -926,6 +926,9 @@ class GPano():
         '''
         lon = float(lon)
         lat = float(lat)
+
+        if polygon is None:
+            polygon = Polygon([(-181, 91), (181, 91), (181, -91), (-181, -90), (-181, 91)])
         if not isinstance(yaw_list, list):
             yaw_list = [yaw_list]
 
@@ -938,11 +941,11 @@ class GPano():
 
         step_cnt = 0
         next_pt = (lon, lat)
-        lonlats = []
+        pano_lonlats = []
         next_panoId = self.getPanoIDfrmLonlat(lon, lat)[0]
 
         if next_panoId == 0:
-            return lonlats
+            return pano_lonlats
 
         pre_panoId = ""
 
@@ -962,7 +965,7 @@ class GPano():
                         jdata = self.getJsonfrmPanoID(next_panoId, dm=1)
                         if jdata == 0:
                             print("The road is dead end in Google Stree Map (forwarding, jdata == 0).")
-                            return lonlats
+                            return pano_lonlats
 
                     except Exception as e:
                         print("Error in getJsonfrmPanoID in  go_along_road_forward():", e)
@@ -970,7 +973,7 @@ class GPano():
                         time.sleep(5)
                         next_Json = self.getNextJson(jdata, pre_panoId)
                         if next_Json == 0:
-                            return lonlats
+                            return pano_lonlats
 
                         next_lon = next_Json["Location"]["lng"]
                         next_lat = next_Json["Location"]["lat"]
@@ -980,9 +983,9 @@ class GPano():
                         step_cnt += 1
                         next_pt = (next_lon, next_lat)
                         if len(pre_panoId) < 10:
-                            return lonlats
+                            return pano_lonlats
                         if panoId == 0:
-                            return lonlats
+                            return pano_lonlats
 
                         print('step_cnt: ', step_cnt)
                         continue
@@ -990,7 +993,7 @@ class GPano():
                     # print('jdata: ', jdata)
                     pt_lon = float(jdata["Location"]["lng"])
                     pt_lat = float(jdata["Location"]["lat"])
-                    lonlats.append((pt_lon, pt_lat))
+                    pano_lonlats.append((next_panoId, pt_lon, pt_lat))
                     panoId = jdata["Location"]["panoId"]
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
                     # print('yaw_list: ', yaw_list)
@@ -1000,9 +1003,9 @@ class GPano():
                     if yaw_list[0] == 'json_only':
                         hasDownloaded = self.fileExists(saved_path, panoId + ".json")
 
-                    if hasDownloaded:
+                    if hasDownloaded and (not overwrite):
                         print("File exists in forward(): ", saved_path, panoId + ".json")
-                        return lonlats
+                        return pano_lonlats
                         # next_Json = self.getNextJson(jdata, pre_panoId)
                         # next_lon = next_Json["Location"]["lng"]
                         # next_lat = next_Json["Location"]["lat"]
@@ -1042,7 +1045,7 @@ class GPano():
 
                     if next_Json == 0:
                         print("The road is dead end in Google Stree Map.")
-                        return lonlats
+                        return pano_lonlats
                     else:
                         next_lon = next_Json["Location"]["lng"]
                         next_lat = next_Json["Location"]["lat"]
@@ -1069,10 +1072,10 @@ class GPano():
                     print("Waiting for 5 seconds...")
                     time.sleep(5)
                     if len(pre_panoId) < 10:
-                        return lonlats
+                        return pano_lonlats
                     next_Json = self.getNextJson(jdata, pre_panoId)
                     if next_Json == 0:
-                        return lonlats
+                        return pano_lonlats
 
                     next_lon = next_Json["Location"]["lng"]
                     next_lat = next_Json["Location"]["lat"]
@@ -1080,7 +1083,7 @@ class GPano():
                     step_cnt += 1
                     next_pt = (next_lon, next_lat)
                     if panoId == 0:
-                        return lonlats
+                        return pano_lonlats
                     pre_panoId = panoId
                     print('step_cnt: ', step_cnt)
                     continue
@@ -1088,14 +1091,19 @@ class GPano():
             print("Error in go_along_road_forwakd(), function will restart.", e, os.getpid())
             self.go_along_road_forward(lon, lat, saved_path, yaw_list, pitch_list, steps, polygon,
                                        zoom)
-        return lonlats
+        return pano_lonlats
 
-    def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None, zoom=5):
+    def go_along_road_backward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=0, polygon=None, zoom=5, overwrite=False):
         lon = float(lon)
         lat = float(lat)
+        lonlats = []
+
+        if polygon is None:
+            polygon = Polygon([(-181, 91), (181, 91), (181, -91), (-181, -90), (-181, 91)])
+
         if not self.point_in_polygon(Point((lon, lat)), polygon):
             print("Starting point is not in the polygon.")
-            return
+            return lonlats
 
         if not isinstance(yaw_list, list):
             yaw_list = [yaw_list]
@@ -1155,7 +1163,7 @@ class GPano():
                     # print('jdata: ', jdata)
                     pt_lon = float(jdata["Location"]["lng"])
                     pt_lat = float(jdata["Location"]["lat"])
-                    lonlats.append((pt_lon, pt_lat))
+                    lonlats.append((next_panoId, pt_lon, pt_lat))
                     panoId = jdata["Location"]["panoId"]
                     heading = float(jdata["Projection"]["pano_yaw_deg"])
                     # print('step:', step_cnt, jdata["Location"]["description"],  panoId)
@@ -1167,7 +1175,7 @@ class GPano():
                         hasDownloaded = self.fileExists(saved_path, panoId + ".json")
                         # print(yaw_list)
 
-                    if hasDownloaded:
+                    if hasDownloaded and (not overwrite):
                         print("File exists in backward: ", os.path.join(saved_path, panoId + ".json"))
                         return lonlats
                         # print('yaw_list : None', yaw_list)

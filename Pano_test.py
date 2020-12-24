@@ -15,10 +15,14 @@ from PIL import Image, features
 import pandas as pd
 import numpy as np
 from natsort import natsorted
+from pyproj import CRS
+from pyproj import Transformer
+
 
 import pptk
 
 gsv = GPano.GSV_depthmap()
+gpano = GPano.GPano()
 
 def getJsonDepthmapfrmLonlat(lon, lat, dm=1, saved_path='', prefix='', suffix=''):
     prefix = str(prefix)
@@ -309,6 +313,139 @@ def getHeightVariance():
     df_std.to_csv(os.path.join(data_dir, "height_std.csv"), index=False)
 
 
+def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_path=''):
+    # lat, lon = 40.7303117, -74.1815408
+    saved_path = r'K:\Research\street_view_depthmap'
+    # panoId = r"BM1Qt23drK3-yMWxYfOfVg"
+    if (lat != None) and (lon != None):
+        panoId, _, _ = GPano.GPano().getPanoIDfrmLonlat(lon, lat)
+
+
+
+    dm, jdata = gsv.saveDepthMap_frm_panoId(panoId=panoId, saved_path=saved_path)
+
+    image_date = jdata['Data']['image_date']
+    print(panoId, image_date)
+
+    tilt_yaw_deg = jdata['Projection']['tilt_yaw_deg']
+    pano_yaw_deg = jdata['Projection']['pano_yaw_deg']
+    tilt_pitch_deg = jdata['Projection']['tilt_pitch_deg']
+    elevation_egm96_m = jdata['Location']['elevation_egm96_m']
+
+    jpg = os.path.join(saved_path, panoId + '.jpg')
+    img = Image.open(jpg)
+
+    dm_np = np.array(dm).astype(float)
+    img_np = np.array(img)[0:256, :, :]
+    colors = img_np.reshape(-1, 3)
+    # print(colors.shape)
+    # print(colors)
+    # print(img_np.shape)
+    nx, ny = (512, 256)
+    x_space = np.linspace(0, nx - 1, nx)
+    y_space = np.linspace(ny - 1, 0, ny)
+
+    xv, yv = np.meshgrid(x_space, y_space)
+
+    thetas = yv / ny * np.pi - np.pi / 2
+    phis = xv / nx * (np.pi * 2) - np.pi
+    thetas_sin = np.sin(thetas)
+    thetas_cos = np.cos(thetas)
+    phis_sin = np.sin(phis)
+    phis_cos = np.cos(phis)
+    R = thetas_cos * dm_np
+
+    z = dm_np * thetas_sin
+    x = R * phis_cos
+    y = R * phis_sin
+
+    P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)], axis=1)
+
+    rotate_x_radian = (90 - tilt_yaw_deg) / 180 * math.pi
+    rotate_z_radian = (90 - pano_yaw_deg) / 180 * math.pi
+    rotate_y_radian = (tilt_pitch_deg) / 180 * math.pi
+
+    P = P.dot(gsv.rotate_x(rotate_x_radian))
+    P = P.dot(gsv.rotate_y(rotate_y_radian))
+    P = P.dot(gsv.rotate_z(rotate_z_radian))
+
+
+
+    if color:
+        P = np.concatenate([P, colors], axis=1)
+    # print(P.shape, P)
+
+    return P
+
+def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=True, saved_path=''):
+    lat, lon = 40.7301114, -74.1806459
+    lat, lon =40.7083166,-74.2559286
+    lat, lon = 40.6677323,-74.1797492
+    lat, lon = 40.6580514,-74.2094375   # large error
+    lat, lon = 40.6594416,-74.2086
+    lat, lon = 40.679933,-74.277889
+    lat, lon = 40.6749695,-74.2957822
+    lat, lon = 40.6740651,-74.2958849
+    lat, lon = 40.7068861,-74.2569793
+    lat, lon = 40.7064717,-74.2576984
+    lat, lon = 40.7092409,-74.2527648
+    lat, lon =40.7092581,-74.2452077
+    lat, lon =40.672149,-74.1862878
+    lat, lon =40.6650419,-74.1821079  # mosaic precision is very bad on bridge.
+    lat, lon = 40.6645449,-74.1825446
+    lat, lon = 40.6511743,-74.2034643
+
+    jdata = gpano.getPanoJsonfrmLonat(lon, lat)
+
+    panoId = jdata['Location']['panoId']
+
+
+    P = getPointCloud_from_PanoId(panoId = panoId)
+
+    elevation_egm96_m = jdata['Location']['elevation_egm96_m']
+    elevation_egm96_m = float(elevation_egm96_m)
+    P[:, 2:3] += elevation_egm96_m
+
+
+    # crs_4326 = CRS.from_epsg(4326)
+    crs_local =  CRS.from_proj4(f"+proj=tmerc +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m +no_defs")
+    print(crs_local)
+
+    transformer = Transformer.from_crs(4326, crs_local)
+    new_center = transformer.transform(lat, lon)
+    print("new_center: ", new_center)
+
+    links = jdata.get("Links", [])
+    for link in links:
+        p = link["panoId"]
+        pts = getPointCloud_from_PanoId(panoId = p)
+
+        jdata1 = gpano.getJsonfrmPanoID(p)
+        lat1 = jdata1['Location']['lat']
+        lon1 = jdata1['Location']['lng']
+        elevation_egm96_m = jdata1['Location']['elevation_egm96_m']
+        elevation_egm96_m = float(elevation_egm96_m)
+
+        new_center = transformer.transform(lat1, lon1)
+        pts[:, 0:1] += new_center[1]
+        pts[:, 1:2] += new_center[0]
+        pts[:, 2:3] += elevation_egm96_m
+        print("new_center: ", new_center)
+
+        P = np.concatenate([P, pts], axis=0)
+
+
+    # print(P[:, :3])
+    # print(P[:, 3:6])
+    print(P.shape)
+
+    v = pptk.viewer(P[:, :3])
+    v.attributes(P[:, 3:6] / 255.)
+    v.set(point_size=0.03, show_axis=True, show_grid=True)
+
+
+    pass
+
 
 def showPointCloud():
 
@@ -319,14 +456,16 @@ def showPointCloud():
     lat, lon = 40.7605202,-73.9640951
     lat, lon = 40.7692807,-73.9435982
     lat, lon = 40.780667,-73.9610365
-    lat, lon = 40.7302882,-74.1814277
+    lat, lon = 40.7303117,-74.1815408
     saved_path = r'K:\Research\street_view_depthmap'
     # panoId = r'1_LEWPWwTwKBqDXQODfRmA'
     panoId, _, _ = GPano.GPano().getPanoIDfrmLonlat(lon, lat)
     print(panoId)
 
     # jpg = tif.replace("noflip.tif", '.jpg')
-    dm = gsv.saveDepthMap_frm_panoId(panoId=panoId, saved_path=saved_path)
+    dm, jdata = gsv.saveDepthMap_frm_panoId(panoId=panoId, saved_path=saved_path)
+
+    tilt_yaw_deg = jdata['Projection']['tilt_yaw_deg']
 
     # tif = r'I:\t\depthmap0\6kPwaDvg4AZ39ESx1FK13gnoflip.tif'
 
@@ -359,11 +498,11 @@ def showPointCloud():
     z = dm_np * thetas_sin
     x = R * phis_cos
     y = R * phis_sin
-    print(x)
-    print(y)
-    print(z.shape)
-    print(z.ravel().shape)
-    print(z.ravel().reshape(-1, 1).shape)
+    # print(x)
+    # print(y)
+    # print(z.shape)
+    # print(z.ravel().shape)
+    # print(z.ravel().reshape(-1, 1).shape)
 
     #
     # print(xv)
@@ -371,16 +510,24 @@ def showPointCloud():
     # print(xv.shape)
     # print(yv.shape)
 
+
+
     P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)], axis=1)
+
+    rotate_x_radian = (90 - tilt_yaw_deg) / 180 *math.pi
+
+    P = P.dot(gsv.rotate_x(rotate_x_radian))
 
     v = pptk.viewer(P)
     v.attributes(colors/255.)
-    v.set(point_size=0.03,show_axis=False, show_grid=False)
+    v.set(point_size=0.03,show_axis=True, show_grid=True)
 
 
 if __name__ == '__main__':
-    showPointCloud()
+    # showPointCloud()
+    # getPointCloud_from_PanoId()
     # getHeightVariance()
+    showNeighbor_pointClouds()
     # read_depthmaps()
     # test_go_along_road_forward()
 

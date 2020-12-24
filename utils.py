@@ -19,52 +19,63 @@ def refactorJson(jdata):
     if len(str(jdata)) < 1000:
         return ""
 
-    # restore the first level keys
-    newJson['Data'] = {}
-    newJson['Projection'] = {}
-    newJson['Location'] = {}
-    newJson['Links'] = {}
-    newJson['Time_machine'] = {}
-    newJson['model'] = {}
+    try:
+
+        # restore the first level keys
+        newJson['Data'] = {}
+        newJson['Projection'] = {}
+        newJson['Location'] = {}
+        newJson['Links'] = {}
+        newJson['Time_machine'] = {}
+        newJson['model'] = {}
 
 
-    # Data
-    newJson['Data']['image_width'] = jdata[1][0][2][2][1]
-    newJson['Data']['image_height'] = jdata[1][0][2][2][0]
-    newJson['Data']['tile_width'] = jdata[1][0][2][3][1][0]
-    newJson['Data']['tile_height'] = jdata[1][0][2][3][1][1]
-    newJson['Data']['image_date'] = jdata[1][0][6][7]
-    newJson['Data']['imagery_type'] =  jdata[1][0][0][0]
-    newJson['Data']['copyright'] =  jdata[1][0][4][0][0][0][0]
+        # Data
+        newJson['Data']['image_width'] = jdata[1][0][2][2][1]
+        newJson['Data']['image_height'] = jdata[1][0][2][2][0]
+        newJson['Data']['tile_width'] = jdata[1][0][2][3][1][0]
+        newJson['Data']['tile_height'] = jdata[1][0][2][3][1][1]
+        newJson['Data']['image_date'] = jdata[1][0][6][7]
+        newJson['Data']['imagery_type'] =  jdata[1][0][0][0]
+        newJson['Data']['copyright'] =  jdata[1][0][4][0][0][0][0]
 
-    # Projection
-    newJson['Projection']['projection_type'] = 'spherical'
-    newJson['Projection']['pano_yaw_deg'] = float(jdata[1][0][5][0][1][2][0])
-    newJson['Projection']['tilt_yaw_deg'] =  float(jdata[1][0][5][0][1][2][1])
-    newJson['Projection']['tilt_pitch_deg'] =  float(jdata[1][0][5][0][1][2][2])
+        # Projection
+        newJson['Projection']['projection_type'] = 'spherical'
+        newJson['Projection']['pano_yaw_deg'] = float(jdata[1][0][5][0][1][2][0])
+        newJson['Projection']['tilt_yaw_deg'] =  float(jdata[1][0][5][0][1][2][1])
+        newJson['Projection']['tilt_pitch_deg'] =  float(jdata[1][0][5][0][1][2][2])
 
-    # Location
-    newJson['Location']['panoId'] = jdata[1][0][1][1]
-    newJson['Location']['zoomLevels'] = ''
-    newJson['Location']['lat'] = jdata[1][0][5][0][1][0][2]
-    newJson['Location']['lng'] = jdata[1][0][5][0][1][0][3]
-    newJson['Location']['original_lat'] = ''
-    newJson['Location']['original_lng'] = ''
-    newJson['Location']['elevation_wgs84_m'] = ""
-    newJson['Location']['description'] = jdata[1][0][3][2][0][0]
-    newJson['Location']['streetRange'] = ''
-    newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
-    newJson['Location']['country'] =  jdata[1][0][5][0][1][4]
-    newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
+        # Location
+        newJson['Location']['panoId'] = jdata[1][0][1][1]
+        newJson['Location']['zoomLevels'] = ''
+        newJson['Location']['lat'] = jdata[1][0][5][0][1][0][2]
+        newJson['Location']['lng'] = jdata[1][0][5][0][1][0][3]
+        newJson['Location']['original_lat'] = ''
+        newJson['Location']['original_lng'] = ''
+        newJson['Location']['elevation_wgs84_m'] = ""
+        newJson['Location']['description'] = jdata[1][0][3][2][0][0]
+        newJson['Location']['streetRange'] = ''
+        try:
+            newJson['Location']['country'] = jdata[1][0][5][0][1][4]
+        except Exception as e:
+            print("Error in obtain newJson['Location']['country']:", e)
+        try:
+            newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
+        except Exception as e:
+            print("Error in obtain newJson['Location']['region']:", e)
 
-    # Links
-    newJson['Links'] = getLinks(jdata)
+        newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
 
-    # Time_machine
-    newJson['Time_machine'] = getTimeMachine(jdata)
+        # Links
+        newJson['Links'] = getLinks(jdata)
 
-    # model
-    newJson['model']['depth_map'] = jdata[1][0][5][0][5][1][2]
+        # Time_machine
+        newJson['Time_machine'] = getTimeMachine(jdata)
+
+        # model
+        newJson['model']['depth_map'] = jdata[1][0][5][0][5][1][2]
+    except Exception as e:
+        print("Error in refactorJson():", e)
 
     return newJson
 

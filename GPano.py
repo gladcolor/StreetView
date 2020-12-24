@@ -616,8 +616,19 @@ class GPano():
         else: # if there is no panorama
             return 0, 0, 0
 
-
     def getPanoJsonfrmLonat(self, lon, lat):
+        try:
+            panoId, pano_lon, pano_lat = self.getPanoIDfrmLonlat(lon, lat)
+            jdata = self.getJsonfrmPanoID(panoId)
+        except Exception as e:
+            print("Error in getPanoJsonfrmLonat():", e)
+            return None
+
+        return jdata
+
+
+
+    def getPanoJsonfrmLonat0(self, lon, lat):
         try:
             server_num = random.randint(0, 3)
             # url = f'http://maps.google.com/cbk?hl=en&gl=us&output=json&ll={lat},{lon}'
@@ -2409,12 +2420,12 @@ class GSV_depthmap(object):
                     #     depthMap[y * w + (w - x - 1)] = 0
 
                     # huan
-                    if t < 100:
+                    if t < 50:
                         depthMap[y * w + x] = t
                     else:
-                        depthMap[y * w + x] = 9999999
+                        depthMap[y * w + x] = 0
                 else:
-                    depthMap[y * w + x] = 9999999
+                    depthMap[y * w + x] = 0
 
         return {"width": w, "height": h, "depthMap": depthMap}
 
@@ -2431,7 +2442,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
-    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=0):
+    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=3):
 
 
         jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1, saved_path=saved_path)
@@ -2447,7 +2458,7 @@ class GSV_depthmap(object):
         if pano_zoom > -1:
             GPano().getPanoJPGfrmPanoId(panoId=panoId, saved_path=saved_path, zoom=pano_zoom)
 
-        return img
+        return img, jdata
 
     def saveDepthMap_frm_JsonFile(self, json_file, saved_path):
         try:

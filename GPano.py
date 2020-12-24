@@ -464,7 +464,7 @@ class GPano():
             print("Error in getPanoJPGfrmPanoId():", e)
             status = 0
 
-        return status
+        return mapname
 
     def getPanosfrmLonlats_mp(self, list_lonlat_mp, saved_path, prefix="", suffix="", zoom=5, Process_cnt=4):
         """ Multi_processing version of getPanosfrmLonlats()
@@ -605,14 +605,13 @@ class GPano():
         if len(line) > 1000:
             try:
                 jdata = json.loads(line)
+                panoId = jdata[1][1][1]
+                pano_lon = jdata[1][5][0][1][0][3]
+                pano_lat = jdata[1][5][0][1][0][2]
+                return panoId, pano_lon, pano_lat
             except:
                 jdata = ""
-
-            panoId = jdata[1][1][1]
-            pano_lon = jdata[1][5][0][1][0][3]
-            pano_lat = jdata[1][5][0][1][0][2]
-
-            return panoId, pano_lon, pano_lat
+                return 0, 0, 0
 
         else: # if there is no panorama
             return 0, 0, 0
@@ -2307,8 +2306,18 @@ class GSV_depthmap(object):
         # convert the URL safe format to regular format.
         data = b64_string.replace("-", "+").replace("_", "/")
 
-        data = base64.b64decode(data)  # decode the string
+        # origninal
+        # data = base64.b64decode(data)  # decode the string
+        # data = zlib.decompress(data)  # decompress the data
+
+        # Huan
+        data = base64.b64decode(b64_string)
         data = zlib.decompress(data)  # decompress the data
+        data = data.decode("ascii")
+        data += "=" * ((4 - len(data) % 4) % 4)
+        data = data.replace("-", "+").replace("_", "/")
+        data = base64.b64decode(data)
+
         return np.array([d for d in data])
 
     def parseHeader(self, depthMap):
@@ -2422,7 +2431,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
-    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True):
+    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=0):
 
 
         jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1, saved_path=saved_path)
@@ -2435,8 +2444,28 @@ class GSV_depthmap(object):
         if len(saved_path) > 0:
             img = self.saveDepthmapImage(depthMap, new_name)
 
+        if pano_zoom > -1:
+            GPano().getPanoJPGfrmPanoId(panoId=panoId, saved_path=saved_path, zoom=pano_zoom)
+
         return img
 
+    def saveDepthMap_frm_JsonFile(self, json_file, saved_path):
+        try:
+            if not os.path.exists(json_file):
+                return None
+
+            jdata = open(json_file)
+            jdata = json.load(jdata)
+
+            depthMap = self.getDepthmapfrmJson(jdata)
+
+            new_name = os.path.join(saved_path, jdata['Location']['panoId'] + ".tif")
+
+            if len(saved_path) > 0:
+                img = self.saveDepthmapImage(depthMap, new_name)
+            return img
+        except Exception as e:
+            print("Error in saveDepthMap_frm_JsonFile():", e)
 
     def saveDepthmapImage(self, depthMap, saved_file):
         im = depthMap["depthMap"]

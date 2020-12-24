@@ -2,10 +2,24 @@ import GPano
 import json
 import os
 import requests
-import pandas as pd
+
 import multiprocessing as mp
 import time
 import GPano
+import glob
+import math
+
+import PIL
+from PIL import Image, features
+
+import pandas as pd
+import numpy as np
+from natsort import natsorted
+
+import pptk
+
+gsv = GPano.GSV_depthmap()
+
 def getJsonDepthmapfrmLonlat(lon, lat, dm=1, saved_path='', prefix='', suffix=''):
     prefix = str(prefix)
     suffix = str(suffix)
@@ -112,14 +126,14 @@ def test_getJsonfrmPanoID():
 def test_go_along_road_forward():
     csv_file = r'L:\Datasets\HamptonRoads\EC-lat-lon.csv'
     df = pd.read_csv(csv_file)
-    for idx, row in df.iterrows():
+    for idx, row in df[3750:].iterrows():
         lon = row['LON']
         lat = row['LAT']
         ID = int(row['ID'])
         gpano = GPano.GPano()
         saved_path = r'L:\Datasets\HamptonRoads\go_along'
-        # results = gpano.go_along_road_forward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
-        results = gpano.go_along_road_backward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
+        results = gpano.go_along_road_forward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
+        # results = gpano.go_along_road_backward(lon, lat, saved_path, yaw_list='json_only', steps=100, overwrite=True)
 
         # go_along_road_forward(self, lon, lat, saved_path, yaw_list=0, pitch_list=0, steps=99999, polygon=None, fov=90, zoom=5):
         result_file_name = os.path.join(saved_path, str(ID) + "_backward.txt")
@@ -135,8 +149,240 @@ def test_go_along_road_forward():
             f.close()
         # print(result['Time_machine'])
 
+def test_saveDepthMap_frm_JsonFile():
+    saved_path =  r'L:\Datasets\HamptonRoads\go_along\depthmaps'
+    data_path = r'L:\Datasets\HamptonRoads\go_along'
+    TXTs = glob.glob(os.path.join(data_path, "*.txt"))
+    Jsons = glob.glob(os.path.join(data_path, "*.json"))
+
+
+
+
+    mp_list = mp.Manager().list()
+    for j in Jsons:
+        mp_list.append(j)
+
+    process_cnt = 8
+    pool = mp.Pool(processes=process_cnt)
+    for i in range(process_cnt):
+        pool.apply_async(save_depthmap, args=(mp_list, saved_path))
+    pool.close()
+    pool.join()
+
+    # for idx, json in enumerate(Jsons):
+    #     try:
+    #
+    #         gsv.saveDepthMap_frm_JsonFile(json, saved_path)
+    #         basename = os.path.basename(json)
+    #         print(idx, basename)
+    #     except Exception as e:
+    #         print("Error in test_saveDepthMap_frm_JsonFile():", e)
+    #         continue
+
+def save_depthmap(json_list, saved_path):
+    gsv = GPano.GSV_depthmap()
+    total = len(json_list)
+    processed_cnt = total - len(json_list)
+    while len(json_list) > 0:
+        json = json_list.pop(0)
+        basename = os.path.basename(json)
+        basename = basename.replace(".json", '.tif')
+        new_name = os.path.join(saved_path, basename)
+        if os.path.exists(new_name):
+            continue
+
+        gsv.saveDepthMap_frm_JsonFile(json, saved_path)
+        processed_cnt += 1
+        print(f"Processed {processed_cnt} / {total}")
+
+def read_depthmaps():
+    depthmap_path =  r'L:\Datasets\HamptonRoads\go_along\depthmaps'
+    data_path = r'L:\Datasets\HamptonRoads\go_along'
+    tag = r'_backward'
+    back_txts = glob.glob(os.path.join(data_path, "*_backward.txt"))
+    saved_path = r'L:\Datasets\HamptonRoads\go_along\heights'
+    for idx, txt in enumerate(back_txts[:]):
+        print(txt)
+        # f = open(txt, 'r')
+        df = pd.read_csv(txt, header=None)
+        df.columns = ["panoId", 'lon', 'lat']
+        # print(df)
+        df = df.iloc[::-1]
+        df = df[:-1]
+        # print(df)
+
+        forward_txt = txt.replace("_backward", '')
+        basename = os.path.basename(forward_txt)
+
+        if os.path.exists(forward_txt):
+            df_forward = pd.read_csv(forward_txt, header=None)
+        df_forward.columns = ["panoId", 'lon', 'lat']
+        # print(df_forward)
+
+        df_all = pd.concat([df, df_forward])
+        df_all = df_all.reset_index()
+        # print(df_all)
+        df_all['height'] = -1.0
+        df_all['image_date'] = ''
+        for idx, row in df_all.iterrows():
+            try:
+                panoId = row['panoId']
+                dm_file = os.path.join(depthmap_path, panoId+".tif")
+                json_file = os.path.join(data_path, panoId+".json")
+                dm_img = Image.open(dm_file)
+                dm_img = np.array(dm_img)
+                height = dm_img[-1][255]
+
+                image_date = json.load(open(json_file, 'r'))['Data']['image_date']
+                df_all.at[idx, 'height'] = height
+                df_all.at[idx, 'image_date'] = image_date
+                print(basename, panoId, image_date, dm_img.shape, height)
+            except Exception as e:
+                print("Error in  df_all.iterrows():", e)
+                continue
+
+        # print(df_all)
+
+        df_all = df_all.drop("index", axis=1)
+        df_all.to_csv(os.path.join(saved_path, basename), index=False)
+
+
+
+    # forward_txts =
+
+def getHeightVariance():
+    data_dir = r'L:\Datasets\HamptonRoads\go_along\heights'
+    txts = glob.glob(os.path.join(data_dir, '*.txt'))
+    txts = natsorted(txts)
+    # df_std = pd.DataFrame(columns=['ID', 'start', 'end', 'mean', 'std'])
+    row_list = []
+    for idx0, txt in enumerate(txts[:]):
+        print("Processing:", txt)
+        basename = os.path.basename(txt)
+        df = pd.read_csv(txt)
+        pre_date = '[0000, 00]'
+        end_pos = 0
+        # start_pos = 0
+
+        sum_height = 0
+        count = 0
+        std_count = 0
+
+
+        start_pos = 0
+        for idx, row in df[:].iterrows():
+
+            height = row['height']
+            sum_height += height
+            count += 1
+            crt_date = row['image_date']
+
+            crt_pos = idx
+
+            if idx ==0:
+                pre_date = crt_date
+
+            if (crt_date != pre_date) or (idx == len(df)-1):
+
+                if crt_pos > end_pos + 1:
+                    end_pos = idx - 1
+                    std_dict = {}
+                    std_dict['ID'] = basename
+                    std_dict['image_date'] =crt_date
+                    std_dict['start'] = start_pos
+                    std_dict['end'] = end_pos
+                    std_dict['count'] = end_pos - start_pos +1
+                    if std_dict['count']  > 1:
+                        std_dict['std'] = df[start_pos:end_pos-1]['height'].std()
+                        std_dict['mean']= df[start_pos:end_pos-1]['height'].mean()
+                    else:
+                        std_dict['std'] = 0
+                        std_dict['mean'] = 0
+                    start_pos = idx
+                    pre_date = crt_date
+                    row_list.append(std_dict)
+                else:
+                    start_pos = idx + 1
+
+    df_std = pd.DataFrame(row_list)
+    print(df_std)
+    df_std.to_csv(os.path.join(data_dir, "height_std.csv"), index=False)
+
+
+
+def showPointCloud():
+
+    lon =-74.1628251
+    lat =40.7282837
+    lat, lon = 40.7316559, -74.1623911
+    lat, lon = 40.758635,-73.9637293
+    lat, lon = 40.7605202,-73.9640951
+    lat, lon = 40.7692807,-73.9435982
+    lat, lon = 40.780667,-73.9610365
+    lat, lon = 40.7302882,-74.1814277
+    saved_path = r'K:\Research\street_view_depthmap'
+    # panoId = r'1_LEWPWwTwKBqDXQODfRmA'
+    panoId, _, _ = GPano.GPano().getPanoIDfrmLonlat(lon, lat)
+    print(panoId)
+
+    # jpg = tif.replace("noflip.tif", '.jpg')
+    dm = gsv.saveDepthMap_frm_panoId(panoId=panoId, saved_path=saved_path)
+
+    # tif = r'I:\t\depthmap0\6kPwaDvg4AZ39ESx1FK13gnoflip.tif'
+
+    # dm = Image.open(tif)
+    jpg = os.path.join(saved_path, panoId+'.jpg')
+    img = Image.open(jpg)
+
+    dm_np = np.array(dm)
+    img_np = np.array(img)[0:256, :, :]
+    colors = img_np.reshape(-1, 3)
+    print(colors.shape)
+    print(colors)
+    # print(img_np.shape)
+    nx, ny = (512, 256)
+    x_space = np.linspace(0, nx-1, nx)
+    y_space = np.linspace(ny-1,0, ny)
+
+    xv, yv = np.meshgrid(x_space, y_space)
+
+    # sin = (np.ones(ny, nx))
+
+    thetas = yv / ny * np.pi - np.pi / 2
+    phis = xv / nx * (np.pi * 2) - np.pi
+    thetas_sin = np.sin(thetas)
+    thetas_cos = np.cos(thetas)
+    phis_sin = np.sin(phis)
+    phis_cos = np.cos(phis)
+    R = thetas_cos * dm_np
+
+    z = dm_np * thetas_sin
+    x = R * phis_cos
+    y = R * phis_sin
+    print(x)
+    print(y)
+    print(z.shape)
+    print(z.ravel().shape)
+    print(z.ravel().reshape(-1, 1).shape)
+
+    #
+    # print(xv)
+    # print(yv)
+    # print(xv.shape)
+    # print(yv.shape)
+
+    P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)], axis=1)
+
+    v = pptk.viewer(P)
+    v.attributes(colors/255.)
+    v.set(point_size=0.03,show_axis=False, show_grid=False)
+
+
 if __name__ == '__main__':
-    test_go_along_road_forward()
+    showPointCloud()
+    # getHeightVariance()
+    # read_depthmaps()
+    # test_go_along_road_forward()
 
 
     # getJsonDepthmapfrmLonlat(-74.317149454999935, 40.798423060000061, dm=1,

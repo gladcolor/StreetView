@@ -123,6 +123,11 @@ class GPano():
         s = np.sin(th)
         return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
+    def zrotation(self, th):
+        c = np.cos(th)
+        s = np.sin(th)
+        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
 
     # Obtain a panomaro image from Google Street View Map
     def getPanoZoom0frmID(self, panoId, saved_path):
@@ -2176,7 +2181,33 @@ class GPano():
           render view at (pitch, yaw) with fov_h by fov_v
           width is the number of horizontal pixels in the view
           """
-        m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
+
+        # test:
+        theta0 = (pi/2-theta0)
+        # pitch = (pi/2-pitch)
+        # pitch = (pi / 2 - pitch)
+        # m = np.dot(self.zrotation(pitch), self.yrotation(phi0), self.xrotation(theta0))  # failed
+        # m = np.dot(self.zrotation(pitch), self.yrotation(phi0), self.xrotation(-theta0))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pi/2-pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pi/2+pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi/2+pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi/2-pitch))  # failed
+        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi-pitch))  # failed
+        # m = self.zrotation(-pitch)
+        m = np.eye(3)
+        m = m.dot(self.zrotation(pitch))
+        m = m.dot(self.xrotation(theta0))
+        m = m.dot(self.yrotation(phi0))
+
+
+        # m = np.dot(self.zrotation(-pi-pitch), self.xrotation(theta0))
+        # m = np.dot(m, self.yrotation(phi0))  # failed
+        # m = np.dot(self.zrotation(-pi/2+pitch),m )
+
+        # end test.
+        # m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
 
         # Huan
         # m = np.dot(yrotation(phi0), np.dot(xrotation(pitch), xrotation(theta0))
@@ -2420,7 +2451,7 @@ class GSV_depthmap(object):
                     #     depthMap[y * w + (w - x - 1)] = 0
 
                     # huan
-                    if t < 50:
+                    if t < 70:
                         depthMap[y * w + x] = t
                     else:
                         depthMap[y * w + x] = 0
@@ -2504,8 +2535,7 @@ class GSV_depthmap(object):
             print('pitch_of_thumb:', math.degrees(pitch_of_thumb))
             results = []
 
-            # if not isinstance(theta_phis_in_pano, list):
-            #     theta_phis_in_thumb = [theta_phis_in_pano]
+
 
             results = theta_phis_in_pano
             print('results shape: ', results.shape, results[0])
@@ -2517,22 +2547,13 @@ class GSV_depthmap(object):
             heading_of_pano = float(heading_of_pano)
             pitch_of_pano = float(pitch_of_pano)
             print('results shape: ', results.shape, results[0])
-            # for row in theta_phis_in_thumb:
-            #     print("theta_phis_in_thumb (before adding thumb_heading): ", row)
 
-            # theta_phis_in_thumb = [tuple([row[0] - pitch_of_thumb, row[1] + heading_of_thumb]) for row in theta_phis_in_thumb]
-
-            # results = np.array(theta_phis_in_thumb)
             print('results shape: ', results.shape, results[0])
             results = np.concatenate((results, theta_phis_in_pano), axis=1)
 
             print('results shape: ', results.shape, results[0])
 
-            # for row in theta_phis_in_thumb:
-            #     print("theta_phis_in_thumb (after adding thumb_heading): ", row)
-            #
-            # for row in theta_phis_in_thumb:
-            #     print("theta_phis_in_thumb (after adding pano_heading): ", row[1] + heading_of_pano)
+
 
             # print("row: ", row)
             points3D = np.zeros((len(theta_phis_in_pano), 4))
@@ -3403,16 +3424,11 @@ class GSV_depthmap(object):
                     header = self.parseHeader(depthMapData)
                     # print('header:',header)
                     dm_planes = self.parsePlanes(header, depthMapData)
-                    # print('dm_planes[indices]:', dm_planes['indices'])
-                    # print('len of dm_planes[indices]:', len(dm_planes['indices']))
+
 
                     dm = self.getDepthmapfrmJson(obj_json)
 
-                    # print("dm:", dm)
 
-
-                    # print('dm[depthjMap]:', dm['depthMap'])
-                    # print('dm[depthjMap] min, max:', min(dm['depthMap']), max(dm['depthMap']))
 
 
                     url = GPano.getGSV_url_frm_lonlat(self, pano_lon, pano_lat, heading=math.degrees(thumb_heading))
@@ -3424,10 +3440,7 @@ class GSV_depthmap(object):
                     # sidewalk_idx = [tuple(row) for row in sidewalk_idx]
                     # print('sidewalk_idx:', sidewalk_idx)
                     classes = np.where(predict == -1)
-                    # print("classes len: ", len(classes))
 
-                    # print("len of sidewalk_idx:", len(sidewalk_idx))
-                    # print("sidewalk_idx:", sidewalk_idx)
 
 
                     if len(sidewalk_idx) > 1:

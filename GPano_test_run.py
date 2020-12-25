@@ -327,6 +327,7 @@ def clip_panos_ocean_city():
         pano_pitch = 0
 
         fov_v = atan((h * tan((fov_h / 2)) / w)) * 2
+
         for yaw in yawList:
             rimg = gpano.clip_pano(theta0,
                                    radians(yaw),

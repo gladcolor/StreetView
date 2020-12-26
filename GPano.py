@@ -113,20 +113,20 @@ class GPano():
         rotated = cv2.warpAffine(old_image, M, (old_width, old_height))
         return rotated
 
-    def xrotation(self, th):
+    def xrotation(self, th):  # verified, good to use, same as wikipedia
         c = np.cos(th)
         s = np.sin(th)
-        return np.array([[1, 0, 0], [0, c, s], [0, -s, c]])
+        return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
 
     def yrotation(self, th):
         c = np.cos(th)
         s = np.sin(th)
-        return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+        return np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]])
 
     def zrotation(self, th):
         c = np.cos(th)
         s = np.sin(th)
-        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+        return np.array([[c, -s, 0.0], [s, c, 0], [0.0, 0.0, 1.0]])
 
 
     # Obtain a panomaro image from Google Street View Map
@@ -2183,38 +2183,22 @@ class GPano():
           """
 
         # test:
-        theta0 = (pi/2-theta0)
-        # pitch = (pi/2-pitch)
-        # pitch = (pi / 2 - pitch)
-        # m = np.dot(self.zrotation(pitch), self.yrotation(phi0), self.xrotation(theta0))  # failed
-        # m = np.dot(self.zrotation(pitch), self.yrotation(phi0), self.xrotation(-theta0))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pi/2-pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(pi/2+pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi/2+pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi/2-pitch))  # failed
-        # m = np.dot(self.xrotation(theta0), self.yrotation(phi0), self.zrotation(-pi-pitch))  # failed
-        # m = self.zrotation(-pitch)
+
         m = np.eye(3)
+
+        theta0 = (theta0 - pi / 2 )
         m = m.dot(self.zrotation(pitch))
         m = m.dot(self.xrotation(theta0))
         m = m.dot(self.yrotation(phi0))
 
 
-        # m = np.dot(self.zrotation(-pi-pitch), self.xrotation(theta0))
-        # m = np.dot(m, self.yrotation(phi0))  # failed
-        # m = np.dot(self.zrotation(-pi/2+pitch),m )
-
         # end test.
         # m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
 
-        # Huan
-        # m = np.dot(yrotation(phi0), np.dot(xrotation(pitch), xrotation(theta0))
 
         (base_height, base_width, _) = img.shape
 
-        height = int(width * np.tan(fov_v / 2) / np.tan(fov_h / 2))
+        height = int(round(width * np.tan(fov_v / 2) / np.tan(fov_h / 2), 0))
 
         new_img = np.zeros((height, width, 3), np.uint8)
 
@@ -2412,6 +2396,7 @@ class GSV_depthmap(object):
         h = header["height"]
 
         depthMap = np.empty(w * h)
+        normal_vector_map = np.zeros((h, w, 3), dtype=np.uint8)
 
         sin_theta = np.empty(h)
         cos_theta = np.empty(h)
@@ -2437,6 +2422,8 @@ class GSV_depthmap(object):
                 # v[0] = sin_theta[y] * cos_phi[x]
                 # v[1] = sin_theta[y] * sin_phi[x]
 
+
+
                 # Huan
                 v[0] = sin_theta[y] * sin_phi[x]
                 v[1] = sin_theta[y] * cos_phi[x]
@@ -2445,6 +2432,11 @@ class GSV_depthmap(object):
                 if planeIdx > 0:
                     plane = planes[planeIdx]
                     t = np.abs(plane["d"] / (v[0] * plane["n"][0] + v[1] * plane["n"][1] + v[2] * plane["n"][2]))
+
+                    normal_vector_map[y, x, 0] = int(plane["n"][0] * 128 + 128)
+                    normal_vector_map[y, x, 1] = int(plane["n"][1] * 128 + 128)
+                    normal_vector_map[y, x, 2] = int(plane["n"][2] * 128 + 128)
+
                     # original
                     #     depthMap[y * w + (w - x - 1)] = t
                     # else:
@@ -2458,7 +2450,7 @@ class GSV_depthmap(object):
                 else:
                     depthMap[y * w + x] = 0
 
-        return {"width": w, "height": h, "depthMap": depthMap}
+        return {"width": w, "height": h, "depthMap": depthMap, "normal_vector_map": normal_vector_map}
 
     def getDepthmapfrmJson(self, jdata):
         try:
@@ -2473,7 +2465,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
-    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=3):
+    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=2):
 
 
         jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1, saved_path=saved_path)
@@ -2998,7 +2990,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in seg_to_pointcloud():", e, seg)
 
-    def rotate_x(self,pitch):
+    def rotate_x(self,pitch):  # verified, good to use, same as wikipedia
         #picth is degree
         r_x = np.array([[1.0,0.0,0.0],
                         [0.0,math.cos(pitch),-1*math.sin(pitch)],

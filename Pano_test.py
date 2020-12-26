@@ -395,13 +395,18 @@ def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_p
 
     P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)], axis=1)
 
-    rotate_x_radian = (90 - tilt_yaw_deg) / 180 * math.pi
-    rotate_z_radian = (90 - pano_yaw_deg) / 180 * math.pi
-    rotate_y_radian = (-tilt_pitch_deg) / 180 * math.pi  # should  be negative according to the observation of highway ramp.
+    # rotate_x_radian = (90 - tilt_yaw_deg) / 180 * math.pi
+    # rotate_z_radian = (90 - pano_yaw_deg) / 180 * math.pi
+    # rotate_y_radian = (-tilt_pitch_deg) / 180 * math.pi  # should  be negative according to the observation of highway ramp.
+    #
+    rotate_x_radian = math.radians(90 - tilt_yaw_deg)
+    rotate_y_radian = math.radians(-tilt_pitch_deg)  # should  be negative according to the observation of highway ramp.
+    rotate_z_radian = math.radians(90 - pano_yaw_deg)
 
-    P = P.dot(gsv.rotate_x(rotate_x_radian))
-    P = P.dot(gsv.rotate_y(rotate_y_radian))
-    P = P.dot(gsv.rotate_z(rotate_z_radian))
+
+    P = P.dot(gsv.rotate_x(rotate_x_radian))   # math.radians(90 - tilt_yaw_deg)  # roll
+    P = P.dot(gsv.rotate_y(rotate_y_radian))   # math.radians(-tilt_pitch_deg)  # pitch
+    P = P.dot(gsv.rotate_z(rotate_z_radian))   # math.radians(90 - pano_yaw_deg)  # yaw
 
 
 
@@ -445,9 +450,10 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     lat, lon = 40.7059479,-74.2829309
     lat, lon = 40.7303117,-74.1815408   # NJIT kinney street
     lat, lon = 40.7068861, -74.2569793  # Franklin elem.
-    lat, lon = 40.6490476, -74.1921442
+
     lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
     lat, lon = 40.7093514, -74.2453146  # road bridge tilt
+    lat, lon = 40.6490476, -74.1921442
 
     jdata = gpano.getPanoJsonfrmLonat(lon, lat)
 
@@ -472,21 +478,20 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     links = jdata.get("Links", [])
     for link in links:
         p = link["panoId"]
-        # pts = getPointCloud_from_PanoId(panoId = p)
-        #
-        # jdata1 = gpano.getJsonfrmPanoID(p)
-        # lat1 = jdata1['Location']['lat']
-        # lon1 = jdata1['Location']['lng']
-        # elevation_egm96_m = jdata1['Location']['elevation_egm96_m']
-        # elevation_egm96_m = float(elevation_egm96_m)
-        #
-        # new_center = transformer.transform(lat1, lon1)
-        # pts[:, 0:1] += new_center[1]
-        # pts[:, 1:2] += new_center[0]
-        # pts[:, 2:3] += elevation_egm96_m
-        # print("new_center: ", new_center)
+        pts = getPointCloud_from_PanoId(panoId = p)
 
-        # P = np.concatenate([P, pts], axis=0)
+        jdata1 = gpano.getJsonfrmPanoID(p)
+        lat1 = jdata1['Location']['lat']
+        lon1 = jdata1['Location']['lng']
+        elevation_egm96_m = jdata1['Location']['elevation_egm96_m']
+        elevation_egm96_m = float(elevation_egm96_m)
+
+        new_center = transformer.transform(lat1, lon1)
+        pts[:, 0:1] += new_center[1]
+        pts[:, 1:2] += new_center[0]
+        pts[:, 2:3] += elevation_egm96_m
+        print("new_center: ", new_center)
+        P = np.concatenate([P, pts], axis=0)
 
 
     # print(P[:, :3])
@@ -578,12 +583,12 @@ def showPointCloud():
 
 def clip_pano():
     img_file = r'K:\Research\street_view_depthmap\BM1Qt23drK3-yMWxYfOfVg_zoom5.jpg'
-    # img_file = r'K:\Research\street_view_depthmap\6P-soqWVruus2bXk_44uDA-zoom6_ramp.jpg'
+    img_file = r'K:\Research\street_view_depthmap\6P-soqWVruus2bXk_44uDA-zoom5_ramp.jpg'
 
     saved_path =  r'K:\Research\street_view_depthmap'
     img = cv2.imread(img_file)
     theta0 = 0
-    yaw = 90
+    yaw = -90
     phi0 = math.radians(yaw)
     fov = 90  # degree
     h_w_ratio = 3 / 4
@@ -592,20 +597,24 @@ def clip_pano():
     w = int(fov / 360 * w_img/ 4)
     h = int(w * h_w_ratio)
     fov_v = math.atan((h * math.tan((fov_h / 2)) / w)) * 2
-    theta0 = math.radians(84.20023345947266)
+    theta0 = math.radians(84.20023345947266)  # njit kinney street
     pitch =  math.radians(1.42633581161499)
+
+    theta0 = math.radians(90.95146179199219)  # highway ramp
+    pitch =  math.radians(358.2179260253906)
+
     rimg = gpano.clip_pano(theta0, phi0, fov_h, fov_v, w, img, pitch)
     basename = os.path.basename(img_file)
     new_name = os.path.join(saved_path, basename)
-    cv2.imwrite('%s_%d_%d.jpg' % (new_name, theta0, yaw), rimg)
+    cv2.imwrite('%s_%d_%d.jpg' % (new_name, math.degrees(theta0), yaw), rimg)
 
 
 if __name__ == '__main__':
     # showPointCloud()
     # getPointCloud_from_PanoId()
     # getHeightVariance()
-    # showNeighbor_pointClouds()
-    clip_pano()
+    showNeighbor_pointClouds()
+    # clip_pano()
     # read_depthmaps()
     # test_go_along_road_forward()
 

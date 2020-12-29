@@ -331,6 +331,13 @@ def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_p
     jpg = os.path.join(saved_path, panoId + '.jpg')
     img = Image.open(jpg)
 
+    normalvector_file = os.path.join(saved_path, panoId + '_normal_vector.png')
+    # normalvector_file = os.path.join(saved_path, panoId + '_plane_idx.tif')
+    normalvector = Image.open(normalvector_file)
+
+    plane_idx_file = os.path.join(saved_path, panoId + '_plane_idx.png')
+    plane_idx = Image.open(plane_idx_file)
+
     img_height = img.height
     img_width = img.width
 
@@ -370,8 +377,18 @@ def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_p
     dm_np = dm_np * dm_mask
 
 
+
     img_np = np.array(img)[0:img_height, :, :]
     colors = img_np.reshape(-1, 3)
+
+    normalvector = normalvector.resize((img.width, img_height), Image.NEAREST)
+    normalvector_np = np.array(normalvector)[0:img_height, :, :]
+    normalvectors = normalvector_np.reshape(-1, 3)
+
+    plane_idx = plane_idx.resize((img.width, img_height), Image.NEAREST)
+    plane_np = np.array(plane_idx)[0:img_height, :]
+    planes = plane_np.reshape(-1, 1)
+
     # print(colors.shape)
     # print(colors)
     # print(img_np.shape)
@@ -408,15 +425,19 @@ def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_p
     P = P.dot(gsv.rotate_y(rotate_y_radian))   # math.radians(-tilt_pitch_deg)  # pitch
     P = P.dot(gsv.rotate_z(rotate_z_radian))   # math.radians(90 - pano_yaw_deg)  # yaw
 
-
-
     if color:
-        P = np.concatenate([P, colors], axis=1)
+        P = np.concatenate([P, colors, planes, normalvectors, normalvectors[:, 2:3]], axis=1)
+
+
 
     P = np.concatenate([P, dm_np.ravel().reshape(-1, 1)], axis=1)
     P = P[np.where(dm_mask.ravel())]
-    P = P[P[:, -1] < 25]
-    # P = P[P[:, -1] > 2]
+    distance_threshole = 20
+    P = P[P[:, -1] < distance_threshole]
+
+    # keep the ground points.
+    P = P[P[:, -2] <10]
+
     # P = P[P[:, 2] < 8]
 
     # P = P[P[:, -1] < 30]
@@ -424,6 +445,7 @@ def getPointCloud_from_PanoId(panoId="", lat=None, lon=None, color=True, saved_p
     # print(P.shape, P)
 
     return P[:, :6]
+    # return P[:, :-2]
 
 def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=True, saved_path=''):
     lat, lon = 40.7301114, -74.1806459
@@ -445,19 +467,32 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     lat, lon = 40.6506152,-74.1853549
 
 
-    lat, lon = 40.7093514,-74.2453146 # road bridge tilt
     lat, lon = 40.7065675,-74.2822872  # black hole in middle
     lat, lon = 40.7059479,-74.2829309
-    lat, lon = 40.7303117,-74.1815408   # NJIT kinney street
-    lat, lon = 40.7068861, -74.2569793  # Franklin elem.
 
     lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
     lat, lon = 40.7093514, -74.2453146  # road bridge tilt
     lat, lon = 40.6490476, -74.1921442
 
+    lat, lon = 40.7068861, -74.2569793  # Franklin elem.
+    lat, lon = 40.6693928, -74.2276427 # Elizebth, NJ, Topical area
+    lat, lon = 40.780667, -73.9610365  # Good example, single side, school marking.
+    lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+    lat, lon = 40.7093514, -74.2453146  # road bridge ramp tilt, z = 37 m
+    lat, lon = 40.7115964, -74.2443227 # under ramp, z =28.3m
+    lat, lon = 40.7088847,-74.2451582 # under ramp, z =24.7m
+    lat, lon = 40.7096628,-74.244780 # middle ramp, z =32.1m
+    lat, lon =40.7065092,-74.2565972  # Near Franklin elem. school, NJ
+    lat, lon = 40.7045795, -74.2571879
+
+    lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+
     jdata = gpano.getPanoJsonfrmLonat(lon, lat)
 
     panoId = jdata['Location']['panoId']
+
+    # lat, lon = 40.7093514, -74.2453146  # road bridge ramp tilt, z = 37 m
+    # panoId = "eCxNsAw4zyWgE94PA2t8EA"  # under ramp, z =31.9m
 
 
     P = getPointCloud_from_PanoId(panoId = panoId)
@@ -476,45 +511,67 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     print("new_center: ", new_center)
 
     links = jdata.get("Links", [])
-    for link in links:
-        p = link["panoId"]
-        pts = getPointCloud_from_PanoId(panoId = p)
 
-        jdata1 = gpano.getJsonfrmPanoID(p)
-        lat1 = jdata1['Location']['lat']
-        lon1 = jdata1['Location']['lng']
-        elevation_egm96_m = jdata1['Location']['elevation_egm96_m']
-        elevation_egm96_m = float(elevation_egm96_m)
+    show_neighbor = False
+    # show_neighbor = True
+    if show_neighbor:
+        for link in links:
+            p = link["panoId"]
+            pts = getPointCloud_from_PanoId(panoId = p)
 
-        new_center = transformer.transform(lat1, lon1)
-        pts[:, 0:1] += new_center[1]
-        pts[:, 1:2] += new_center[0]
-        pts[:, 2:3] += elevation_egm96_m
-        print("new_center: ", new_center)
-        P = np.concatenate([P, pts], axis=0)
+            jdata1 = gpano.getJsonfrmPanoID(p)
+            lat1 = jdata1['Location']['lat']
+            lon1 = jdata1['Location']['lng']
+            elevation_egm96_m = jdata1['Location']['elevation_egm96_m']
+            elevation_egm96_m = float(elevation_egm96_m)
 
+            new_center = transformer.transform(lat1, lon1)
+            pts[:, 0:1] += new_center[1]
+            pts[:, 1:2] += new_center[0]
+            pts[:, 2:3] += elevation_egm96_m
+            print("new_center: ", new_center)
+            P = np.concatenate([P, pts], axis=0)
 
     # print(P[:, :3])
     # print(P[:, 3:6])
     print(P.shape)
 
     v = pptk.viewer(P[:, :3])
-    v.attributes(P[:, 3:6] / 255.)
-    v.set(point_size=0.003, show_axis=True, show_grid=True)
+    # transparent = np.concatenate([P[:, 3:6] / 255.0, 1-(P[:, -2:-1])/255.0], axis=1)
+    # v.attributes(P[:, 3:6] / 255.0, P[:, 6], P[:, 7:10]/255.0)
+    v.attributes(P[:, 3:6] / 255.0)
+    # P = np.concatenate([P, colors, planes, normalvectors, normalvectors[:, 2]], axis=1)
 
+    v.set(point_size=0.001, show_axis=True, show_grid=True)
 
+    img, worldfile = gsv.pointCloud_to_image(P, 0.02)
 
+    saved_path = r'K:\Research\street_view_depthmap'
+    new_name = os.path.join(saved_path, "pointcloud_img.jpg")
+    img_pil = Image.fromarray(img)
+    img_pil.save(new_name)
+
+    new_name = os.path.join(saved_path, "pointcloud_img.jgw")
+    # worldfile_name = new_file_name.replace(".png", '.pgw')
+    print("worldfile:", worldfile)
+    with open(new_name, 'w') as wf:
+        for line in worldfile:
+            print(line)
+            wf.write(str(line) + '\n')
+
+    # color_map = np.random.rand(30, 3)
+    # v.color_map(color_map)
 
 def showPointCloud():
 
-    lon =-74.1628251
-    lat =40.7282837
+    lon = -74.1628251
+    lat = 40.7282837
     lat, lon = 40.7316559, -74.1623911
     lat, lon = 40.758635,-73.9637293
     lat, lon = 40.7605202,-73.9640951
     lat, lon = 40.7692807,-73.9435982
     lat, lon = 40.780667,-73.9610365
-    lat, lon = 40.7303117,-74.1815408
+    lat, lon = 40.7303117,-74.1815408  # NJIT, Kinney street.
     saved_path = r'K:\Research\street_view_depthmap'
     # panoId = r'1_LEWPWwTwKBqDXQODfRmA'
     panoId, _, _ = GPano.GPano().getPanoIDfrmLonlat(lon, lat)
@@ -543,8 +600,6 @@ def showPointCloud():
 
     xv, yv = np.meshgrid(x_space, y_space)
 
-    # sin = (np.ones(ny, nx))
-
     thetas = yv / ny * np.pi - np.pi / 2
     phis = xv / nx * (np.pi * 2) - np.pi
     thetas_sin = np.sin(thetas)
@@ -556,19 +611,6 @@ def showPointCloud():
     z = dm_np * thetas_sin
     x = R * phis_cos
     y = R * phis_sin
-    # print(x)
-    # print(y)
-    # print(z.shape)
-    # print(z.ravel().shape)
-    # print(z.ravel().reshape(-1, 1).shape)
-
-    #
-    # print(xv)
-    # print(yv)
-    # print(xv.shape)
-    # print(yv.shape)
-
-
 
     P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)], axis=1)
 
@@ -583,16 +625,16 @@ def showPointCloud():
 
 def clip_pano():
     img_file = r'K:\Research\street_view_depthmap\BM1Qt23drK3-yMWxYfOfVg_zoom5.jpg'
-    img_file = r'K:\Research\street_view_depthmap\6P-soqWVruus2bXk_44uDA-zoom5_ramp.jpg'
+    # img_file = r'K:\Research\street_view_depthmap\6P-soqWVruus2bXk_44uDA-zoom5_ramp.jpg'
 
     saved_path =  r'K:\Research\street_view_depthmap'
     img = cv2.imread(img_file)
     theta0 = 0
-    yaw = -90
+    yaw = 90
     phi0 = math.radians(yaw)
-    fov = 90  # degree
+    fov = 105  # degree
     h_w_ratio = 3 / 4
-    fov_h = math.radians(90)
+    fov_h = math.radians(fov)
     h_img, w_img, channel = img.shape
     w = int(fov / 360 * w_img/ 4)
     h = int(w * h_w_ratio)
@@ -600,14 +642,13 @@ def clip_pano():
     theta0 = math.radians(84.20023345947266)  # njit kinney street
     pitch =  math.radians(1.42633581161499)
 
-    theta0 = math.radians(90.95146179199219)  # highway ramp
-    pitch =  math.radians(358.2179260253906)
+    # theta0 = math.radians(90.95146179199219)  # highway ramp
+    # pitch =  math.radians(358.2179260253906)
 
     rimg = gpano.clip_pano(theta0, phi0, fov_h, fov_v, w, img, pitch)
     basename = os.path.basename(img_file)
     new_name = os.path.join(saved_path, basename)
     cv2.imwrite('%s_%d_%d.jpg' % (new_name, math.degrees(theta0), yaw), rimg)
-
 
 if __name__ == '__main__':
     # showPointCloud()

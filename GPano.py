@@ -185,7 +185,7 @@ class GPano():
             brng = (brng + 360) #% 360
         return brng
 
-    def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=4):
+    def getPanoJPGsfrmLonlats(self, list_lonlat, saved_path, prefix="", suffix="", zoom=0):
         """ Obtain panorama images from a list of lat/lon: [(lon, lat), ...]
         """
         statuses = []  # succeeded: 1; failed: 0
@@ -2191,7 +2191,6 @@ class GPano():
         m = m.dot(self.xrotation(theta0))
         m = m.dot(self.yrotation(phi0))
 
-
         # end test.
         # m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
 
@@ -2231,7 +2230,6 @@ class GPano():
 
 
 class GSV_depthmap(object):
-
     # def getPanoIdDepthmapfrmLonlat(self, lon, lat, dm=1, saved_path='', prefix='', suffix=''):
     #     url = f''
     #     r = requests.get('url')
@@ -2414,6 +2412,8 @@ class GSV_depthmap(object):
             sin_phi[x] = np.sin(phi)
             cos_phi[x] = np.cos(phi)
 
+        plane_idx_map = np.reshape(indices, (h, w))
+
         for y in range(h):
             for x in range(w):
                 planeIdx = indices[y * w + x]
@@ -2443,14 +2443,14 @@ class GSV_depthmap(object):
                     #     depthMap[y * w + (w - x - 1)] = 0
 
                     # huan
-                    if t < 70:
+                    if t < 200:
                         depthMap[y * w + x] = t
                     else:
                         depthMap[y * w + x] = 0
                 else:
                     depthMap[y * w + x] = 0
 
-        return {"width": w, "height": h, "depthMap": depthMap, "normal_vector_map": normal_vector_map}
+        return {"width": w, "height": h, "depthMap": depthMap, "normal_vector_map": normal_vector_map, 'plane_idx_map': plane_idx_map}
 
     def getDepthmapfrmJson(self, jdata):
         try:
@@ -2465,7 +2465,7 @@ class GSV_depthmap(object):
         except Exception as e:
             print("Error in getDepthmapfrmJson():", e)
 
-    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=2):
+    def saveDepthMap_frm_panoId(self, panoId, saved_path, save_json=True, pano_zoom=3, normal_vector=True):
 
 
         jdata = GPano.getJsonfrmPanoID(GPano(), panoId, dm=1, saved_path=saved_path)
@@ -2481,7 +2481,20 @@ class GSV_depthmap(object):
         if pano_zoom > -1:
             GPano().getPanoJPGfrmPanoId(panoId=panoId, saved_path=saved_path, zoom=pano_zoom)
 
+        if normal_vector:
+            new_name = os.path.join(saved_path, panoId + "_normal_vector.png")
+            self.saveNormalVectorImage(depthMap, new_name)
+
+            new_name = os.path.join(saved_path, panoId + "_plane_idx.png")
+            self.savePlaneImage(depthMap, new_name)
+
         return img, jdata
+
+    def depthmap_to_dem(self, depthmap, w, h, resolution, heading_deg=0, saved_path=''):
+        idx = depthmap
+        f = interpolate.interp2d(x, y, z, kind='cubic')
+        depthmap
+        pass
 
     def saveDepthMap_frm_JsonFile(self, json_file, saved_path):
         try:
@@ -2517,7 +2530,18 @@ class GSV_depthmap(object):
 
         return img
 
-        # print(im)
+    def saveNormalVectorImage(self, depthMap, saved_file):
+        im = depthMap["normal_vector_map"]
+        img = PIL.Image.fromarray(im)
+        img.save(saved_file)
+        return img
+
+    def savePlaneImage(self, depthMap, saved_file):
+        im = depthMap["plane_idx_map"]
+        img = PIL.Image.fromarray(im)
+        img.save(saved_file)
+        return img
+    # print(im)
 
     def getPointCloud(self, theta_phis_in_pano, heading_of_thumb, pitch_of_thumb, \
                       depthmap, cameraLon, cameraLat,
@@ -3154,7 +3178,7 @@ class GSV_depthmap(object):
         return result
 
 
-    def pointCloud_to_image(self, pointcloud, resolution):
+    def pointCloud_to_image(self, pointcloud, resolution, pixels=[-1]):
         try:
             minX = min(pointcloud[:, 0])
             maxY = max(pointcloud[:, 1])
@@ -3162,7 +3186,7 @@ class GSV_depthmap(object):
             rangeY = maxY - min(pointcloud[:, 1])
             w = int(rangeX / resolution)
             h = int(rangeY / resolution)
-            np_image = np.zeros((h, w), dtype=np.uint8)
+            np_image = np.zeros((h, w, 3), dtype=np.uint8)
             # print("np_image.shape: ", np_image.shape)
             print('rangeX, rangeY, w, h:', rangeX, rangeY, w, h)
             # pointcloud = pointcloud[:5]
@@ -3180,7 +3204,8 @@ class GSV_depthmap(object):
                     row = h - 1
                 if col == w:
                     col = w - 1
-                np_image[row][col] = int(point[-1])
+                # np_image[row][col] = int(point[-1])  # original
+                np_image[row][col] = point[3:6].astype(int)
             worldfile = [resolution, 0, 0, -resolution, minX, maxY]
 
             return np_image, worldfile

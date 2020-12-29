@@ -19,7 +19,7 @@ import os
 import fiona
 from pyproj import Proj, transform
 
-# from pyproj import Transformer
+from pyproj import Transformer
 
 from tqdm import tqdm
 
@@ -525,6 +525,43 @@ def get_PanoJPG_Hampton2():
             print("Error in get_PanoJPG_Hampton, panoId, log:", panoId, e)
             continue
 
+
+
+def get_PanoJPG_DC():
+    csv_file = r'K:\Research\GSV_sidewalk\vectors\DC_Roadway_Block-shp\road_pts.csv'
+    saved_path = r'K:\Research\GSV_sidewalk\images\pano_zoom5'
+
+    df_pts = pd.read_csv(csv_file)
+
+    for idx, row in tqdm(df_pts.iterrows()):
+
+        x = row['LON']
+        y = row['LAT']
+        ID = str(int(row['Id']))
+
+        logger.info("ID: %s point: %f, %f", ID, x, y)
+
+        panoId, lon, lat = gpano.getPanoIDfrmLonlat(x, y)
+
+        if len(str(panoId)) < 20:
+            continue
+
+        new_file = os.path.join(saved_path,  panoId + ".jpg")
+
+        if os.path.exists(new_file):
+            continue
+
+        try:
+            gpano.getJsonfrmPanoID(panoId, dm=1, saved_path=saved_path)
+            gpano.getPanoJPGfrmPanoId(panoId, saved_path=saved_path, zoom=5)
+
+            print(f"Processing: {idx}, {panoId}   \n")
+
+        except Exception as e:
+            print("Error in get_PanoJPG_Hampton, panoId, log:", panoId, e)
+            continue
+
+
 def clip_panos_oceancity_with_panoId():
     try:
         shape_file = r'X:\My Drive\Research\StreetGraph\data\oceancity\vectors\ocean_parcel_panoid.shp'
@@ -979,7 +1016,8 @@ if __name__ == '__main__':
 
     # getHouse_image_HamptonRoads()
 
-    walk_forward()
+    # walk_forward()
+    get_PanoJPG_DC()
 
     print("Done")
 

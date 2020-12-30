@@ -4,6 +4,7 @@ import base64
 import struct
 import PIL
 import os
+from pyproj import Transformer
 
 
 import pandas as pd
@@ -351,3 +352,9 @@ def computeDepthMap(header, indices, planes):
 
     return {"width": w, "height": h, "depthMap": depthMap, "normal_vector_map": normal_vector_map, 'plane_idx_map': plane_idx_map}
 
+
+def epsg_transform(in_epsg, out_epsg):
+    # crs_4326 = CRS.from_epsg(4326)
+    # crs_local =  CRS.from_proj4(f"+proj=tmerc +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m +no_defs")
+    # print(crs_local)
+    return Transformer.from_crs(in_epsg, out_epsg)

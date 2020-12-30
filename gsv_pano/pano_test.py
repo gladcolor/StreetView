@@ -1,6 +1,9 @@
 import unittest
 import math
 import os
+import numpy as np
+
+import pptk
 
 from pano import GSV_pano
 
@@ -32,14 +35,21 @@ class TestPano(unittest.TestCase):
     #     print(mid_column_sum)
     #     self.assertEqual(round(mid_column_sum, 5), 864.18066)
 
-    def test_get_point_cloud(self):
-        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-        pano1 = GSV_pano(panoId=panoId_2019)
-        dm = pano1.get_depthmap()
-        point_cloud = pano1.get_point_cloud(zoom=2)
-        mid_column_sum = dm[:, 127].sum()
-        print(mid_column_sum)
-        self.assertEqual(round(mid_column_sum, 5), 864.18066)
+    # OK, 2020 - 12 - 29
+    # def test_get_point_cloud(self):
+    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+    #     pano1 = GSV_pano(panoId=panoId_2019)
+    #     dm = pano1.get_depthmap()
+    #     point_cloud = pano1.get_point_cloud(zoom=2)
+    #     P = point_cloud
+    #     v = pptk.viewer(P[:, :3])
+    #     v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+    #     # color_map = np.random.rand(255, 3)
+    #     # v.color_map(color_map)
+    #     # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+    #     mid_column_sum = dm[:, 127].sum()
+    #     v.set(point_size=0.001, show_axis=True, show_grid=True)
+    #     self.assertEqual(round(mid_column_sum, 5), 864.18066)
 
     # OK, 2020-12-28
     # def test_get_panorama(self):
@@ -62,4 +72,32 @@ class TestPano(unittest.TestCase):
     #     self.assertEqual(pano_zoom1.size, (16384/4, 8192/4))
 
 
+   # Not OK, 2020 - 12 - 29
+   # def test_get_DEM(self):
+   #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+   #     pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
+   #     dm = pano1.get_depthmap()
+   #     DEM = pano1.get_DEM(width=30, height=30, resolution=0.05, zoom=3)
+   #     self.assertEqual(DEM.shape, (600, 600))
 
+       # point_cloud = pano1.get_DEM(zoom=3)
+       # P = point_cloud
+       # v.set(point_size=0.001, show_axis=True, show_grid=False)
+
+
+       # v = pptk.viewer(P[:, :3])
+       # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+       # color_map = np.random.rand(255, 3)
+       # v.color_map(color_map)
+       # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+       # mid_column_sum = dm[:, 127].sum()
+
+
+
+    def test_get_DOM(self):
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+        pano1 = GSV_pano(panoId=panoId_2019)
+
+        DOM = pano1.get_DOM(width=30, height=30, zoom=3)
+
+        self.assertEqual(DOM.shape, (600, 600))

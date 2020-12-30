@@ -2490,11 +2490,11 @@ class GSV_depthmap(object):
 
         return img, jdata
 
-    def depthmap_to_dem(self, depthmap, w, h, resolution, heading_deg=0, saved_path=''):
-        idx = depthmap
-        f = interpolate.interp2d(x, y, z, kind='cubic')
-        depthmap
-        pass
+    # def depthmap_to_dem(self, depthmap, w, h, resolution, heading_deg=0, saved_path=''):
+    #     idx = depthmap
+    #     f = interpolate.interp2d(x, y, z, kind='cubic')
+    #     depthmap
+    #     pass
 
     def saveDepthMap_frm_JsonFile(self, json_file, saved_path):
         try:

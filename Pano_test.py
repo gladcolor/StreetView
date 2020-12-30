@@ -513,7 +513,7 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     links = jdata.get("Links", [])
 
     show_neighbor = False
-    # show_neighbor = True
+    show_neighbor = True
     if show_neighbor:
         for link in links:
             p = link["panoId"]

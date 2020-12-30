@@ -15,6 +15,8 @@ import base64
 import zlib
 import multiprocessing as mp
 from skimage import morphology
+from pyproj import CRS
+from pyproj import Transformer
 
 # Geospatial processing
 from pyproj import Proj, transform
@@ -31,6 +33,8 @@ import yaml
 
 import PIL
 from PIL import Image, features
+from PIL import Image
+
 import cv2
 
 from io import BytesIO
@@ -66,6 +70,7 @@ logging.basicConfig(level=logging.INFO,
 
 
 
+
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
     path = default_path
     if os.path.exists(path):
@@ -94,8 +99,9 @@ class GSV_pano(object):
 
         self.depthmap = {"depthMap":None, "width":None, "height": None, "plane_idx_map": None, "plane_map": None}
         self.panorama ={"image": None, "zoom": None}
-        self.point_cloud = {"point_cloud": None, "zoom": None}
-        self.DEM = {"DEM": None, "zoom": None}
+        self.point_cloud = {"point_cloud": None, "zoom": None, "dm_mask": None}
+        self.DEM = {"DEM": None, "zoom": None, "resolution": None}
+        self.DOM = {"DOM": None, "zoom": None, "resolution": None}
 
 
         try:
@@ -212,58 +218,203 @@ class GSV_pano(object):
                     # display image
                     img = PIL.Image.fromarray(im)
                     img.save(new_name)
-                return self.depthmap['depthMap']
+                return self.depthmap
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
 
         return self.depthmap
 
-    def get_DEM(self, saved_path=""):  # return: numpy array
+    # unfinished............
+    def get_DEM(self, width = 30, height = 30, resolution=0.05, zoom=3):  # return: numpy array,
 
-        if self.depthmap['DEM'] is None:
+        if (self.DEM['DEM'] is None) or (self.DEM['zoom'] != zoom):
             try:
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
+                P = self.get_point_cloud(zoom=zoom, color=True)
 
-                depthmap = self.get_depthmap()
+                # filter  points
+                # keep the ground points.
+                P = P[P[:, -1] < 10]
+                # width2 = width *1.1
+                # height2 = height * 1.1
+                # r = math.sqrt(width**2 + height**2)
+                # P = P[P[:, 3] < r]
+                P = P[P[:, 0] < width/2]
+                P = P[P[:, 0] > -width/2]
+                P = P[P[:, 1] < height/2]
+                P = P[P[:, 1] > -height/2]
 
-                if len(saved_path) > 0:
-                    if os.path.exists(saved_path):
-                        os.path.mkdir()
-                    new_name = os.path.join(saved_path, self.jdata['Location']['panoId'] + ".tif")
-                    im = depthMap["depthMap"]
+                dem_coarse_resolution = resolution
 
-                    im[np.where(im == max(im))[0]] = 0
+                P_col = (P[:, 0]/dem_coarse_resolution + int(width / dem_coarse_resolution / 2)).astype(int)
+                P_row = (int(height / dem_coarse_resolution / 2) - P[:, 1] / dem_coarse_resolution).astype(int)
 
-                    im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
-                    # display image
-                    img = PIL.Image.fromarray(im)
-                    img.save(new_name)
-                return self.depthmap['depthMap']
+                # dem_coarse_np = np.ones((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution))) * -999
+                dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution)))
+                dem_coarse_np[P_row, P_col] = P[:, 2]
+
+                self.DEM["DEM"] = dem_coarse_np
+                self.DEM["resolution"] = resolution
+                self.DEM['zoom'] = int(zoom)
+
+                # crs_local = CRS.from_proj4(f"+proj=tmerc +lat_0={self.lat} +lon_0={self.lon} +datum=WGS84 +units=m +no_defs")
+                crs_local = CRS.from_proj4(f'+proj=tmerc +lat_0=38.83333333333334 +lon_0=-74.5 +k=0.9999 +x_0=150000 +y_0=0 +ellps=GRS80 +units=m +no_defs')
+                print(crs_local)
+                # transform = utils.epsg_transform(4326, 102005)  # USA_Contiguous_Equidistant_Conic, 102005
+                # transform = utils.epsg_transform(4326, 103105)  # New Jersey state plane, meter. Error, no 103105.
+                transformer = utils.epsg_transform(4326, crs_local)  # New Jersey state plane, meter
+
+                x_m, y_m = transformer.transform(self.lat, self.lon)
+
+                if self.saved_path != "":
+                    if not os.path.exists(self.saved_path):
+                        os.mkdir(self.saved_path)
+                    im = Image.fromarray(self.DEM['DEM'])
+                    new_name = os.path.join(self.saved_path, self.panoId + "_DEM.tif")
+                    worldfile_name = new_name.replace("_DEM.tif", "_DEM.tfw")
+                    worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
+
+                    im.save(new_name)
+
+                    with open(worldfile_name, 'w') as wf:
+                        for line in worldfile:
+                            # print(line)
+                            wf.write(str(line) + '\n')
+
+                coarse_idx = np.argwhere(dem_coarse_np > -999)
+                coarse_values = dem_coarse_np[dem_coarse_np > -999]
+                # dem_np = np.zeros((int(height / resolution), int(width / resolution)))
+
+                dm_mask = self.point_cloud["dm_mask"]
+
+                # empty_idx = np.argwhere(dem_coarse_np == -999)
+                # print("empty idx shape:", empty_idx.shape)
+
+                # mask_values =
+
+                xx_coarse = coarse_idx[:, 0] * dem_coarse_resolution - width/2
+                yy_coarse = height/2 - coarse_idx[:, 1] * dem_coarse_resolution
+
+                # interpolate_fun = interpolate.interp2d(xx_coarse, yy_coarse, coarse_values, kind='linear', copy=False)
+                #
+                # xx = np.arange(-width/2, width/2, resolution)
+                # yy = np.arange(height/2, -height/2, -resolution)  # easy to make a mistake.
+                # xxx, yyy = np.meshgrid(xx, yy)
+                #
+                # znew = interpolate_fun(xx, yy)
+                #
+                # print("znew:", znew.shape)
+                # print("znew max, min in Z axis:")
+                # print(np.max(znew))
+                # print(np.min(znew))
+
+                # dem_np = np.zeros((int(height / resolution), int(width / resolution)))
+                # dem_np[P_row, P_col] =  P[:,  2]
+
+                # P = P[::20]
+
+
+                # P = P[P[:, 3] < r]
+                # P = P[P[:, 3] > 0]
+
+
+                # print(P.shape)
+                # print(coarse_values.shape)
+
+                # DEM_values
+
+
+                # self.DEM['DEM'] = np.concatenate([xxx.ravel().reshape(-1, 1), yyy.ravel().reshape(-1, 1), znew.ravel().reshape(-1, 1)], axis=1)
+                # self.DEM['DEM'] = np.concatenate([coarse_idx[:,0].reshape(-1, 1) * dem_coarse_resolution, \
+                #                                   coarse_idx[:, 1].reshape(-1, 1)* dem_coarse_resolution, \
+                #                                   coarse_values.ravel().reshape(-1, 1)], axis=1)
+                # self.DEM['DEM'] = P
+
             except Exception as e:
-                logger.exception("Error in get_depthmap(): %s", e)
+                logger.exception("Error in get_DEM(): %s", e)
 
-        return self.depthmap['DEM']
+        return self.DEM['DEM']
 
-    def get_point_cloud(self, w=20, h=20, zoom=0, color=True, saved_path=""):  # return: numpy array
+    def get_DOM(self, width = 30, height = 30, resolution=0.05, zoom=3):  # return: numpy array,
+
+        if (self.DOM['DOM'] is None) or (self.DEM['zoom'] != zoom):
+            try:
+                if self.jdata is None:
+                    logging.info("Jdata is None: %s.", self.panoId)
+                    return None
+                DEM = self.get_DEM(resolution=resolution, zoom=zoom)
+
+                DEM = Image.fromarray(DEM).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+                DEM = np.array(DEM)
+
+                left = 0 - width/2
+                upper = 0 + height/2
+
+                col_num = int(width/resolution)
+                row_num = int(height/resolution)
+
+                x = np.arange(-width/2.0, width/2.0, resolution)
+                y = np.arange(height/2.0, -height/2.0, -resolution)
+
+                xv, yv = np.meshgrid(x, y)
+
+                xv = xv.ravel()
+                yv = yv.ravel()
+
+                pano_yaw = self.jdata["Projection"]['pano_yaw_deg']
+                pano_yaw = math.radians(pano_yaw)
+
+                s = np.sqrt(xv**2+yv**2)
+                s[s==0] = 0.0000000001
+                phi = np.arccos(xv/s) - pano_yaw
+                h = DEM.ravel()
+                theta = np.arctan2(h, s) + radians(6)
+
+                img = self.get_panorama(zoom=zoom)['image']
+
+                img_h, img_w, _ = img.shape
+                # img_np = img.reshape(-1, 3)
+
+                ey = np.rint(theta * img_h / np.pi).astype(np.int)
+                ex = np.rint(phi * img_w / (2 * np.pi)).astype(np.int)
+
+                ex[ex >= img_w] = img_w - 1
+                ey[ey >= img_h] = img_h - 1
+
+                DI = np.ones((row_num * col_num, 3), np.int)
+
+                xx, yy = np.meshgrid(np.arange(col_num), np.arange(row_num))
+
+                DI[:, 0] = xx.reshape(row_num * col_num)
+                DI[:, 1] = yy.reshape(row_num * col_num)
+
+                new_img = np.zeros((row_num, col_num, 3), np.uint8)
+                new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
+
+                print(new_img)
+
+                im = Image.fromarray(new_img)
+                im.show()
+
+            except Exception as e:
+                logger.exception("Error in get_DOM(): %s", e)
+
+        return self.DOM['DOM']
+
+    def get_point_cloud(self, zoom=0, distance_threshole=40, color=True, saved_path=""):  # return: numpy array
         ''':param
         pano_zoom: -1: not colorize the point cloud
         '''
 
-        if self.point_cloud['point_cloud'] is None:
+        if (self.point_cloud['point_cloud'] is None) or (self.point_cloud['zoom'] != zoom):
             try:
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
-                r = math.sqrt(w**2 + h**2)
+
                 depthmap = self.get_depthmap()['depthMap']
-
-
-                # filter  points
-                depthmap = np.where(depthmap < r, depthmap, 0)
-                depthmap_idx = np.argwhere(0 < depthmap  )
-                depthmap_value = depthmap[np.where(0 < depthmap)]
 
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
@@ -275,7 +426,8 @@ class GSV_pano(object):
                 dm_mask = Image.fromarray(dm_mask)
                 dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
                 dm_mask = np.array(dm_mask)
-                dm_mask[0, :] = 1  # show the camera center.
+                self.point_cloud["dm_mask"] = dm_mask
+                # dm_mask[0, :] = 1  # show the camera center.
 
                 tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
                 pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
@@ -285,7 +437,7 @@ class GSV_pano(object):
                 dm_np = np.array(dm_resized).astype(float)
                 dm_np = dm_np * dm_mask
 
-                img = self.get_panorama(zoom=zoom)
+                img = self.get_panorama(zoom=zoom)['image']
 
                 img_np = np.array(img)[0:image_height, :, :]
                 colors = img_np.reshape(-1, 3)
@@ -298,9 +450,6 @@ class GSV_pano(object):
                 plane_np = np.array(plane_idx)
                 planes = plane_np.reshape(-1, 1)
 
-                # print(colors.shape)
-                # print(colors)
-                # print(img_np.shape)
                 nx, ny = (image_width, image_height)
                 x_space = np.linspace(0, nx - 1, nx)
                 y_space = np.linspace(ny - 1, 0, ny)
@@ -322,54 +471,35 @@ class GSV_pano(object):
                 P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)],
                                    axis=1)
 
-                # rotate_x_radian = (90 - tilt_yaw_deg) / 180 * math.pi
-                # rotate_z_radian = (90 - pano_yaw_deg) / 180 * math.pi
-                # rotate_y_radian = (-tilt_pitch_deg) / 180 * math.pi  # should  be negative according to the observation of highway ramp.
-                #
                 rotate_x_radian = math.radians(90 - tilt_yaw_deg)
                 rotate_y_radian = math.radians(
                     -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp.
-                rotate_z_radian = math.radians(90 - pano_yaw_deg)
+                # rotate_z_radian = math.radians(90 - pano_yaw_deg)
+                rotate_z_radian = math.radians(pano_yaw_deg)
+
 
                 P = P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
                 P = P.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
                 P = P.dot(utils.rotate_z(rotate_z_radian))  # math.radians(90 - pano_yaw_deg)  # yaw
 
-                if color:
-                    P = np.concatenate([P, colors, planes, normalvectors, normalvectors[:, 2:3]], axis=1)
-
                 P = np.concatenate([P, dm_np.ravel().reshape(-1, 1)], axis=1)
+
+                if color:
+                    P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+
                 P = P[np.where(dm_mask.ravel())]
-                distance_threshole = 20
-                P = P[P[:, -1] < distance_threshole]
+                # distance_threshole = 20
+                P = P[P[:, 3] < distance_threshole]
+                P = P[P[:, 3] > 0]
 
                 # keep the ground points.
-                P = P[P[:, -2] < 10]
+                # P = P[P[:, -1] < 10]
 
-                # P = P[P[:, 2] < 8]
-
-                # P = P[P[:, -1] < 30]
-
-                # print(P.shape, P)
-
-                P = P[:, :6]
+                # P = P[:, :6]
                 self.point_cloud['point_cloud'] = P
                 self.point_cloud['zoom'] = int(zoom)
 
-                # interpolate_fun = interpolate.interp2d(depthmap_idx[:, 0], depthmap_idx[:, 1], depthmap_value, kind='linear')
 
-                # if len(saved_path) > 0:
-                #     if os.path.exists(saved_path):
-                #         os.path.mkdir()
-                #     new_name = os.path.join(saved_path, self.jdata['Location']['panoId'] + ".tif")
-                #     im = depthMap["depthMap"]
-                #
-                #     im[np.where(im == max(im))[0]] = 0
-                #
-                #     im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
-                #     # display image
-                #     img = PIL.Image.fromarray(im)
-                #     img.save(new_name)
                 return self.point_cloud['point_cloud']
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
@@ -415,7 +545,7 @@ class GSV_pano(object):
                         column_cnt = 0
                         row_cnt = 0
                         target = old_img
-                    old_img.close()
+                    # old_img.close()
 
                 for x in range(column_cnt):  # col
                     for y in range(row_cnt):  # row
@@ -442,10 +572,10 @@ class GSV_pano(object):
                         os.mkdir(self.saved_path)
                     target.save(new_name)
 
-                self.panorama["image"] = target
+                self.panorama["image"] = np.array(target)
                 self.panorama['zoom'] = int(zoom)
 
-            return self.panorama["image"]
+            return self.panorama
 
         except Exception as e:
             logger.exception("Error in getPanoJPGfrmPanoId(): %s", e)

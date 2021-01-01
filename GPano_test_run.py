@@ -533,7 +533,7 @@ def get_PanoJPG_DC():
 
     df_pts = pd.read_csv(csv_file)
 
-    for idx, row in tqdm(df_pts.iterrows()):
+    for idx, row in tqdm(df_pts[14586:].iterrows()):
 
         x = row['LON']
         y = row['LAT']

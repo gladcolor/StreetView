@@ -2189,17 +2189,27 @@ class GPano():
         theta0 = (theta0 - pi / 2 )
         m = m.dot(self.zrotation(pitch))
         m = m.dot(self.xrotation(theta0))
+        # m = m.dot(self.yrotation(-math.pi))
         m = m.dot(self.yrotation(phi0))
+
 
         # end test.
         # m = np.dot(self.yrotation(phi0), self.xrotation(theta0))  # original
 
+        if len(img.shape) == 3:
+            base_height, base_width, channel = img.shape
 
-        (base_height, base_width, _) = img.shape
+
+        if len(img.shape) == 2:
+            base_height, base_width = img.shape
+            channel = 1
 
         height = int(round(width * np.tan(fov_v / 2) / np.tan(fov_h / 2), 0))
-
-        new_img = np.zeros((height, width, 3), np.uint8)
+        # new_img = np.zeros((height, width, 3), np.uint8)
+        if len(img.shape) == 3:
+            new_img = np.zeros((height, width, channel), np.uint8)
+        if len(img.shape) == 2:
+            new_img = np.zeros((height, width))
 
         DI = np.ones((height * width, 3), np.int)
         trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],

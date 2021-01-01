@@ -486,6 +486,8 @@ def showNeighbor_pointClouds(panoId="", lat=40.7303117, lon=-74.1815408, color=T
     lat, lon = 40.7045795, -74.2571879
 
     lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+    lat, lon = 40.7092976,-74.2531686  # Millrun Manor Dr.
+
 
     jdata = gpano.getPanoJsonfrmLonat(lon, lat)
 
@@ -624,23 +626,37 @@ def showPointCloud():
 
 
 def clip_pano():
-    img_file = r'K:\Research\street_view_depthmap\BM1Qt23drK3-yMWxYfOfVg_zoom5.jpg'
-    # img_file = r'K:\Research\street_view_depthmap\6P-soqWVruus2bXk_44uDA-zoom5_ramp.jpg'
+    img_file = r'K:\Research\street_view_depthmap\shLvvlTQSJHmm0kREZtaLw.tif'
+    img_file = r'K:\Research\street_view_depthmap\shLvvlTQSJHmm0kREZtaLw.jpg'
+    img_file = r'K:\Research\street_view_depthmap\BM1Qt23drK3-yMWxYfOfVg.jpg'
+
+    distance = 20
 
     saved_path =  r'K:\Research\street_view_depthmap'
-    img = cv2.imread(img_file)
-    theta0 = 0
-    yaw = 90
+    img = cv2.imread(img_file, -1)
+    # theta0 = 90
+    yaw = 0
     phi0 = math.radians(yaw)
-    fov = 105  # degree
+    fov = 90  # degree
+    hc = 2.4
+    fov = math.degrees(math.atan(distance/hc)*2)
     h_w_ratio = 3 / 4
+    h_w_ratio = 1
     fov_h = math.radians(fov)
-    h_img, w_img, channel = img.shape
-    w = int(fov / 360 * w_img/ 4)
+    if len(img.shape) ==3:
+        h_img, w_img, channel = img.shape
+    if len(img.shape) == 2:
+        h_img, w_img = img.shape
+        channel = 1
+
+    w = int(fov / 360 * w_img)
+    w = int(distance/0.02)
     h = int(w * h_w_ratio)
     fov_v = math.atan((h * math.tan((fov_h / 2)) / w)) * 2
-    theta0 = math.radians(84.20023345947266)  # njit kinney street
+    theta0 = math.radians(84.20023345947266 + 90)  # njit kinney street
+    theta0 = math.radians(180)  # njit kinney street
     pitch =  math.radians(1.42633581161499)
+    pitch =  math.radians(0)
 
     # theta0 = math.radians(90.95146179199219)  # highway ramp
     # pitch =  math.radians(358.2179260253906)
@@ -648,14 +664,15 @@ def clip_pano():
     rimg = gpano.clip_pano(theta0, phi0, fov_h, fov_v, w, img, pitch)
     basename = os.path.basename(img_file)
     new_name = os.path.join(saved_path, basename)
-    cv2.imwrite('%s_%d_%d.jpg' % (new_name, math.degrees(theta0), yaw), rimg)
+    cv2.imwrite('%s_%d_%d.tif' % (new_name, math.degrees(theta0), yaw), rimg)
+    # cv2.imshow(rimg)
 
 if __name__ == '__main__':
     # showPointCloud()
     # getPointCloud_from_PanoId()
     # getHeightVariance()
-    showNeighbor_pointClouds()
-    # clip_pano()
+    # showNeighbor_pointClouds()
+    clip_pano()
     # read_depthmaps()
     # test_go_along_road_forward()
 

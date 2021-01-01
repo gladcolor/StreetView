@@ -225,7 +225,7 @@ class GSV_pano(object):
         return self.depthmap
 
     # unfinished............
-    def get_DEM(self, width = 30, height = 30, resolution=0.05, zoom=3):  # return: numpy array,
+    def get_DEM(self, width = 30, height = 30, resolution=0.05, zoom=4):  # return: numpy array,
 
         if (self.DEM['DEM'] is None) or (self.DEM['zoom'] != zoom):
             try:
@@ -253,7 +253,9 @@ class GSV_pano(object):
 
                 # dem_coarse_np = np.ones((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution))) * -999
                 dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution)))
-                dem_coarse_np[P_row, P_col] = P[:, 2]
+                dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution), 3))  # color image
+                # dem_coarse_np[P_row, P_col] = P[:, 2]
+                dem_coarse_np[P_row, P_col] = P[:, 4:7]    # color image
 
                 self.DEM["DEM"] = dem_coarse_np
                 self.DEM["resolution"] = resolution
@@ -271,9 +273,10 @@ class GSV_pano(object):
                 if self.saved_path != "":
                     if not os.path.exists(self.saved_path):
                         os.mkdir(self.saved_path)
-                    im = Image.fromarray(self.DEM['DEM'])
-                    new_name = os.path.join(self.saved_path, self.panoId + "_DEM.tif")
-                    worldfile_name = new_name.replace("_DEM.tif", "_DEM.tfw")
+                    # im = Image.fromarray(self.DEM['DEM'])
+                    im = Image.fromarray(self.DEM['DEM'].astype("uint8"), "RGB")
+                    new_name = os.path.join(self.saved_path, self.panoId + "_DEM+.tif")
+                    worldfile_name = new_name.replace(".tif", ".tfw")
                     worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
 
                     im.save(new_name)
@@ -283,19 +286,19 @@ class GSV_pano(object):
                             # print(line)
                             wf.write(str(line) + '\n')
 
-                coarse_idx = np.argwhere(dem_coarse_np > -999)
-                coarse_values = dem_coarse_np[dem_coarse_np > -999]
+                # coarse_idx = np.argwhere(dem_coarse_np > -999)
+                # coarse_values = dem_coarse_np[dem_coarse_np > -999]
                 # dem_np = np.zeros((int(height / resolution), int(width / resolution)))
 
-                dm_mask = self.point_cloud["dm_mask"]
+                # dm_mask = self.point_cloud["dm_mask"]
 
                 # empty_idx = np.argwhere(dem_coarse_np == -999)
                 # print("empty idx shape:", empty_idx.shape)
 
                 # mask_values =
 
-                xx_coarse = coarse_idx[:, 0] * dem_coarse_resolution - width/2
-                yy_coarse = height/2 - coarse_idx[:, 1] * dem_coarse_resolution
+                # xx_coarse = coarse_idx[:, 0] * dem_coarse_resolution - width/2
+                # yy_coarse = height/2 - coarse_idx[:, 1] * dem_coarse_resolution
 
                 # interpolate_fun = interpolate.interp2d(xx_coarse, yy_coarse, coarse_values, kind='linear', copy=False)
                 #
@@ -337,7 +340,76 @@ class GSV_pano(object):
 
         return self.DEM['DEM']
 
-    def get_DOM(self, width = 30, height = 30, resolution=0.05, zoom=3):  # return: numpy array,
+    def XYZ_to_spherical(self, XYZs):
+        panorama = self.get_panorama(zoom=3)['image']
+        image_height, image_width, channel = panorama.shape
+        nx, ny = (image_width, image_height)
+        x_space = np.linspace(0, nx - 1, nx)
+        y_space = np.linspace(ny - 1, 0, ny)
+
+        xv, yv = np.meshgrid(x_space, y_space)
+
+        thetas = yv / ny * np.pi - np.pi / 2
+        phis = xv / nx * (np.pi * 2) - np.pi
+        thetas_sin = np.sin(thetas)
+        thetas_cos = np.cos(thetas)
+        phis_sin = np.sin(phis)
+        phis_cos = np.cos(phis)
+
+        tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
+        pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
+        tilt_pitch_deg = self.jdata['Projection']['tilt_pitch_deg']
+
+        rotate_x_radian = math.radians(90 - tilt_yaw_deg)
+        rotate_y_radian = math.radians(
+            -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+        # rotate_z_radian = math.radians(90 - pano_yaw_deg)
+        rotate_z_radian = math.radians(pano_yaw_deg)
+
+        P0 = XYZs
+        XYZs = XYZs[:, :3]
+        XYZs = XYZs.dot(utils.rotate_z(-rotate_z_radian))
+        XYZs = XYZs.dot(utils.rotate_y(-rotate_y_radian))
+        XYZs = XYZs.dot(utils.rotate_x(-rotate_x_radian))
+
+        X = XYZs[:, 0]
+        Y = XYZs[:, 1]
+        Z = XYZs[:, 2]
+
+        R = np.sqrt(X**2 + Y**2)
+
+        dm_np = np.sqrt(X**2 + Y**2 + Z**2)
+
+        theta_sin = Z / dm_np
+        phi_sin = X / R
+
+        theta = np.arcsin(theta_sin)
+        # phi   = math.pi/2 - np.arcsin(phi_sin) -math.pi
+        phi   =  np.arcsin(phi_sin)
+        phi = np.arctan2(X, Y)
+
+
+        theta = np.nan_to_num(theta)
+        phi = np.nan_to_num(phi)
+
+
+        # find the pixels
+        v_reso = math.pi/image_height
+        h_reso = math.pi * 2 / image_width
+        row = ((theta - math.pi/2 ) / -v_reso).astype(int)
+        col = ((phi + math.pi) / h_reso).astype(int)
+        row[row >= image_height] = image_height - 1
+        col[col >= image_width] = image_width - 1
+
+        new_img = np.zeros((image_height, image_width, channel)).astype(int)
+        new_img[row, col] = panorama[row, col]
+        im = Image.fromarray(new_img.astype('uint8'), 'RGB')
+        im.show()
+
+        return theta, phi
+
+
+    def get_DOM(self, width = 30, height = 30, resolution=0.05, zoom=4):  # return: numpy array,
 
         if (self.DOM['DOM'] is None) or (self.DEM['zoom'] != zoom):
             try:
@@ -465,23 +537,37 @@ class GSV_pano(object):
                 R = thetas_cos * dm_np  # * dm_mask
 
                 z = dm_np * thetas_sin
-                x = R * phis_cos
-                y = R * phis_sin
-
-                P = np.concatenate([y.ravel().reshape(-1, 1), x.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)],
+                # x = R * phis_cos
+                # y = R * phis_sin
+                y = R * phis_cos
+                x = R * phis_sin
+                P = np.concatenate([x.ravel().reshape(-1, 1), y.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)],
                                    axis=1)
 
                 rotate_x_radian = math.radians(90 - tilt_yaw_deg)
                 rotate_y_radian = math.radians(
-                    -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp.
+                    -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
                 # rotate_z_radian = math.radians(90 - pano_yaw_deg)
                 rotate_z_radian = math.radians(pano_yaw_deg)
-
 
                 P = P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
                 P = P.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
                 P = P.dot(utils.rotate_z(rotate_z_radian))  # math.radians(90 - pano_yaw_deg)  # yaw
 
+
+                #
+                # P1 =     P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
+                #
+                # P2 = P1.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
+                # P3 = P2.dot(utils.rotate_z(rotate_z_radian))  # math.radians(90 - pano_yaw_deg)  # yaw
+                #
+                # P2_re =    P3.dot(utils.rotate_z(-rotate_z_radian))
+                # P1_re = P2_re.dot(utils.rotate_y(-rotate_y_radian))
+                # P_re  = P1_re.dot(utils.rotate_x(-rotate_x_radian))
+
+
+
+                # P = np.concatenate([P, dm_np.ravel().reshape(-1, 1), thetas.reshape(-1,1), phis.reshape(-1, 1)], axis=1)
                 P = np.concatenate([P, dm_np.ravel().reshape(-1, 1)], axis=1)
 
                 if color:
@@ -491,6 +577,12 @@ class GSV_pano(object):
                 # distance_threshole = 20
                 P = P[P[:, 3] < distance_threshole]
                 P = P[P[:, 3] > 0]
+
+                # keep the ground points.
+                # P = P[P[:, -1] < 10]
+
+                theta2, phi2 = self.XYZ_to_spherical(P)
+
 
                 # keep the ground points.
                 # P = P[P[:, -1] < 10]

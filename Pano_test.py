@@ -638,10 +638,10 @@ def clip_pano():
     yaw = 0
     phi0 = math.radians(yaw)
     fov = 90  # degree
-    hc = 2.4
-    fov = math.degrees(math.atan(distance/hc)*2)
+    # hc = 2.4
+    # fov = math.degrees(math.atan(distance/hc)*2)
     h_w_ratio = 3 / 4
-    h_w_ratio = 1
+    # h_w_ratio = 1
     fov_h = math.radians(fov)
     if len(img.shape) ==3:
         h_img, w_img, channel = img.shape
@@ -664,7 +664,7 @@ def clip_pano():
     rimg = gpano.clip_pano(theta0, phi0, fov_h, fov_v, w, img, pitch)
     basename = os.path.basename(img_file)
     new_name = os.path.join(saved_path, basename)
-    cv2.imwrite('%s_%d_%d.tif' % (new_name, math.degrees(theta0), yaw), rimg)
+    cv2.imwrite('%s_%d_%d.jpg' % (new_name, math.degrees(theta0), yaw), rimg)
     # cv2.imshow(rimg)
 
 if __name__ == '__main__':

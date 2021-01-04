@@ -18,6 +18,8 @@ from skimage import morphology
 from pyproj import CRS
 from pyproj import Transformer
 
+from sklearn.linear_model import LinearRegression
+
 # Geospatial processing
 from pyproj import Proj, transform
 from geopy.distance import geodesic
@@ -25,9 +27,12 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import nearest_points
 
 import numpy as np
+from numpy import inf
+
 # import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import interpolate
+
 from skimage import io
 import yaml
 
@@ -44,6 +49,11 @@ import requests
 import urllib.request
 import urllib
 import logging
+
+
+import pykrige.kriging_tools as kt
+from pykrige.ok import OrdinaryKriging
+import matplotlib.pyplot as plt
 
 
 import selenium
@@ -202,7 +212,52 @@ class GSV_pano(object):
                 data = utils.parsePlanes(header, depthMapData)
                 # compute position and values of pixels
                 depthMap = utils.computeDepthMap(header, data["indices"], data["planes"])
+
+                kernel = morphology.disk(2)
+                dm_mask = morphology.erosion(depthMap['depthMap'], kernel)
+                dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
+                # dm_mask = Image.fromarray(dm_mask)
+                # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
+                # dm_mask = np.array(dm_mask)
+                ground_mask = np.where(depthMap['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)
+
+                # interpolation using linear regression
+                row_num =  self.depthmap['width']
+                hc = depthMap['depthMap'][-1][int(self.depthmap['width']/2)]
+
+                for i in range(row_num):
+                    try:
+                        mask_column = ground_mask[:, i]
+                        depths = depthMap['depthMap'][:, i] * mask_column
+                        y = depths[depths > 0]
+                        # y = y.reshape(-1, 1)
+                        x = np.argwhere(depths > 0).ravel()
+
+                        f = interpolate.interp1d(x, y)
+                        x_new = np.arange(0, self.depthmap['height'], 1)
+                        y_new = f(x_new)
+
+                        plt.plot(x, y, 'o', x_new, y_new, '-')
+                        plt.show()
+
+                        v_resol = math.pi/self.depthmap['height']
+                        thetas =  math.pi/2 - x * v_resol
+                        # tanx = 1/np.tan(thetas) - hc/(y * np.sin(thetas))
+                        tanx = (np.cos(thetas) * y - hc)/(np.sin(thetas) * y)
+                        tanx = np.nan_to_num(tanx)
+                        tanx[tanx >1000] = 0
+                        print("tanx: ", np.arctan(tanx).mean(), np.arctan(tanx).std())
+
+                        # reg = LinearRegression().fit(x, y)
+                        # print("reg.coef_, reg.intercept_:", reg.coef_, reg.intercept_)
+                        # print("reg score:", reg.score(x, y))
+                    except Exception as e:
+                        logging.exception("Error in get_dempthmap() linear regression: %s", e)
+
+
                 self.depthmap['depthMap'] = depthMap['depthMap']
+                self.depthmap['dm_mask'] = dm_mask
+                self.depthmap['ground_mask'] = ground_mask
                 self.depthmap['plane_map'] = depthMap['normal_vector_map']
                 self.depthmap['plane_idx_map'] = depthMap['plane_idx_map']
 
@@ -225,14 +280,14 @@ class GSV_pano(object):
         return self.depthmap
 
     # unfinished............
-    def get_DEM(self, width = 30, height = 30, resolution=0.05, zoom=4):  # return: numpy array,
+    def get_DEM(self, width = 40, height = 40, resolution=0.4, zoom=0):  # return: numpy array,
 
         if (self.DEM['DEM'] is None) or (self.DEM['zoom'] != zoom):
             try:
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
-                P = self.get_point_cloud(zoom=zoom, color=True)
+                P = self.get_point_cloud(zoom=zoom, color=True)['point_cloud']
 
                 # filter  points
                 # keep the ground points.
@@ -248,15 +303,66 @@ class GSV_pano(object):
 
                 dem_coarse_resolution = resolution
 
+
+
                 P_col = (P[:, 0]/dem_coarse_resolution + int(width / dem_coarse_resolution / 2)).astype(int)
                 P_row = (int(height / dem_coarse_resolution / 2) - P[:, 1] / dem_coarse_resolution).astype(int)
 
                 # dem_coarse_np = np.ones((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution))) * -999
                 dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution)))
-                dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution), 3))  # color image
-                # dem_coarse_np[P_row, P_col] = P[:, 2]
-                dem_coarse_np[P_row, P_col] = P[:, 4:7]    # color image
+                # dem_coarse_np = np.zeros((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution), 3))  # color image
+                dem_coarse_np[P_row, P_col] = P[:, 2]
+                # dem_coarse_np[P_row, P_col] = P[:, 4:7]    # color image
 
+                grid_col = np.linspace(-width/2,  width/2,  dem_coarse_np.shape[1])
+                grid_row = np.linspace(height/2, -height/2, dem_coarse_np.shape[0])
+
+
+
+                resolution = 0.03
+                w = int(width / resolution)
+                h = int(height / resolution)
+                dem_fined = np.array(Image.fromarray(dem_coarse_np).resize((w, h), Image.LINEAR))
+
+                grid_col = np.linspace(-width/2,  width/2, w)
+                grid_row = np.linspace(height/2, -height/2, h)
+
+                xx, yy = np.meshgrid(grid_col, grid_row)
+
+
+                kernel = morphology.disk(1)
+                dem_mask = np.where(np.array(dem_coarse_np) < 0, 1, 0).astype(int)
+                dem_mask = morphology.erosion(dem_mask, kernel)
+
+                dem_mask = np.array(Image.fromarray(dem_mask).resize((w, h), Image.LINEAR))
+
+                # dem_coarse_np = dem_fined
+
+                # DEM_points = np.concatenate([xx.ravel().reshape(-1,1), yy.ravel().reshape(-1,1), dem_coarse_np.ravel().reshape(-1,1)], axis=1)
+                # DEM_points = np.concatenate([DEM_points, np.zeros((len(DEM_points), 3))], axis=1)
+                # need_colors = DEM_points
+                # need_colors = DEM_points[DEM_points[:, 2] < 0]  # remove zero points.
+                # interp = interpolate.interp2d(grid_col, grid_row, dem_coarse_np,
+                #                               kind='linear')  # 'cubic' will distord the distance.
+
+                # distance = interp(phi1, theta1)[0]
+
+
+                # theta, phi = self.XYZ_to_spherical(need_colors)
+
+                # find the pixels
+                # colors = self.find_pixel_to_thetaphi(theta, phi)
+
+                # DEM_points [DEM_points[:, 2] < 0, 3:6] = colors
+                # DEM_points [:, 3:6] = colors
+
+                # self.DEM["DEM"] = dem_coarse_np
+                # DEM_points = DEM_points[DEM_points[:, 2] < 0] # remove zero points.
+
+
+                # DEM_points[dem_mask.ravel() == 0, 3:6] = np.array([0, 0, 0])
+
+                # self.DEM["DEM"] = DEM_points
                 self.DEM["DEM"] = dem_coarse_np
                 self.DEM["resolution"] = resolution
                 self.DEM['zoom'] = int(zoom)
@@ -270,21 +376,23 @@ class GSV_pano(object):
 
                 x_m, y_m = transformer.transform(self.lat, self.lon)
 
-                if self.saved_path != "":
-                    if not os.path.exists(self.saved_path):
-                        os.mkdir(self.saved_path)
-                    # im = Image.fromarray(self.DEM['DEM'])
-                    im = Image.fromarray(self.DEM['DEM'].astype("uint8"), "RGB")
-                    new_name = os.path.join(self.saved_path, self.panoId + "_DEM+.tif")
-                    worldfile_name = new_name.replace(".tif", ".tfw")
-                    worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
 
-                    im.save(new_name)
 
-                    with open(worldfile_name, 'w') as wf:
-                        for line in worldfile:
-                            # print(line)
-                            wf.write(str(line) + '\n')
+                # if self.saved_path != "":
+                #     if not os.path.exists(self.saved_path):
+                #         os.mkdir(self.saved_path)
+                #     # im = Image.fromarray(self.DEM['DEM'])
+                #     im = Image.fromarray(self.DEM['DEM'].astype("uint8"), "RGB")
+                #     new_name = os.path.join(self.saved_path, self.panoId + "_DEM+.tif")
+                #     worldfile_name = new_name.replace(".tif", ".tfw")
+                #     worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
+                #     im.show()
+                #     im.save(new_name)
+                #
+                #     with open(worldfile_name, 'w') as wf:
+                #         for line in worldfile:
+                #             # print(line)
+                #             wf.write(str(line) + '\n')
 
                 # coarse_idx = np.argwhere(dem_coarse_np > -999)
                 # coarse_values = dem_coarse_np[dem_coarse_np > -999]
@@ -338,23 +446,23 @@ class GSV_pano(object):
             except Exception as e:
                 logger.exception("Error in get_DEM(): %s", e)
 
-        return self.DEM['DEM']
+        return self.DEM
 
     def XYZ_to_spherical(self, XYZs):
-        panorama = self.get_panorama(zoom=3)['image']
-        image_height, image_width, channel = panorama.shape
-        nx, ny = (image_width, image_height)
-        x_space = np.linspace(0, nx - 1, nx)
-        y_space = np.linspace(ny - 1, 0, ny)
-
-        xv, yv = np.meshgrid(x_space, y_space)
-
-        thetas = yv / ny * np.pi - np.pi / 2
-        phis = xv / nx * (np.pi * 2) - np.pi
-        thetas_sin = np.sin(thetas)
-        thetas_cos = np.cos(thetas)
-        phis_sin = np.sin(phis)
-        phis_cos = np.cos(phis)
+        # panorama = self.get_panorama(zoom=5)['image']
+        # image_height, image_width, channel = panorama.shape
+        # nx, ny = (image_width, image_height)
+        # x_space = np.linspace(0, nx - 1, nx)
+        # y_space = np.linspace(ny - 1, 0, ny)
+        #
+        # xv, yv = np.meshgrid(x_space, y_space)
+        #
+        # thetas = yv / ny * np.pi - np.pi / 2
+        # phis = xv / nx * (np.pi * 2) - np.pi
+        # thetas_sin = np.sin(thetas)
+        # thetas_cos = np.cos(thetas)
+        # phis_sin = np.sin(phis)
+        # phis_cos = np.cos(phis)
 
         tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
         pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
@@ -366,7 +474,7 @@ class GSV_pano(object):
         # rotate_z_radian = math.radians(90 - pano_yaw_deg)
         rotate_z_radian = math.radians(pano_yaw_deg)
 
-        P0 = XYZs
+        # P0 = XYZs
         XYZs = XYZs[:, :3]
         XYZs = XYZs.dot(utils.rotate_z(-rotate_z_radian))
         XYZs = XYZs.dot(utils.rotate_y(-rotate_y_radian))
@@ -385,7 +493,7 @@ class GSV_pano(object):
 
         theta = np.arcsin(theta_sin)
         # phi   = math.pi/2 - np.arcsin(phi_sin) -math.pi
-        phi   =  np.arcsin(phi_sin)
+        # phi   =  np.arcsin(phi_sin)
         phi = np.arctan2(X, Y)
 
 
@@ -394,6 +502,27 @@ class GSV_pano(object):
 
 
         # find the pixels
+        # v_reso = math.pi/image_height
+        # h_reso = math.pi * 2 / image_width
+        # row = ((theta - math.pi/2 ) / -v_reso).astype(int)
+        # col = ((phi + math.pi) / h_reso).astype(int)
+        # row[row >= image_height] = image_height - 1
+        # col[col >= image_width] = image_width - 1
+        #
+        # new_img = np.zeros((image_height, image_width, channel)).astype(int)
+        # new_img[row, col] = panorama[row, col]
+        # im = Image.fromarray(new_img.astype('uint8'), 'RGB')
+        # im.show()
+
+        return theta, phi
+
+    def find_pixel_to_thetaphi(self, theta, phi, zoom=4):
+        ''':argument
+        theata, phi: numpy array
+        '''
+        panorama = self.get_panorama(zoom=zoom)['image']
+        image_height, image_width, channel = panorama.shape
+
         v_reso = math.pi/image_height
         h_reso = math.pi * 2 / image_width
         row = ((theta - math.pi/2 ) / -v_reso).astype(int)
@@ -401,79 +530,111 @@ class GSV_pano(object):
         row[row >= image_height] = image_height - 1
         col[col >= image_width] = image_width - 1
 
-        new_img = np.zeros((image_height, image_width, channel)).astype(int)
-        new_img[row, col] = panorama[row, col]
-        im = Image.fromarray(new_img.astype('uint8'), 'RGB')
-        im.show()
+        # new_img = np.zeros((image_height, image_width, channel)).astype(int)
+        # new_img[row, col] = panorama[row, col]
+        # im = Image.fromarray(new_img.astype('uint8'), 'RGB')
+        # im.show()
 
-        return theta, phi
+        return panorama[row, col]
 
-
-    def get_DOM(self, width = 30, height = 30, resolution=0.05, zoom=4):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4):  # return: numpy array,
 
         if (self.DOM['DOM'] is None) or (self.DEM['zoom'] != zoom):
             try:
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
-                DEM = self.get_DEM(resolution=resolution, zoom=zoom)
+                dem_coarse_np = self.get_DEM(resolution=0.4, zoom=4)['DEM']
 
-                DEM = Image.fromarray(DEM).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
-                DEM = np.array(DEM)
 
-                left = 0 - width/2
-                upper = 0 + height/2
+                # interpolation using Kriging
+                cols = dem_coarse_np.shape[1]
+                rows = dem_coarse_np.shape[0]
+                idx = np.argwhere(dem_coarse_np)
+                z = dem_coarse_np[dem_coarse_np < 0]
+                xx, yy = idx[:,1].astype(float), idx[:,0].astype(float)
+                OK = OrdinaryKriging(
+                    xx,
+                    yy,
+                    z,
+                    variogram_model="linear",
+                    verbose=False,
+                    enable_plotting=False,
+                )
+                z, ss = OK.execute("grid", np.arange(0.0, cols, 1.0), np.arange(0.0, rows, 1.0))
 
-                col_num = int(width/resolution)
-                row_num = int(height/resolution)
+                # interpolation using linear regression
 
-                x = np.arange(-width/2.0, width/2.0, resolution)
-                y = np.arange(height/2.0, -height/2.0, -resolution)
 
-                xv, yv = np.meshgrid(x, y)
 
-                xv = xv.ravel()
-                yv = yv.ravel()
+                dem_coarse_np = z
 
-                pano_yaw = self.jdata["Projection"]['pano_yaw_deg']
-                pano_yaw = math.radians(pano_yaw)
 
-                s = np.sqrt(xv**2+yv**2)
-                s[s==0] = 0.0000000001
-                phi = np.arccos(xv/s) - pano_yaw
-                h = DEM.ravel()
-                theta = np.arctan2(h, s) + radians(6)
+                w = int(width / resolution)
+                h = int(height / resolution)
 
-                img = self.get_panorama(zoom=zoom)['image']
 
-                img_h, img_w, _ = img.shape
-                # img_np = img.reshape(-1, 3)
 
-                ey = np.rint(theta * img_h / np.pi).astype(np.int)
-                ex = np.rint(phi * img_w / (2 * np.pi)).astype(np.int)
+                dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+                dem_refined = np.array(dem_refined)
 
-                ex[ex >= img_w] = img_w - 1
-                ey[ey >= img_h] = img_h - 1
+                grid_col = np.linspace(-width / 2, width / 2, w)
+                grid_row = np.linspace(height / 2, -height / 2, h)
+                xx, yy = np.meshgrid(grid_col, grid_row)
 
-                DI = np.ones((row_num * col_num, 3), np.int)
+                kernel = morphology.disk(1)
+                dem_mask = np.where(np.array(dem_coarse_np) < 0, 1, 0).astype(int)
+                dem_mask = morphology.erosion(dem_mask, kernel)
+                dem_mask = np.array(Image.fromarray(dem_mask).resize((w, h), Image.LINEAR))
 
-                xx, yy = np.meshgrid(np.arange(col_num), np.arange(row_num))
 
-                DI[:, 0] = xx.reshape(row_num * col_num)
-                DI[:, 1] = yy.reshape(row_num * col_num)
 
-                new_img = np.zeros((row_num, col_num, 3), np.uint8)
-                new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
+                DEM_points = np.concatenate(
+                    [xx.ravel().reshape(-1, 1), yy.ravel().reshape(-1, 1), dem_refined.ravel().reshape(-1, 1)],
+                    axis=1)
+                DEM_points = np.concatenate([DEM_points, np.zeros((len(DEM_points), 3))], axis=1) # add color columns
+                # need_colors = DEM_points
+                need_colors = DEM_points[DEM_points[:, 2] < 0]  # remove zero points.
+                theta, phi = self.XYZ_to_spherical(need_colors)
+                colors = self.find_pixel_to_thetaphi(theta, phi)
+                DEM_points [DEM_points[:, 2] < 0, 3:6] = colors
+                DEM_points[dem_mask.ravel() == 0, 3:6] = np.array([0, 0, 0])
 
-                print(new_img)
+                self.DOM['DOM'] = DEM_points
 
-                im = Image.fromarray(new_img)
-                im.show()
+                crs_local = CRS.from_proj4(f'+proj=tmerc +lat_0=38.83333333333334 +lon_0=-74.5 +k=0.9999 +x_0=150000 +y_0=0 +ellps=GRS80 +units=m +no_defs')
+                print(crs_local)
+                # transform = utils.epsg_transform(4326, 102005)  # USA_Contiguous_Equidistant_Conic, 102005
+                # transform = utils.epsg_transform(4326, 103105)  # New Jersey state plane, meter. Error, no 103105.
+                transformer = utils.epsg_transform(4326, crs_local)  # New Jersey state plane, meter
+
+                x_m, y_m = transformer.transform(self.lat, self.lon)
+
+                im = DEM_points[:, 3:6].reshape((w, h, 3))
+
+                if self.saved_path != "":
+                    if not os.path.exists(self.saved_path):
+                        os.mkdir(self.saved_path)
+                    # im = Image.fromarray(self.DEM['DEM'])
+                    im = Image.fromarray(im.astype("uint8"), "RGB")
+                    new_name = os.path.join(self.saved_path, self.panoId + "_DOM.tif")
+                    worldfile_name = new_name.replace(".tif", ".tfw")
+                    worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
+                    im.show()
+                    im.save(new_name)
+
+                    with open(worldfile_name, 'w') as wf:
+                        for line in worldfile:
+                            # print(line)
+                            wf.write(str(line) + '\n')
+
+                # im = Image.fromarray(new_img)
+                # im.show()
 
             except Exception as e:
                 logger.exception("Error in get_DOM(): %s", e)
 
-        return self.DOM['DOM']
+        return self.DOM
 
     def get_point_cloud(self, zoom=0, distance_threshole=40, color=True, saved_path=""):  # return: numpy array
         ''':param
@@ -581,7 +742,7 @@ class GSV_pano(object):
                 # keep the ground points.
                 # P = P[P[:, -1] < 10]
 
-                theta2, phi2 = self.XYZ_to_spherical(P)
+                # theta2, phi2 = self.XYZ_to_spherical(P)
 
 
                 # keep the ground points.
@@ -591,8 +752,8 @@ class GSV_pano(object):
                 self.point_cloud['point_cloud'] = P
                 self.point_cloud['zoom'] = int(zoom)
 
+                return self.point_cloud
 
-                return self.point_cloud['point_cloud']
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
 
@@ -651,13 +812,17 @@ class GSV_pano(object):
                         image = image.resize((tile_width, tile_height))
                         target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
+
+
                 if prefix != "":
                     prefix += '_'
                 if suffix != "":
                     suffix = '_' + suffix
 
-                if int(zoom) == 0:
-                    target = target.crop((0, 0, image_width, image_height))
+                # if int(zoom) == 0:
+                #     target = target.crop((0, 0, image_width, image_height))
+                target = target.crop((0, 0, image_width, image_height))
+
 
                 if self.saved_path != "":
                     if not os.path.exists(self.saved_path):

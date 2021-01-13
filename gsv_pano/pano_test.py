@@ -4,10 +4,13 @@ import os
 import numpy as np
 
 import pptk
-
+import cv2
 from pano import GSV_pano
+from PIL import Image
+import PIL
 
 # gsv = GSV_pano()
+import matplotlib.pyplot as plt
 
 class TestPano(unittest.TestCase):
 
@@ -127,7 +130,10 @@ class TestPano(unittest.TestCase):
     def test_clip_pano(self, to_phi=90):
          panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
          pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
-         rimg = pano1.clip_pano(to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")
+         to_theta = math.radians(-0)
+         rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")
+         PIL.Image.fromarray(rimg).show()
+
          self.assertEqual((768, 1024, 3), rimg.shape)
 
          # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())

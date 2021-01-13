@@ -4,10 +4,13 @@ import os
 import numpy as np
 
 import pptk
-
+import cv2
 from pano import GSV_pano
+from PIL import Image
+import PIL
 
 # gsv = GSV_pano()
+import matplotlib.pyplot as plt
 
 class TestPano(unittest.TestCase):
 
@@ -72,41 +75,41 @@ class TestPano(unittest.TestCase):
     #     self.assertEqual(pano_zoom1.size, (16384/4, 8192/4))
 
 
-    # Not OK, 2020 - 12 - 29
-    def test_get_DEM(self):
-        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-
-        # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
-        # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
-        lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
-        lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
-        lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
-        lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
-        lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
-        lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
-        lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
-
-        lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-        # lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
-        lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
-
-        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-        # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
-        # dm = pano1.get_depthmap()
-        # DEM = pano1.get_DEM(width=40, height=40, resolution=0.4, zoom=4)
-        # self.assertEqual(DEM.shape, (1333, 1333))
-
-        point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=4)['DOM']
-        P = point_cloud
-        v = pptk.viewer(P[:, :3])
-        v.set(point_size=0.01, show_axis=True, show_grid=False)
-
-        v.attributes(P[:, 3:6] / 255.0)
-        # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
-        # color_map = np.random.rand(255, 3)
-        # v.color_map(color_map)
-        # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
-        # mid_column_sum = dm[:, 127].sum()
+   # Not OK, 2020 - 12 - 29
+   # def test_get_DEM(self):
+   #      panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+   #
+   #      # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
+   #      # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
+   #      lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
+   #      lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
+   #      lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
+   #      lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
+   #      lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
+   #      lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
+   #      lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
+   #
+   #      lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+   #      lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
+   #      lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
+   #
+   #      pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+   #      # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
+   #      # dm = pano1.get_depthmap()
+   #      # DEM = pano1.get_DEM(width=40, height=40, resolution=0.4, zoom=4)
+   #      # self.assertEqual(DEM.shape, (1333, 1333))
+   #
+   #      point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=4)['DOM']
+   #      P = point_cloud
+   #      v = pptk.viewer(P[:, :3])
+   #      v.set(point_size=0.01, show_axis=True, show_grid=False)
+   #
+   #      v.attributes(P[:, 3:6] / 255.0)
+   #      # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+   #      # color_map = np.random.rand(255, 3)
+   #      # v.color_map(color_map)
+   #      # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+   #      # mid_column_sum = dm[:, 127].sum()
 
 
 
@@ -123,3 +126,14 @@ class TestPano(unittest.TestCase):
     #     DOM = pano1.get_DOM(width=30, height=30, resolution=0.05, zoom=0)
     #
     #     self.assertEqual(DOM.shape, (600, 600))
+
+    def test_clip_pano(self, to_phi=90):
+         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+         pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
+         to_theta = math.radians(-0)
+         rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")
+         PIL.Image.fromarray(rimg).show()
+
+         self.assertEqual((768, 1024, 3), rimg.shape)
+
+         # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())

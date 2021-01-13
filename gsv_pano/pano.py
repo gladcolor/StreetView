@@ -854,7 +854,7 @@ class GSV_pano(object):
         theta = self.jdata['Projection']['tilt_yaw_deg']
         pitch = math.radians(pitch)
         theta = math.radians(theta)
-        to_theta = theta + to_theta
+        to_theta = theta
         to_theta = (to_theta - pi / 2 )
 
         # to_theta = math.radians(to_theta)
@@ -866,8 +866,10 @@ class GSV_pano(object):
         m = m.dot(utils.rotate_x(to_theta))
         m = m.dot(utils.rotate_y(to_phi))
 
+        m = m.dot(utils.rotate_x(math.radians(-8)))
+
         if len(img.shape) == 3:
-            base_height, base_width, channel = img.shape
+            base_height, base_width, channel        = img.shape
 
         if len(img.shape) == 2:
             base_height, base_width = img.shape

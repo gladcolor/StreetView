@@ -850,13 +850,11 @@ class GSV_pano(object):
         self.saved_path = saved_path
 
 
-
-
         pitch = self.jdata['Projection']['tilt_pitch_deg']
         theta = self.jdata['Projection']['tilt_yaw_deg']
         pitch = math.radians(pitch)
         theta = math.radians(theta)
-        to_theta = theta
+        to_theta = theta + to_theta
         to_theta = (to_theta - pi / 2 )
 
         # to_theta = math.radians(to_theta)

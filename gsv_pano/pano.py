@@ -225,35 +225,35 @@ class GSV_pano(object):
                 row_num =  self.depthmap['width']
                 hc = depthMap['depthMap'][-1][int(self.depthmap['width']/2)]
 
-                for i in range(row_num):
-                    try:
-                        mask_column = ground_mask[:, i]
-                        depths = depthMap['depthMap'][:, i] * mask_column
-                        y = depths[depths > 0]
-                        # y = y.reshape(-1, 1)
-                        x = np.argwhere(depths > 0).ravel()
-
-                        f = interpolate.interp1d(x, y)
-                        x_new = np.arange(0, self.depthmap['height'], 1)
-                        y_new = f(x_new)
-
-                        plt.plot(x, y, 'o', x_new, y_new, '-')
-                        plt.show()
-
-                        v_resol = math.pi/self.depthmap['height']
-                        thetas =  math.pi/2 - x * v_resol
-                        # tanx = 1/np.tan(thetas) - hc/(y * np.sin(thetas))
-                        tanx = (np.cos(thetas) * y - hc)/(np.sin(thetas) * y)
-                        tanx = np.nan_to_num(tanx)
-                        tanx[tanx >1000] = 0
-                        print("tanx: ", np.arctan(tanx).mean(), np.arctan(tanx).std())
-
-                        # reg = LinearRegression().fit(x, y)
-                        # print("reg.coef_, reg.intercept_:", reg.coef_, reg.intercept_)
-                        # print("reg score:", reg.score(x, y))
-                    except Exception as e:
-                        logging.exception("Error in get_dempthmap() linear regression: %s", e)
-
+                # for i in range(row_num):
+                #     try:
+                #         mask_column = ground_mask[:, i]
+                #         depths = depthMap['depthMap'][:, i] * mask_column
+                #         y = depths[depths > 0]
+                #         # y = y.reshape(-1, 1)
+                #         x = np.argwhere(depths > 0).ravel()
+                #
+                #         f = interpolate.interp1d(x, y)
+                #         x_new = np.arange(0, self.depthmap['height'], 1)
+                #         y_new = f(x_new)
+                #
+                #         plt.plot(x, y, 'o', x_new, y_new, '-')
+                #         plt.show()
+                #
+                #         v_resol = math.pi/self.depthmap['height']
+                #         thetas =  math.pi/2 - x * v_resol
+                #         # tanx = 1/np.tan(thetas) - hc/(y * np.sin(thetas))
+                #         tanx = (np.cos(thetas) * y - hc)/(np.sin(thetas) * y)
+                #         tanx = np.nan_to_num(tanx)
+                #         tanx[tanx >1000] = 0
+                #         print("tanx: ", np.arctan(tanx).mean(), np.arctan(tanx).std())
+                #
+                #         # reg = LinearRegression().fit(x, y)
+                #         # print("reg.coef_, reg.intercept_:", reg.coef_, reg.intercept_)
+                #         # print("reg score:", reg.score(x, y))
+                #     except Exception as e:
+                #         logging.exception("Error in get_dempthmap() linear regression: %s", e)
+                #
 
                 self.depthmap['depthMap'] = depthMap['depthMap']
                 self.depthmap['dm_mask'] = dm_mask
@@ -837,4 +837,85 @@ class GSV_pano(object):
         except Exception as e:
             logger.exception("Error in getPanoJPGfrmPanoId(): %s", e)
             return None
+
+
+
+
+    def clip_pano(self, to_theta=0, to_phi=0, width=1024, height=768, fov_h_deg=90, zoom=5, type="pano", saved_path=os.getcwd()):
+        if type == "pano":
+            img = self.get_panorama(zoom=zoom)['image']
+        if type == "depthmap":
+            img = self.get_depthmap()['depthMap']
+
+        self.saved_path = saved_path
+
+
+
+
+        pitch = self.jdata['Projection']['tilt_pitch_deg']
+        theta = self.jdata['Projection']['tilt_yaw_deg']
+        pitch = math.radians(pitch)
+        theta = math.radians(theta)
+        to_theta = theta
+        to_theta = (to_theta - pi / 2 )
+
+        # to_theta = math.radians(to_theta)
+        to_phi = math.radians(to_phi)
+
+        # rotation matrix
+        m = np.eye(3)
+        m = m.dot(utils.rotate_z(pitch))
+        m = m.dot(utils.rotate_x(to_theta))
+        m = m.dot(utils.rotate_y(to_phi))
+
+        if len(img.shape) == 3:
+            base_height, base_width, channel = img.shape
+
+        if len(img.shape) == 2:
+            base_height, base_width = img.shape
+            channel = 1
+
+        # height = int(round(width * np.tan(fov_v / 2) / np.tan(fov_h / 2), 0))
+
+
+        if len(img.shape) == 3:
+            new_img = np.zeros((height, width, channel), np.uint8)
+        if len(img.shape) == 2:
+            new_img = np.zeros((height, width))
+
+        fov_h = math.radians(fov_h_deg)
+        fov_v = math.atan((height * math.tan((fov_h / 2)) / width)) * 2
+
+        DI = np.ones((height * width, 3), np.int)
+        trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
+                          [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
+
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+
+        DI[:, 0] = xx.reshape(height * width)
+        DI[:, 1] = yy.reshape(height * width)
+
+        v = np.ones((height * width, 3), np.float)
+
+        v[:, :2] = np.dot(DI, trans.T)
+        v = np.dot(v, m.T)
+
+        diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
+        theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
+        phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi
+
+        ey = np.rint(theta * base_height / np.pi).astype(np.int)
+        ex = np.rint(phi * base_width / (2 * np.pi)).astype(np.int)
+
+        ex[ex >= base_width] = base_width - 1
+        ey[ey >= base_height] = base_height - 1
+
+        new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
+
+        basename = f'{self.panoId}_{int(math.degrees(to_theta))}_{int(math.degrees(to_phi))}_{int(math.degrees(pitch))}.jpg'
+        new_name = os.path.join(self.saved_path, basename)
+
+        cv2.imwrite(new_name,  cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR))
+
+        return new_img
 

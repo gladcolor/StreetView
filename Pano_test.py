@@ -635,7 +635,7 @@ def clip_pano():
     saved_path =  r'K:\Research\street_view_depthmap'
     img = cv2.imread(img_file, -1)
     # theta0 = 90
-    yaw = 0
+    yaw = 90
     phi0 = math.radians(yaw)
     fov = 90  # degree
     # hc = 2.4
@@ -650,13 +650,13 @@ def clip_pano():
         channel = 1
 
     w = int(fov / 360 * w_img)
-    w = int(distance/0.02)
+    # w = int(distance/0.02)
     h = int(w * h_w_ratio)
     fov_v = math.atan((h * math.tan((fov_h / 2)) / w)) * 2
-    theta0 = math.radians(84.20023345947266 + 90)  # njit kinney street
-    theta0 = math.radians(180)  # njit kinney street
+    theta0 = math.radians(84.20023345947266 )  # njit kinney street
+    # theta0 = math.radians(180)  # njit kin+ 90ney street
     pitch =  math.radians(1.42633581161499)
-    pitch =  math.radians(0)
+    # pitch =  math.radians(0)
 
     # theta0 = math.radians(90.95146179199219)  # highway ramp
     # pitch =  math.radians(358.2179260253906)

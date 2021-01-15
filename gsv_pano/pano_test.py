@@ -128,12 +128,14 @@ class TestPano(unittest.TestCase):
     #     self.assertEqual(DOM.shape, (600, 600))
 
     def test_clip_pano(self, to_phi=90):
-         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-         pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
-         to_theta = math.radians(-0)
-         rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")
-         PIL.Image.fromarray(rimg).show()
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+        pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
+        to_theta = 5
+        rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, type="depthmap", saved_path="K:\Research\street_view_depthmap")
+        PIL.Image.fromarray(rimg).show()
 
-         self.assertEqual((768, 1024, 3), rimg.shape)
+        self.assertEqual((768, 1024, 3), rimg.shape)
+        # Google link:
+        # https://geo0.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w=1024&h=768&pitch=-8&ll=40.73031168738437%2C-74.18154077638651&panoid=BM1Qt23drK3-yMWxYfOfVg&yaw=194.5072326660156
 
-         # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())

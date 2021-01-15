@@ -194,7 +194,7 @@ class GSV_pano(object):
             return 0
 
 
-    def get_depthmap(self, saved_path=""):  # return: numpy array
+    def get_depthmap(self, zoom=0, saved_path=""):  # return: numpy array
 
         if self.depthmap['depthMap'] is None:
             try:
@@ -254,6 +254,9 @@ class GSV_pano(object):
                 #     except Exception as e:
                 #         logging.exception("Error in get_dempthmap() linear regression: %s", e)
                 #
+
+                if zoom > 0:
+                    im =depthMap
 
                 self.depthmap['depthMap'] = depthMap['depthMap']
                 self.depthmap['dm_mask'] = dm_mask
@@ -845,7 +848,7 @@ class GSV_pano(object):
         if type == "pano":
             img = self.get_panorama(zoom=zoom)['image']
         if type == "depthmap":
-            img = self.get_depthmap()['depthMap']
+            img = self.get_depthmap(zoom=zoom)['depthMap']
 
         self.saved_path = saved_path
 
@@ -854,8 +857,8 @@ class GSV_pano(object):
         theta = self.jdata['Projection']['tilt_yaw_deg']
         pitch = math.radians(pitch)
         theta = math.radians(theta)
-        to_theta = theta
-        to_theta = (to_theta - pi / 2 )
+        to_theta = math.radians(to_theta)
+        theta = (theta - pi / 2 )
 
         # to_theta = math.radians(to_theta)
         to_phi = math.radians(to_phi)
@@ -863,10 +866,10 @@ class GSV_pano(object):
         # rotation matrix
         m = np.eye(3)
         m = m.dot(utils.rotate_z(pitch))
-        m = m.dot(utils.rotate_x(to_theta))
+        m = m.dot(utils.rotate_x(theta))
         m = m.dot(utils.rotate_y(to_phi))
 
-        m = m.dot(utils.rotate_x(math.radians(-8)))
+        m = m.dot(utils.rotate_x(to_theta))
 
         if len(img.shape) == 3:
             base_height, base_width, channel        = img.shape
@@ -918,4 +921,3 @@ class GSV_pano(object):
         cv2.imwrite(new_name,  cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR))
 
         return new_img
-

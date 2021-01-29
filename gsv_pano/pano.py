@@ -162,8 +162,9 @@ class GSV_pano(object):
 
 
     def getJsonfrmPanoID(self, panoId, dm=1, saved_path=''):
-        url = "https://www.google.com/maps/photometa/v1?authuser=0&hl=zh-CN&pb=!1m4!1smaps_sv.tactile!11m2!2m1!1b1!2m2!1szh-CN!2sus!3m3!1m2!1e2!2s{}!4m57!1e1!1e2!1e3!1e4!1e5!1e6!1e8!1e12!2m1!1e1!4m1!1i48!5m1!1e1!5m1!1e2!6m1!1e1!6m1!1e2!9m36!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e3!2b1!3e2!1m3!1e3!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e1!2b0!3e3!1m3!1e4!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e3"
+        url = "https://www.google.com/maps/photometa/v1?authuser=0&hl=en&pb=!1m4!1smaps_sv.tactile!11m2!2m1!1b1!2m2!1szh-CN!2sus!3m3!1m2!1e2!2s{}!4m57!1e1!1e2!1e3!1e4!1e5!1e6!1e8!1e12!2m1!1e1!4m1!1i48!5m1!1e1!5m1!1e2!6m1!1e1!6m1!1e2!9m36!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e3!2b1!3e2!1m3!1e3!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e1!2b0!3e3!1m3!1e4!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e3"
         url = url.format(panoId)
+
 
         try:
             resp = requests.get(url, proxies=None)
@@ -179,6 +180,9 @@ class GSV_pano(object):
                 return jdata
 
             if saved_path != '':
+                self.saved_path = saved_path
+                if not os.path.exists(self.saved_path):
+                    os.makedirs(self.saved_path)
                 try:
                     with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
                         json.dump(jdata, f)
@@ -918,6 +922,92 @@ class GSV_pano(object):
         basename = f'{self.panoId}_{int(math.degrees(to_theta))}_{int(math.degrees(to_phi))}_{int(math.degrees(pitch))}.jpg'
         new_name = os.path.join(self.saved_path, basename)
 
-        cv2.imwrite(new_name,  cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR))
+        if len(img.shape) == 3:
+            cv2.imwrite(new_name,  cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR))
+        if len(img.shape) == 2:
+            cv2.imwrite(new_name.replace(".jpg", ".tif"), new_img)
+
+        return new_img
+
+    def clip_depthmap(self, to_theta=0, to_phi=0, width=1024, height=768, fov_h_deg=90, zoom=5, type="depthmap",
+                  saved_path=os.getcwd()):
+        if type == "pano":
+            img = self.get_panorama(zoom=zoom)['image']
+        if type == "depthmap":
+            img = self.get_depthmap(zoom=zoom)['depthMap']
+            pano_h, pano_w = self.jdata['Data']['level_sizes'][zoom][0]
+            img = Image.fromarray(img).resize((pano_w, pano_h), Image.BILINEAR)
+            img = np.array(img)
+
+        self.saved_path = saved_path
+
+        pitch = self.jdata['Projection']['tilt_pitch_deg']
+        theta = self.jdata['Projection']['tilt_yaw_deg']
+        pitch = math.radians(pitch)
+        theta = math.radians(theta)
+        to_theta = math.radians(to_theta)
+        theta = (theta - pi / 2)
+
+        # to_theta = math.radians(to_theta)
+        to_phi = math.radians(to_phi)
+
+        # rotation matrix
+        m = np.eye(3)
+        m = m.dot(utils.rotate_z(pitch))
+        m = m.dot(utils.rotate_x(theta))
+        m = m.dot(utils.rotate_y(to_phi))
+
+        m = m.dot(utils.rotate_x(to_theta))
+
+        if len(img.shape) == 3:
+            base_height, base_width, channel = img.shape
+
+        if len(img.shape) == 2:
+            base_height, base_width = img.shape
+            channel = 1
+
+        # height = int(round(width * np.tan(fov_v / 2) / np.tan(fov_h / 2), 0))
+
+        if len(img.shape) == 3:
+            new_img = np.zeros((height, width, channel), np.uint8)
+        if len(img.shape) == 2:
+            new_img = np.zeros((height, width))
+
+        fov_h = math.radians(fov_h_deg)
+        fov_v = math.atan((height * math.tan((fov_h / 2)) / width)) * 2
+
+        DI = np.ones((height * width, 3), np.int)
+        trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
+                          [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
+
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+
+        DI[:, 0] = xx.reshape(height * width)
+        DI[:, 1] = yy.reshape(height * width)
+
+        v = np.ones((height * width, 3), np.float)
+
+        v[:, :2] = np.dot(DI, trans.T)
+        v = np.dot(v, m.T)
+
+        diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)
+        theta = np.pi / 2 - np.arctan2(v[:, 1], diag)
+        phi = np.arctan2(v[:, 0], v[:, 2]) + np.pi
+
+        ey = np.rint(theta * base_height / np.pi).astype(np.int)
+        ex = np.rint(phi * base_width / (2 * np.pi)).astype(np.int)
+
+        ex[ex >= base_width] = base_width - 1
+        ey[ey >= base_height] = base_height - 1
+
+        new_img[DI[:, 1], DI[:, 0]] = img[ey, ex]
+
+        basename = f'{self.panoId}_{int(math.degrees(to_theta))}_{int(math.degrees(to_phi))}_{int(math.degrees(pitch))}.jpg'
+        new_name = os.path.join(self.saved_path, basename)
+
+        if len(img.shape) == 3:
+            cv2.imwrite(new_name, cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR))
+        if len(img.shape) == 2:
+            cv2.imwrite(new_name.replace(".jpg", ".tif"), new_img)
 
         return new_img

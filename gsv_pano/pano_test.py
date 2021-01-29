@@ -119,21 +119,27 @@ class TestPano(unittest.TestCase):
     #     # panoId_2019 = "A3ABgCfEs9T5_TNGkFteXw"  # NJIT kinney street
     #     # lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
     #     # lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+    #     lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
     #
-    #     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-    #     pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
+    #     pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+    #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
     #
-    #     DOM = pano1.get_DOM(width=30, height=30, resolution=0.05, zoom=0)
+    #     DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=0)['DOM']
     #
     #     self.assertEqual(DOM.shape, (600, 600))
 
     def test_clip_pano(self, to_phi=90):
-         # panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-         pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
-         to_theta = math.radians(-0)
-         rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")
-         PIL.Image.fromarray(rimg).show()
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+        lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+        # pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
+        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+        to_theta = 0
+        # rimg = pano1.clip_depthmap(to_theta=to_theta, to_phi=90, zoom=3, type="depthmap", saved_path="K:\Research\street_view_depthmap")
+        rimg = pano1.clip_pano(to_theta=to_theta, to_phi=+90, width=1024*2, height=768*2, zoom=4, type="pano", saved_path=os.getcwd())
+        PIL.Image.fromarray(rimg).show()
 
-         self.assertEqual((768, 1024, 3), rimg.shape)
+        self.assertEqual((768, 1024), rimg.shape)
+        # Google link:
+        # https://geo0.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w=1024&h=768&pitch=-8&ll=40.73031168738437%2C-74.18154077638651&panoid=BM1Qt23drK3-yMWxYfOfVg&yaw=194.5072326660156
 
-         # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())

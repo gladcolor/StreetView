@@ -1,0 +1,14 @@
+numpy
+pyproj
+pandas
+scikit-image
+opencv-python
+requests
+pykrige
+matplotlib
+pptk
+scikit-learn
+geopy
+shapely
+selenium
+bs4

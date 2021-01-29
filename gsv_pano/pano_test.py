@@ -128,7 +128,7 @@ class TestPano(unittest.TestCase):
     #     self.assertEqual(DOM.shape, (600, 600))
 
     def test_clip_pano(self, to_phi=90):
-         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+         # panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
          pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
          to_theta = math.radians(-0)
          rimg = pano1.clip_pano(to_theta=to_theta, to_phi=90, zoom=3, saved_path="K:\Research\street_view_depthmap")

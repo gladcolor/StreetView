@@ -107,11 +107,15 @@ class GSV_pano(object):
         self.lon = None
         self.saved_path = saved_path
 
+
+        # image storage: numpy array
         self.depthmap = {"depthMap":None, "width":None, "height": None, "plane_idx_map": None, "plane_map": None}
         self.panorama ={"image": None, "zoom": None}
+        self.segmenation ={"segmentation": None, "zoom": None, 'full_path':None}
         self.point_cloud = {"point_cloud": None, "zoom": None, "dm_mask": None}
         self.DEM = {"DEM": None, "zoom": None, "resolution": None}
-        self.DOM = {"DOM": None, "zoom": None, "resolution": None}
+        self.DOM = {"DOM": None, "zoom": None, "resolution": None} #
+
 
 
         try:
@@ -523,11 +527,32 @@ class GSV_pano(object):
 
         return theta, phi
 
-    def find_pixel_to_thetaphi(self, theta, phi, zoom=4):
+    def get_segmentation(self):
+
+        if not os.path.exists(self.segmenation['full_path']):
+            logger.error("No full_path for segmentation file! ", self.panoId, exc_info=True)
+            return None
+
+        if self.segmenation['segmentation'] is None:
+            img_pil = Image.open(self.segmenation['full_path'])
+            self.segmenation['segmentation'] = np.array(img_pil)
+        return self.segmenation
+
+
+    def set_segmentation_path(self, full_path):
+        self.segmenation['full_path'] = full_path
+
+
+    def find_pixel_to_thetaphi(self, theta, phi, zoom=4, type="DOM"):
         ''':argument
         theata, phi: numpy array
+        type: DOM or segmentation
         '''
-        panorama = self.get_panorama(zoom=zoom)['image']
+
+        if type == "DOM":
+            panorama = self.get_panorama(zoom=zoom)['image']
+        if type == "segmentation":
+            panorama = self.get_segmentation()['segmentation']
         image_height, image_width, channel = panorama.shape
 
         v_reso = math.pi/image_height
@@ -544,7 +569,16 @@ class GSV_pano(object):
 
         return panorama[row, col]
 
-    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, type="DOM"):  # return: numpy array,
+        """
+
+        :param width:
+        :param height:
+        :param resolution:
+        :param zoom:
+        :param type: DOM or segmentation
+        :return:
+        """
 
         if (self.DOM['DOM'] is None) or (self.DEM['zoom'] != zoom):
             try:
@@ -603,7 +637,7 @@ class GSV_pano(object):
                 # need_colors = DEM_points
                 need_colors = DEM_points[DEM_points[:, 2] < 0]  # remove zero points.
                 theta, phi = self.XYZ_to_spherical(need_colors)
-                colors = self.find_pixel_to_thetaphi(theta, phi)
+                colors = self.find_pixel_to_thetaphi(theta, phi, type=type)
                 DEM_points [DEM_points[:, 2] < 0, 3:6] = colors
                 DEM_points[dem_mask.ravel() == 0, 3:6] = np.array([0, 0, 0])
 

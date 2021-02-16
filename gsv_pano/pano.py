@@ -94,7 +94,7 @@ def setup_logging(default_path='log_config.yaml', logName='', default_level=logg
 
 yaml_path = 'log_config.yaml'
 setup_logging(yaml_path)
-logger = logging.getLogger('console_only')
+logger = logging.getLogger('LOG.file')
 
 class GSV_pano(object):
     def __init__(self, panoId="", request_lon=None, request_lat=None, request_address='', saved_path=''):
@@ -839,19 +839,25 @@ class GSV_pano(object):
                         column_cnt = 0
                         row_cnt = 0
                         target = old_img
+                        logger.info("Found existing panorama: %s", new_name)
+                        self.panorama["image"] = np.array(target)
+                        self.panorama['zoom'] = int(zoom)
+
+                        return self.panorama
                     # old_img.close()
 
-                for x in range(column_cnt):  # col
-                    for y in range(row_cnt):  # row
-                        num = random.randint(0, 3)
-                        zoom = str(zoom)
-                        url = 'https://geo' + str(
-                            num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
-                            x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                        file = urllib.request.urlopen(url)
-                        image = Image.open(file)
-                        image = image.resize((tile_width, tile_height))
-                        target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
+                else: # download new panorama
+                    for x in range(column_cnt):  # col
+                        for y in range(row_cnt):  # row
+                            num = random.randint(0, 3)
+                            zoom = str(zoom)
+                            url = 'https://geo' + str(
+                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
+                                x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
+                            file = urllib.request.urlopen(url)
+                            image = Image.open(file)
+                            image = image.resize((tile_width, tile_height))
+                            target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
 
 
@@ -876,9 +882,8 @@ class GSV_pano(object):
             return self.panorama
 
         except Exception as e:
-            logger.exception("Error in getPanoJPGfrmPanoId(): %s", e)
+            logger.exception("Error in get_panorama(): %s", e)
             return None
-
 
 
 

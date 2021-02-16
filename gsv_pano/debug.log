@@ -1,0 +1,193 @@
+2021-02-16 12:30:09,309 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): <urlopen2021-02-16 12:34:18,479 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): <urlopen2021-02-16 12:39:05,432 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): <urlopen2021-02-16 12:42:03,882 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:42:04,772 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): string indices must be int2021-02-16 12:55:46,660 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:58:47,295 - LOG.file - INFO - get_panorama - 842 - Found existing panorama: K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\Vcia2qC45aeaI5XLFOLfng.jpg
+norama(): string indices must be integers
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 822, in get_panorama
+    tile_width = self.jdata['Data']['tile_width']
+TypeError: string indices must be integers
+2021-02-16 12:52:48,097 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): <urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>
+Traceback (most recent call last):
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1319, in do_open
+    encode_chunked=req.has_header('Transfer-encoding'))
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1252, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1298, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1247, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1026, in _send_output
+    self.send(msg)
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 966, in send
+    self.connect()
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1414, in connect
+    super().connect()
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 938, in connect
+    (self.host,self.port), self.timeout, self.source_address)
+  File "D:\Anaconda3\envs\Google_street_view\lib\socket.py", line 728, in create_connection
+    raise err
+  File "D:\Anaconda3\envs\Google_street_view\lib\socket.py", line 716, in create_connection
+    sock.connect(sa)
+TimeoutError: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 857, in get_panorama
+    file = urllib.request.urlopen(url)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "D:\Anaconda3\envs\Google_street_view2021-02-16 12:57:53,672 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+reet_view\lib\urllib\request.py", line 503, in _call_chain
+    result = func(*args)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1362, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1321, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>
+2021-02-16 12:55:46,189 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:46,486 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+eet_view\lib\http\client.py", line 1026, in _send_output
+    self.send(msg)
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 966, in send
+    self.connect()
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 1414, in connect
+    super().connect()
+  File "D:\Anaconda3\envs\Google_street_view\lib\http\client.py", line 938, in connect
+    (self.host,self.port), self.timeout, self.source_address)
+  File "D:\Anaconda3\envs\Google_street_view\lib\socket.py", line 728, in create_connection
+    raise err
+  File "D:\Anaconda3\envs\Google_street_view\lib\socket.py", line 716, in create_connection
+    sock.connect(sa)
+TimeoutError: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 857, in get_panorama
+    file = urllib.request.urlopen(url)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 543, in _open
+    '_open', req)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 503, in _call_chain
+    result = func(*args)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1362, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1321, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after2021-02-16 12:47:52,476 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:16,393 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:16,783 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:17,143 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:17,518 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:17,955 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+arty did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 857, in get_panorama
+    file = urllib.request.urlopen(url)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 222, in urlopen
+    return opener.open(url, data, timeout)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 525, in open
+    response = self._open(req, data)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 543, in _open
+    '_open', req)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 503, in _call_chain
+    result = func(*args)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1362, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "D:\Anaconda3\envs\Google_street_view\lib\urllib\request.py", line 1321, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>
+2021-02-16 12:55:40,611 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:41,002 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:41,424 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:41,908 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:42,346 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:42,689 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:43,018 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:43,346 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:43,689 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:44,096 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:44,502 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:44,939 - LOG.file - ERROR - get_panorama - 885 - Error in get_panorama(): list index out of range
+Traceback (most recent call last):
+  File "K:\Research\StreetView\Google_street_view\gsv_pano\pano.py", line 826, in get_panorama
+    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+IndexError: list index out of range
+2021-02-16 12:55:45,236 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:45,502 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:45,799 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:46,049 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None
+2021-02-16 12:55:46,314 - LOG.file - INFO - get_panorama - 817 - 0 is not a panoId. Returned None

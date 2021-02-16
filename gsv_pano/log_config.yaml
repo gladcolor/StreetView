@@ -34,7 +34,7 @@ loggers:
     handlers: [file]
   console_only:
     level: DEBUG
-    handlers: [file]
+    handlers: [console]
 
 root:
   level: DEBUG

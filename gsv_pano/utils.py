@@ -4,6 +4,8 @@ import base64
 import struct
 import PIL
 import os
+import fiona
+
 from pyproj import Transformer
 
 

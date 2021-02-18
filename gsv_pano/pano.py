@@ -801,10 +801,98 @@ class GSV_pano(object):
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
 
+    def download_panorama(self, prefix="", suffix="", zoom: int=5, check_size=False, load_img=False):
+        """Reference:
+                    https://developers.google.com/maps/documentation/javascript/streetview
+                    See the part from "Providing Custom Street View Panoramas" section.
+                    Get those tiles and mosaic them to a large image.
+                    The url of a tile:
+                    https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=CJ31ttcx7ez9qcWzoygVqA&output=tile&x=1&y=1&zoom=4&nbt&fover=2
+                    Make sure randomly use geo0 - geo3 server.
+                    When zoom=4, a panorama image have 6 rows, 13 cols.
+                """
+        if prefix != "":
+            prefix += '_'
+        if suffix != "":
+            suffix = '_' + suffix
 
+        try:
+            if (str(self.panoId) == str(0)) or (len(self.panoId) < 20):
+                logger.info("%s is not a panoId. Returned None", self.panoId)
+                return None
 
+            if (self.panorama['image'] is None) or (zoom != self.panorama['zoom']):
+                tile_width = self.jdata['Data']['tile_width']
+                tile_height = self.jdata['Data']['tile_height']
 
-    def get_panorama(self, prefix="", suffix="", zoom: int = 5) -> str:
+                zoom = int(zoom)
+                image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+                image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+
+                # passed
+                column_cnt = np.ceil(image_width / tile_width).astype(int)
+                row_cnt = np.ceil(image_height / tile_height).astype(int)
+
+                new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + '.jpg'))
+
+                need_download = False
+                if os.path.exists(new_name):
+                    logger.info("Found existing panorama: %s", new_name)
+                    need_download = False
+                    if check_size:
+                        old_img = Image.open(new_name)
+                        if old_img.size != (image_width, image_height):
+                            need_download = True
+
+                    if load_img:
+                        old_img = Image.open(new_name)
+                        target = old_img
+                        self.panorama["image"] = np.array(target)
+                        self.panorama['zoom'] = int(zoom)
+                        return self.panorama
+
+                else:
+                    need_download = True
+
+                if need_download:  # download new panorama
+                    target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
+
+                    for x in range(column_cnt):  # col
+                        for y in range(row_cnt):  # row
+                            num = random.randint(0, 3)
+                            zoom = str(zoom)
+                            # example:
+                            #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
+                            # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
+                            url = 'https://geo' + str(
+                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
+                                x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
+                            file = urllib.request.urlopen(url)
+                            image = Image.open(file)
+                            if image.size != (tile_width, tile_width):
+                                image = image.resize((tile_width, tile_height))
+                            target.paste(image,
+                                         (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
+
+                            # if int(zoom) == 0:
+                            #     target = target.crop((0, 0, image_width, image_height))
+                            target = target.crop((0, 0, image_width, image_height))
+
+                            if self.saved_path != "":
+                                if not os.path.exists(self.saved_path):
+                                    os.mkdir(self.saved_path)
+                                target.save(new_name)
+
+                                self.panorama["image"] = np.array(target)
+                                self.panorama['zoom'] = int(zoom)
+
+                            return self.panorama
+
+        except Exception as e:
+            logger.exception("Error in get_panorama(): %s", e)
+            return None
+
+    def get_panorama(self, prefix="", suffix="", zoom: int = 5, check_size=False):
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.

@@ -71,7 +71,7 @@ def refactorJson(jdata):
             except Exception as e:
                 print("Error in obtain new Json['Location']['country']:", e)
 
-        if len(jdata[1][0][3][2][1]) > 0:
+        if len(jdata[1][0][3][2]) > 0:
             try:
                 newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
             except Exception as e:

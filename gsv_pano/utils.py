@@ -65,17 +65,8 @@ def refactorJson(jdata):
         newJson['Location']['country'] = ''
         newJson['Location']['region'] = ''
 
-        if len(jdata[1][0][5][0][1]) > 4:
-            try:
-                newJson['Location']['country'] = jdata[1][0][5][0][1][4]
-            except Exception as e:
-                print("Error in obtain new Json['Location']['country']:", e)
+        # if len(jdata[1][0][5][0][1]) > 4:
 
-        if len(jdata[1][0][3][2]) > 0:
-            try:
-                newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
-            except Exception as e:
-                print("Error in obtain new Json['Location']['region']:", e)
 
         newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
 
@@ -87,6 +78,18 @@ def refactorJson(jdata):
 
         # model
         newJson['model']['depth_map'] = jdata[1][0][5][0][5][1][2]
+
+        try:
+            newJson['Location']['country'] = jdata[1][0][5][0][1][4]
+        except Exception as e:
+            print("Error in obtain new Json['Location']['country']:", e)
+
+        # if len(jdata[1][0][3][2]) > 0:
+        try:
+            newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
+        except Exception as e:
+            print("Error in obtain new Json['Location']['region']:", e)
+
     except Exception as e:
         print("Error in refactorJson():", e)
 

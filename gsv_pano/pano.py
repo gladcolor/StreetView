@@ -123,10 +123,12 @@ class GSV_pano(object):
             if request_lat and request_lon:
                 if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
                     self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
-
-            self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
-            self.lon = self.jdata['Location']['lng']
-            self.lat = self.jdata['Location']['lat']
+            if self.panoId != 0:
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                self.lon = self.jdata['Location']['lng']
+                self.lat = self.jdata['Location']['lat']
+            else:
+                logging.info("Found no paoraom in GSV_pano _init__(): lon: %f, lat: %f", self.lon, self.lat)
 
         except Exception as e:
             logging.exception("Error in GSV_pano _init__(): %s", e)
@@ -146,10 +148,11 @@ class GSV_pano(object):
                 pano_lat = jdata[1][5][0][1][0][2]
                 return panoId, pano_lon, pano_lat
             except:
-                logging.exception("Error in getPanoIDfrmLonlat().", e)
+                logging.exception("Error in getPanoIDfrmLonlat(): %s", e)
                 return 0, 0, 0
 
         else:  # if there is no panorama
+            logging.info("Found no panorama in getPanoIDfrmLonlat(): lon: %f, lat: %f", lon, lat)
             return 0, 0, 0
 
 

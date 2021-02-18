@@ -30,10 +30,14 @@ logger = logging.getLogger('LOG.file')
 def get_panorama(mp_list, saved_path):
     saved_path = saved_path
     while len(mp_list) > 0:
-        i, lon, lat = mp_list.pop(0)
-        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
-        pano1.get_panorama(zoom=5)
-        print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}")
+        try:
+            i, lon, lat = mp_list.pop(0)
+            pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
+            pano1.get_panorama(zoom=5)
+            print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}")
+        except Exception as e:
+            print(e)
+            continue
 
 def download_panos_DC():
     logger.info("Started...")
@@ -41,7 +45,7 @@ def download_panos_DC():
     shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m.shp'
     points = fiona.open(shp_path)
 
-    skips = 4649
+    skips = 8119
     points = points[:]
 
     logger.info("Making mp_list...")

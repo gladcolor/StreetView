@@ -876,7 +876,8 @@ class GSV_pano(object):
 
                     # if int(zoom) == 0:
                     #     target = target.crop((0, 0, image_width, image_height))
-                    target = target.crop((0, 0, image_width, image_height))
+                    if target.size != (image_width, image_height):
+                        target = target.crop((0, 0, image_width, image_height))
 
                     if self.saved_path != "":
                         if not os.path.exists(self.saved_path):

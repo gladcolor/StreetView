@@ -65,7 +65,7 @@ def download_panos_DC():
     random.shuffle(lonlats_mp_first100)
     lonlats_mp[:cut_point] = lonlats_mp_first100
 
-    process_cnt = 10
+    process_cnt = 7
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):

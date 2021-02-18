@@ -874,19 +874,19 @@ class GSV_pano(object):
                             target.paste(image,
                                          (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
-                            # if int(zoom) == 0:
-                            #     target = target.crop((0, 0, image_width, image_height))
-                            target = target.crop((0, 0, image_width, image_height))
+                    # if int(zoom) == 0:
+                    #     target = target.crop((0, 0, image_width, image_height))
+                    target = target.crop((0, 0, image_width, image_height))
 
-                            if self.saved_path != "":
-                                if not os.path.exists(self.saved_path):
-                                    os.mkdir(self.saved_path)
-                                target.save(new_name)
+                    if self.saved_path != "":
+                        if not os.path.exists(self.saved_path):
+                            os.mkdir(self.saved_path)
+                        target.save(new_name)
 
-                                self.panorama["image"] = np.array(target)
-                                self.panorama['zoom'] = int(zoom)
+                        self.panorama["image"] = np.array(target)
+                        self.panorama['zoom'] = int(zoom)
 
-                            return self.panorama
+                    return self.panorama
 
         except Exception as e:
             logger.exception("Error in get_panorama(): %s", e)

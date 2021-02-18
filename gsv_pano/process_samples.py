@@ -5,6 +5,7 @@ import fiona
 import yaml
 import multiprocessing as mp
 from pano import GSV_pano
+import random
 
 from tqdm import tqdm
 
@@ -46,7 +47,7 @@ def download_panos_DC():
     shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m.shp'
     points = fiona.open(shp_path)
 
-    skips = 9488
+    skips = 9701
     points = points[:]
 
     logger.info("Making mp_list...")
@@ -58,6 +59,11 @@ def download_panos_DC():
         lon, lat = geometry
         lonlats_mp.append((i, lon, lat))
     logger.info("Finished mp_list (%d records).", len(lonlats_mp))
+
+    cut_point = 100000
+    lonlats_mp_first100 = lonlats_mp[:cut_point]
+    random.shuffle(lonlats_mp_first100)
+    lonlats_mp[:cut_point] = lonlats_mp_first100
 
     process_cnt = 10
     pool = mp.Pool(processes=process_cnt)

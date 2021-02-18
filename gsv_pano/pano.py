@@ -814,6 +814,10 @@ class GSV_pano(object):
             Make sure randomly use geo0 - geo3 server.
             When zoom=4, a panorama image have 6 rows, 13 cols.
         """
+        if prefix != "":
+            prefix += '_'
+        if suffix != "":
+            suffix = '_' + suffix
 
         try:
             if (str(self.panoId) == str(0)) or (len(self.panoId) < 20):
@@ -834,7 +838,6 @@ class GSV_pano(object):
                 row_cnt = np.ceil(image_height / tile_height).astype(int)
 
                 new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + '.jpg'))
-                target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new graph
 
                 if os.path.exists(new_name):
                     old_img = Image.open(new_name)
@@ -850,24 +853,25 @@ class GSV_pano(object):
                     # old_img.close()
 
                 else: # download new panorama
+                    target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
+
                     for x in range(column_cnt):  # col
                         for y in range(row_cnt):  # row
                             num = random.randint(0, 3)
                             zoom = str(zoom)
+                            # example:
+                            #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
+                            # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
                             url = 'https://geo' + str(
-                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=zh-CN&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
+                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
                                 x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
                             file = urllib.request.urlopen(url)
                             image = Image.open(file)
-                            image = image.resize((tile_width, tile_height))
+                            if image.size != (tile_width, tile_width):
+                                image = image.resize((tile_width, tile_height))
                             target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
 
-
-                if prefix != "":
-                    prefix += '_'
-                if suffix != "":
-                    suffix = '_' + suffix
 
                 # if int(zoom) == 0:
                 #     target = target.crop((0, 0, image_width, image_height))

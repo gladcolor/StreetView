@@ -34,7 +34,8 @@ def get_panorama(mp_list, saved_path):
             i, lon, lat = mp_list.pop(0)
             pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
             pano1.get_panorama(zoom=5)
-            print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}")
+
+            print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}")
         except Exception as e:
             print(e)
             continue
@@ -45,7 +46,7 @@ def download_panos_DC():
     shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m.shp'
     points = fiona.open(shp_path)
 
-    skips = 8119
+    skips = 9488
     points = points[:]
 
     logger.info("Making mp_list...")

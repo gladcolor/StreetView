@@ -114,7 +114,7 @@ class GSV_pano(object):
                          "width":None,
                          "height": None,
                          "plane_idx_map": None,
-                         "plane_map": None,
+                         "normal_vector_map": None,
                          "ground_mask": None,
                          "zoom": None}
         self.panorama ={"image": None, "zoom": None}
@@ -232,8 +232,6 @@ class GSV_pano(object):
                 depthMapData = utils.parse(self.jdata['model']['depth_map'])
 
 
-
-
                 # parse first bytes to describe data
                 header = utils.parseHeader(depthMapData)
                 # parse bytes into planes of float values
@@ -275,7 +273,12 @@ class GSV_pano(object):
                 # dm_mask = Image.fromarray(dm_mask)
                 # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
                 # dm_mask = np.array(dm_mask)
-                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)
+
+                # depthmap_dict['normal_vector_map'] has been rescaled to [0, 255] from (-1,1).
+                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)  # < 10 is correct.
+                # ground_mask[:, 0] = np.where(ground_mask[:,  0] > 100, ground_mask[:, 0], 200)
+                ground_mask[:, 1] = np.where(ground_mask[:,  1] > 100, ground_mask[:, 1], 0)
+                #
                 ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
                 ground_mask = np.array(ground_mask)
 
@@ -319,7 +322,7 @@ class GSV_pano(object):
                 self.depthmap['depthMap'] = depthMap
                 self.depthmap['dm_mask'] = dm_mask
                 self.depthmap['ground_mask'] = ground_mask
-                self.depthmap['plane_map'] = depthmap_dict['normal_vector_map']
+                self.depthmap['normal_vector_map'] = depthmap_dict['normal_vector_map']
                 self.depthmap['plane_idx_map'] = depthmap_dict['plane_idx_map']
                 self.depthmap['zoom'] = zoom
 
@@ -432,6 +435,7 @@ class GSV_pano(object):
                 print(crs_local)
                 # transform = utils.epsg_transform(4326, 102005)  # USA_Contiguous_Equidistant_Conic, 102005
                 # transform = utils.epsg_transform(4326, 103105)  # New Jersey state plane, meter. Error, no 103105.
+                crs_local = 6487 #  NAD83(2011) / Maryland
                 transformer = utils.epsg_transform(4326, crs_local)  # New Jersey state plane, meter
 
                 x_m, y_m = transformer.transform(self.lat, self.lon)
@@ -606,7 +610,7 @@ class GSV_pano(object):
         self.segmenation['full_path'] = full_path
 
 
-    def get_pixel_from_row_col(self, arr_row, arr_col, zoom=4, type="pano"):
+    def get_pixel_from_row_col(self, arr_col, arr_row, zoom=4, type="pano"):
         '''
 
         :param arr_row:
@@ -785,7 +789,7 @@ class GSV_pano(object):
 
 
 
-    def angles_to_points(self, arr_col, arr_row, zoom=4):
+    def col_row_to_points(self, arr_col, arr_row, zoom=4):
         '''
         Convert theta/phi angles to points.
         :param theta_phi_list:
@@ -844,7 +848,7 @@ class GSV_pano(object):
 
         rotate_x_radian = math.radians(90 - tilt_yaw_deg)
         # rotate_x_radian = math.radians( tilt_yaw_deg  - 90 )
-        rotate_y_radian = math.radians(tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+        rotate_y_radian = math.radians( tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
         # rotate_y_radian = math.radians(0)  # should  be negative according to the observation of highway ramp. ???
         rotate_z_radian = math.radians(90 - pano_yaw_deg)
         # rotate_z_radian = math.radians(0)
@@ -1118,8 +1122,8 @@ class GSV_pano(object):
                 if os.path.exists(new_name):
                     old_img = Image.open(new_name)
                     if old_img.size == (image_width, image_height):  # no need to download new image
-                        column_cnt = 0
-                        row_cnt = 0
+                        # column_cnt = 0
+                        # row_cnt = 0
                         target = old_img
                         logger.info("Found existing panorama: %s", new_name)
                         self.panorama["image"] = np.array(target)
@@ -1128,52 +1132,53 @@ class GSV_pano(object):
                         return self.panorama
                     # old_img.close()
 
-                else: # download new panorama
-                    target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
+                    else: # download new panorama
+                        pass
+                target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
 
-                    for x in range(column_cnt):  # col
-                        for y in range(row_cnt):  # row
-                            num = random.randint(0, 3)
-                            zoom = str(zoom)
-                            # example:
-                            #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
-                            # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
-                            url = 'https://geo' + str(
-                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
-                                x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                            # file = urllib.request.urlopen(url, timeout=20)
-                            # print(file)
-                            file = requests.get(url, timeout=60)
+                for x in range(column_cnt):  # col
+                    for y in range(row_cnt):  # row
+                        num = random.randint(0, 3)
+                        zoom = str(zoom)
+                        # example:
+                        #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
+                        # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
+                        url = 'https://geo' + str(
+                            num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
+                            x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
+                        # file = urllib.request.urlopen(url, timeout=20)
+                        # print(file)
+                        file = requests.get(url, timeout=60)
 
-                            # time.sleep(0.5)
+                        # time.sleep(0.5)
 
-                            if file.status_code != 200:
-                                time.sleep(1)
-                                url[11] = str(3- int(url[11]))
-                                file = requests.get(url, timeout=60, verify=False)
+                        if file.status_code != 200:
+                            time.sleep(1)
+                            url[11] = str(3- int(url[11]))
+                            file = requests.get(url, timeout=60, verify=False)
 
-                            image_bytes = BytesIO(file.content)
+                        image_bytes = BytesIO(file.content)
 
-                            image = Image.open(image_bytes)
-                            if image.size != (tile_width, tile_width):
-                                image = image.resize((tile_width, tile_height))
-                            target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
-
-
-
-                # if int(zoom) == 0:
-                #     target = target.crop((0, 0, image_width, image_height))
-                target = target.crop((0, 0, image_width, image_height))
-                # target.show()
+                        image = Image.open(image_bytes)
+                        if image.size != (tile_width, tile_width):
+                            image = image.resize((tile_width, tile_height))
+                        target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
 
-                if self.saved_path != "":
-                    if not os.path.exists(self.saved_path):
-                        os.mkdir(self.saved_path)
-                    target.save(new_name)
 
-                self.panorama["image"] = np.array(target)
-                self.panorama['zoom'] = int(zoom)
+            # if int(zoom) == 0:
+            #     target = target.crop((0, 0, image_width, image_height))
+            target = target.crop((0, 0, image_width, image_height))
+            # target.show()
+
+
+            if self.saved_path != "":
+                if not os.path.exists(self.saved_path):
+                    os.mkdir(self.saved_path)
+                target.save(new_name)
+
+            self.panorama["image"] = np.array(target)
+            self.panorama['zoom'] = int(zoom)
 
             return self.panorama
 

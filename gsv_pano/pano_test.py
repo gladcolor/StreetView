@@ -206,15 +206,15 @@ class TestPano(unittest.TestCase):
 
 
 
-    def test_angles_to_points(self):
+    def test_col_row_to_points(self):
         # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-        lat, lon = 38.9554225, -77.0294996 # DC
+        lat, lon = 38.9484225, -77.0294996 # DC
         panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
         panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
 
         # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
-        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'D:\Code\StreetView\gsv_pano\test_results')
-        zoom = 2
+        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=r'test_results')
+        zoom = 0
 
         # pano1.get_panorama(zoom=2)
 
@@ -228,12 +228,14 @@ class TestPano(unittest.TestCase):
         y_space = np.linspace(0, ny - 1, ny)
 
         xv, yv = np.meshgrid(x_space, y_space)
+        xv = xv.astype(int)
+        yv = yv.astype(int)
 
 
 
         # read pixels from a image
         file_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
-        file_path = r'D:\Code\StreetView\gsv_pano\--rT8OYN1YM3tkQ45-dtwQ.png'
+        file_path = r'--rT8OYN1YM3tkQ45-dtwQ.png'
         # file_path = r'D:\Code\StreetView\gsv_pano\--BGis6it-dZqjEr1UR0jg.png'
         pil_img = Image.open(file_path)
         np_img = np.array(pil_img)
@@ -249,34 +251,44 @@ class TestPano(unittest.TestCase):
         offset_row = 1024*2
         arr_col = arr_rowcol[:, 1] + offset_col
         arr_row = arr_rowcol[:, 0] + offset_row
-        # P = pano1.angles_to_points(arr_col, arr_row, zoom=zoom)
-        P = pano1.angles_to_points(xv.ravel(), yv.ravel(), zoom=zoom)
+        # P = pano1.col_row_to_points(arr_col, arr_row, zoom=zoom)
+        P = pano1.col_row_to_points(xv.ravel(), yv.ravel(), zoom=zoom)
+
+        ground_mask = pano1.get_depthmap()['ground_mask']
 
         # pano1.set_segmentation_path(file_path)
-        pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, type='pano')
+        # pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, type='pano')
 
+        # pixels = pano1.get_depthmap(zoom=zoom)['normal_vector_map']
+        # pixels = pixels.reshape((-1, 3))
 
+        # print("Len(pixels):", len(pixels))
+        # pixels[:, 0] = np.where(pixels[:,  0] < 10, pixels[:, 0], 0)
+        # pixels[:, 1] = np.where(pixels[:,  1] > 100, pixels[:, 1], 255)
+        # pixels[:, 2] = np.where(pixels[:,  2] > 100, pixels[:, 1], 255)
+        # pixels = pixels[ pixels[:,  1] > 100]
         # thetas, phis = pano1.col_row_to_angles(xv.ravel(), yv.ravel())
 
-        P = pano1.angles_to_points(xv, yv, zoom=zoom)
+        P = pano1.col_row_to_points(xv, yv, zoom=zoom)
 
         P = np.concatenate([P, pixels], axis=1)
 
 
         distance_threshole = 25
         P = P[P[:, 3] < distance_threshole]
-        P = P[P[:, 3] > 0]
+        # P = P[P[:, 6] > 10]
+        # P = P[P[:, 4] < 138]
+        # P = P[P[:, 3] > 0]
         timer_end = time.perf_counter()
         print("Time spent (second):", timer_end - timer_start)
 
         v = pptk.viewer(P[:, :3])
         v.set(point_size=0.001, show_axis=True, show_grid=False)
-
         # set color
-        v.attributes(P[:, 4:7] / 255.0 )
+        v.attributes(P[:, 4:7])
 
-        color_map = np.random.rand(255, 3)
-        v.color_map(color_map)
+        # color_map = np.random.rand(255, 3)
+        # v.color_map(color_map)
 
         # tolerance =  math.pi / image_height * 0.5
         # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)

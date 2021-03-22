@@ -1,11 +1,12 @@
 import logging
 import os
 import math
-import fiona
+# import fiona
 import yaml
 import multiprocessing as mp
 from pano import GSV_pano
 import random
+import shapefile
 
 from tqdm import tqdm
 
@@ -45,25 +46,34 @@ def download_panos_DC():
     logger.info("Started...")
     saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
     shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m2.shp'
-    points = fiona.open(shp_path)
+
+    # HP 2012 machine
+    saved_path = r'K:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+    shp_path = r'K:\temp\road_pts_30m2.shp'
+
+    # points = fiona.open(shp_path)
+    points = shapefile.Reader(shp_path)
 
     skips = 9710
-    points = points[:]
+    points = points.shapeRecords()[:]
 
     logger.info("Making mp_list...")
     lonlats_mp = mp.Manager().list()
 
     for i in range(len(points) - skips):
         i += skips
-        geometry = points[i]['geometry']['coordinates']
+        # geometry = points[i]['geometry']['coordinates'] # using fiona
+        geometry = points[i].shape.__geo_interface__['coordinates'] # using pyshp
+
         lon, lat = geometry
         lonlats_mp.append((i, lon, lat))
     logger.info("Finished mp_list (%d records).", len(lonlats_mp))
 
-    cut_point = 100000
-    lonlats_mp_first100 = lonlats_mp[:cut_point]
-    random.shuffle(lonlats_mp_first100)
-    lonlats_mp[:cut_point] = lonlats_mp_first100
+    random.shuffle(lonlats_mp)
+    # cut_point = 100000
+    # lonlats_mp_first100 = lonlats_mp[:cut_point]
+    # random.shuffle(lonlats_mp_first100)
+    # lonlats_mp[:cut_point] = lonlats_mp_first100
 
     process_cnt = 7
     pool = mp.Pool(processes=process_cnt)

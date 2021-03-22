@@ -101,7 +101,7 @@ class GSV_pano(object):
         self.panoId = panoId  # test case: BM1Qt23drK3-yMWxYfOfVg
         self.request_lon = request_lon  # test case: -74.18154077638651
         self.request_lat = request_lat  # test case: 40.73031168738437
-        self.request_address = request_address # test case: '93-121 W Kinney St, Newark, NJ 07102'
+        self.request_address = request_address # test case: '93-121 W Kinney St, Newark, NJ 07102'  # not finished yet.
         self.jdata = None  # json object
         self.lat = None
         self.lon = None
@@ -109,7 +109,14 @@ class GSV_pano(object):
 
 
         # image storage: numpy array
-        self.depthmap = {"depthMap":None, "width":None, "height": None, "plane_idx_map": None, "plane_map": None}
+        self.depthmap = {"depthMap":None,
+                         'dm_mask': None,
+                         "width":None,
+                         "height": None,
+                         "plane_idx_map": None,
+                         "plane_map": None,
+                         "ground_mask": None,
+                         "zoom": None}
         self.panorama ={"image": None, "zoom": None}
         self.segmenation ={"segmentation": None, "zoom": None, 'full_path':None}
         self.point_cloud = {"point_cloud": None, "zoom": None, "dm_mask": None}
@@ -204,37 +211,77 @@ class GSV_pano(object):
             logging.exception("Error in getJsonfrmPanoID() %s, %s, %s." , panoId, url, e)
             return 0
 
+    def _enlarge_mask(self, arr_mask, width, height, erison_size=2):
+        kernel = morphology.disk(erison_size)
+        mask = morphology.erosion(arr_mask, kernel)
+        # mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
+        # resized_mask = np.array(resized_mask)
+        resized_mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
+        resized_mask = np.array(resized_mask)
+        return resized_mask
 
-    def get_depthmap(self, zoom=0, saved_path=""):  # return: numpy array
 
-        if self.depthmap['depthMap'] is None:
+    def get_depthmap(self, zoom, saved_path=""):  # return: {}
+
+        if (self.depthmap['depthMap'] is None) or (self.depthmap['zoom'] != zoom):
             try:
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
 
                 depthMapData = utils.parse(self.jdata['model']['depth_map'])
+
+
+
+
                 # parse first bytes to describe data
                 header = utils.parseHeader(depthMapData)
                 # parse bytes into planes of float values
-                self.depthmap['width'] = header['width']
-                self.depthmap['height'] = header['height']
+
 
                 data = utils.parsePlanes(header, depthMapData)
                 # compute position and values of pixels
-                depthMap = utils.computeDepthMap(header, data["indices"], data["planes"])
+                depthmap_dict = utils.computeDepthMap(header, data["indices"], data["planes"])
+                depthMap = depthmap_dict['depthMap']
+                dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(int)
 
-                kernel = morphology.disk(2)
-                dm_mask = morphology.erosion(depthMap['depthMap'], kernel)
-                dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
+                image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+                image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+
+                self.depthmap['width'] = image_width
+                self.depthmap['height'] = image_height
+
+                # kernel = morphology.disk(2)
+
+                # dm_mask = morphology.erosion(depthMap, kernel)
+
+
+
+                # resize
+                depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
+                depthMap = np.array(depthMap)
+
+
+                # dm_mask = Image.fromarray(dm_mask)
+                # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
+
+                # dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
+                # dm_mask = morphology.erosion(dm_mask, kernel)
+
+                dm_mask = self._enlarge_mask(dm_mask, image_width, image_height, erison_size=1)
+
+                depthMap = depthMap * dm_mask
+
                 # dm_mask = Image.fromarray(dm_mask)
                 # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
                 # dm_mask = np.array(dm_mask)
-                ground_mask = np.where(depthMap['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)
+                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)
+                ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
+                ground_mask = np.array(ground_mask)
 
                 # interpolation using linear regression
-                row_num =  self.depthmap['width']
-                hc = depthMap['depthMap'][-1][int(self.depthmap['width']/2)]
+                row_num =  image_width
+                hc = depthMap[-1][int(image_width/2)]
 
                 # for i in range(row_num):
                 #     try:
@@ -269,21 +316,22 @@ class GSV_pano(object):
                 if zoom > 0:
                     im =depthMap
 
-                self.depthmap['depthMap'] = depthMap['depthMap']
+                self.depthmap['depthMap'] = depthMap
                 self.depthmap['dm_mask'] = dm_mask
                 self.depthmap['ground_mask'] = ground_mask
-                self.depthmap['plane_map'] = depthMap['normal_vector_map']
-                self.depthmap['plane_idx_map'] = depthMap['plane_idx_map']
+                self.depthmap['plane_map'] = depthmap_dict['normal_vector_map']
+                self.depthmap['plane_idx_map'] = depthmap_dict['plane_idx_map']
+                self.depthmap['zoom'] = zoom
 
                 if len(saved_path) > 0:
                     if os.path.exists(saved_path):
                         os.path.mkdir()
                     new_name = os.path.join(saved_path, self.jdata['Location']['panoId'] + ".tif")
-                    im = depthMap["depthMap"]
+                    im = depthMap
 
                     im[np.where(im == max(im))[0]] = 0
 
-                    im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
+                    # im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
                     # display image
                     img = PIL.Image.fromarray(im)
                     img.save(new_name)
@@ -292,6 +340,8 @@ class GSV_pano(object):
                 logger.exception("Error in get_depthmap(): %s", e)
 
         return self.depthmap
+
+
 
     # unfinished............
     def get_DEM(self, width = 40, height = 40, resolution=0.4, zoom=0):  # return: numpy array,
@@ -317,8 +367,6 @@ class GSV_pano(object):
 
                 dem_coarse_resolution = resolution
 
-
-
                 P_col = (P[:, 0]/dem_coarse_resolution + int(width / dem_coarse_resolution / 2)).astype(int)
                 P_row = (int(height / dem_coarse_resolution / 2) - P[:, 1] / dem_coarse_resolution).astype(int)
 
@@ -330,8 +378,6 @@ class GSV_pano(object):
 
                 grid_col = np.linspace(-width/2,  width/2,  dem_coarse_np.shape[1])
                 grid_row = np.linspace(height/2, -height/2, dem_coarse_np.shape[0])
-
-
 
                 resolution = 0.03
                 w = int(width / resolution)
@@ -530,15 +576,29 @@ class GSV_pano(object):
 
         return theta, phi
 
-    def get_segmentation(self):
+    def get_segmentation(self, zoom=4):
 
         if not os.path.exists(self.segmenation['full_path']):
             logger.error("No full_path for segmentation file! ", self.panoId, exc_info=True)
             return None
 
+
         if self.segmenation['segmentation'] is None:
             img_pil = Image.open(self.segmenation['full_path'])
+            img_pil = img_pil.convert('RGB')
+
+            # fill the clipped segmentation:
+
+            fill_clipped_seg = True
+            if fill_clipped_seg:
+                w, h = img_pil.size
+                large_img = Image.new('RGB', (w * 1, h * 4))  # new image
+                large_img.paste(img_pil, (0, h*2))
+                img_pil = large_img
+                img_pil.show()
+
             self.segmenation['segmentation'] = np.array(img_pil)
+
         return self.segmenation
 
 
@@ -546,17 +606,48 @@ class GSV_pano(object):
         self.segmenation['full_path'] = full_path
 
 
+    def get_pixel_from_row_col(self, arr_row, arr_col, zoom=4, type="pano"):
+        '''
+
+        :param arr_row:
+        :param arr_col:
+        :param zoom:
+        :param type: "pano" or "seg"
+        :return:
+        '''
+        np_img = None
+        if type == "pano":
+            np_img = self.get_panorama(zoom=zoom)['image']
+        if type == "seg":
+            np_img = self.get_segmentation(zoom=zoom)['segmentation']
+
+        if len(np_img.shape) > 2:
+            image_height, image_width, channel = np_img.shape
+        if len(np_img.shape) == 2:
+            image_height, image_width = np_img.shape
+
+        return np_img[arr_row, arr_col]
+
+
+
+
     def find_pixel_to_thetaphi(self, theta, phi, zoom=4, type="DOM"):
         ''':argument
         theata, phi: numpy array
         type: DOM or segmentation
         '''
-
+        panorama = None
         if type == "DOM":
             panorama = self.get_panorama(zoom=zoom)['image']
         if type == "segmentation":
             panorama = self.get_segmentation()['segmentation']
-        image_height, image_width, channel = panorama.shape
+
+        if len(panorama.shape) > 2:
+            image_height, image_width, channel = panorama.shape
+        if len(panorama.shape) == 2:
+            image_height, image_width = panorama.shape
+            # palette = np.array(im.getpalette(),dtype=np.uint8).reshape((256,3))
+            channel = 1
 
         v_reso = math.pi/image_height
         h_reso = math.pi * 2 / image_width
@@ -588,6 +679,7 @@ class GSV_pano(object):
                 if self.jdata is None:
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
+                # get the coarse DEM
                 dem_coarse_np = self.get_DEM(resolution=0.4, zoom=4)['DEM']
 
 
@@ -609,15 +701,11 @@ class GSV_pano(object):
 
                 # interpolation using linear regression
 
-
-
                 dem_coarse_np = z
 
 
                 w = int(width / resolution)
                 h = int(height / resolution)
-
-
 
                 dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
                 dem_refined = np.array(dem_refined)
@@ -680,6 +768,104 @@ class GSV_pano(object):
 
         return self.DOM
 
+    def col_row_to_angles(self, arr_col, arr_row, zoom=4):
+        '''
+        Convert the pixels (rows, cols) to spherical coordinates (theta, phi).
+        :param arr_col:
+        :param arr_row:
+        :param zoom:
+        :return: coordinate of pixel center
+        '''
+        image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+        image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+
+        thetas = np.pi / 2 - (arr_row + 0.5) / image_height * np.pi
+        phis = (arr_col + 0.5) / image_width * (np.pi * 2) - np.pi
+        return thetas, phis
+
+
+
+    def angles_to_points(self, arr_col, arr_row, zoom=4):
+        '''
+        Convert theta/phi angles to points.
+        :param theta_phi_list:
+        :param zoom:
+        :return:
+        '''
+        depthmap = self.get_depthmap(zoom=zoom)['depthMap']
+        image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+        image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+
+        # dm_resized = Image.fromarray(depthmap).resize((image_width, image_height), Image.LINEAR)
+        # kernel = morphology.disk(2)
+        # dm_mask = morphology.erosion(depthmap, kernel)
+        # dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
+        # dm_mask = Image.fromarray(dm_mask)
+        # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
+        # dm_mask = np.array(dm_mask)
+        self.point_cloud["dm_mask"] = depthmap
+        # dm_mask[0, :] = 1  # show the camera center.
+
+        tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
+        pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
+        tilt_pitch_deg = self.jdata['Projection']['tilt_pitch_deg']
+        elevation_egm96_m = self.jdata['Location']['elevation_egm96_m']
+
+        # dm_np = np.array(dm_resized).astype(float)
+        # dm_np = dm_np * dm_mask
+
+        distances = depthmap[arr_row.astype(int), (arr_col).astype(int)]
+
+        # normalvector = Image.fromarray(self.depthmap['plane_map']).resize((image_width, image_height), Image.NEAREST)
+        # normalvector_np = np.array(normalvector)
+        # normalvectors = normalvector_np.reshape(-1, 3)
+        #
+        # plane_idx = Image.fromarray(self.depthmap['plane_idx_map']).resize((image_width, image_height), Image.NEAREST)
+        # plane_np = np.array(plane_idx)
+        # planes = plane_np.reshape(-1, 1)
+
+        arr_theta, arr_phi = self.col_row_to_angles(arr_col, arr_row, zoom=zoom)
+
+        thetas_sin = np.sin(arr_theta)
+        thetas_cos = np.cos(arr_theta)
+        phis_sin = np.sin(arr_phi)
+        phis_cos = np.cos(arr_phi)
+        # R = thetas_cos * dm_np  # * dm_mask
+        R = thetas_cos * distances  # * dm_mask
+
+        # z = dm_np * thetas_sin
+        z = distances * thetas_sin
+        # x = R * phis_cos
+        # y = R * phis_sin
+        y = R * phis_cos
+        x = R * phis_sin
+        P = np.concatenate([x.ravel().reshape(-1, 1), y.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)],
+                           axis=1)
+
+        rotate_x_radian = math.radians(90 - tilt_yaw_deg)
+        # rotate_x_radian = math.radians( tilt_yaw_deg  - 90 )
+        rotate_y_radian = math.radians(tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+        # rotate_y_radian = math.radians(0)  # should  be negative according to the observation of highway ramp. ???
+        rotate_z_radian = math.radians(90 - pano_yaw_deg)
+        # rotate_z_radian = math.radians(0)
+
+        P = P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
+        P = P.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
+        P = P.dot(utils.rotate_z(rotate_z_radian))  # math.radians(90 - pano_yaw_deg)  # yaw
+
+
+        # P = np.concatenate([P, dm_np.ravel().reshape(-1, 1), thetas.reshape(-1,1), phis.reshape(-1, 1)], axis=1)
+        P = np.concatenate([P, distances.reshape(-1, 1)], axis=1)
+
+
+        # P = P[np.where(dm_mask.ravel())]
+        # distance_threshole = 20
+        # P = P[P[:, 3] < distance_threshole]
+        # P = P[P[:, 3] > 0]
+
+        return P
+
+
     def get_point_cloud(self, zoom=0, distance_threshole=40, color=True, saved_path=""):  # return: numpy array
         ''':param
         pano_zoom: -1: not colorize the point cloud
@@ -691,7 +877,8 @@ class GSV_pano(object):
                     logging.info("Jdata is None: %s.", self.panoId)
                     return None
 
-                depthmap = self.get_depthmap()['depthMap']
+                depthmap = self.get_depthmap(zoom=zoom)['depthMap']
+
 
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
@@ -954,8 +1141,20 @@ class GSV_pano(object):
                             url = 'https://geo' + str(
                                 num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
                                 x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                            file = urllib.request.urlopen(url)
-                            image = Image.open(file)
+                            # file = urllib.request.urlopen(url, timeout=20)
+                            # print(file)
+                            file = requests.get(url, timeout=60)
+
+                            # time.sleep(0.5)
+
+                            if file.status_code != 200:
+                                time.sleep(1)
+                                url[11] = str(3- int(url[11]))
+                                file = requests.get(url, timeout=60, verify=False)
+
+                            image_bytes = BytesIO(file.content)
+
+                            image = Image.open(image_bytes)
                             if image.size != (tile_width, tile_width):
                                 image = image.resize((tile_width, tile_height))
                             target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
@@ -965,6 +1164,7 @@ class GSV_pano(object):
                 # if int(zoom) == 0:
                 #     target = target.crop((0, 0, image_width, image_height))
                 target = target.crop((0, 0, image_width, image_height))
+                # target.show()
 
 
                 if self.saved_path != "":
@@ -978,7 +1178,7 @@ class GSV_pano(object):
             return self.panorama
 
         except Exception as e:
-            logger.exception("Error in get_panorama(): %s", e)
+            logger.exception("Error in get_panorama(): %s, %s", e, url)
             return None
 
 

@@ -1,7 +1,7 @@
 import logging
 import os
 import math
-# import fiona
+import fiona
 import yaml
 import multiprocessing as mp
 from pano import GSV_pano
@@ -30,14 +30,18 @@ logger = logging.getLogger('LOG.file')
 
 
 def get_panorama(mp_list, saved_path):
+    total = len(mp_list)
     saved_path = saved_path
+    processed_cnt = 0
     while len(mp_list) > 0:
         try:
             i, lon, lat = mp_list.pop(0)
             pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
             pano1.download_panorama(zoom=5)
 
-            print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}")
+            processed_cnt = total - len(mp_list)
+            print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}. {processed_cnt} / {total}")
+
         except Exception as e:
             print(e)
             continue
@@ -46,16 +50,10 @@ def download_panos_DC():
     logger.info("Started...")
     saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
     shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m2.shp'
-
-    # HP 2012 machine
-    saved_path = r'K:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
-    shp_path = r'K:\temp\road_pts_30m2.shp'
-
-    # points = fiona.open(shp_path)
-    points = shapefile.Reader(shp_path)
+    points = fiona.open(shp_path)
 
     skips = 9710
-    points = points.shapeRecords()[:]
+    points = points[:]
 
     logger.info("Making mp_list...")
     lonlats_mp = mp.Manager().list()
@@ -69,13 +67,14 @@ def download_panos_DC():
         lonlats_mp.append((i, lon, lat))
     logger.info("Finished mp_list (%d records).", len(lonlats_mp))
 
-    random.shuffle(lonlats_mp)
-    # cut_point = 100000
-    # lonlats_mp_first100 = lonlats_mp[:cut_point]
-    # random.shuffle(lonlats_mp_first100)
-    # lonlats_mp[:cut_point] = lonlats_mp_first100
+    cut_point = 100000
+    lonlats_mp_first100 = lonlats_mp[:cut_point]
+    random.shuffle(lonlats_mp_first100)
+    lonlats_mp[:cut_point] = lonlats_mp_first100
 
-    process_cnt = 7
+    random.shuffle(lonlats_mp)
+
+    process_cnt = 5
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):

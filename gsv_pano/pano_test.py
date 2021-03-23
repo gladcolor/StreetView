@@ -79,40 +79,56 @@ class TestPano(unittest.TestCase):
 
 
    # Not OK, 2020 - 12 - 29
-   # def test_get_DEM(self):
-   #      panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-   #
-   #      # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
-   #      # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
-   #      lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
-   #      lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
-   #      lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
-   #      lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
-   #      lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #      lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #      lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #
-   #      lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-   #      lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
-   #      lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
-   #
-   #      pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-   #      # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
-   #      # dm = pano1.get_depthmap()
-   #      # DEM = pano1.get_DEM(width=40, height=40, resolution=0.4, zoom=4)
-   #      # self.assertEqual(DEM.shape, (1333, 1333))
-   #
-   #      point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=4)['DOM']
-   #      P = point_cloud
-   #      v = pptk.viewer(P[:, :3])
-   #      v.set(point_size=0.01, show_axis=True, show_grid=False)
-   #
-   #      v.attributes(P[:, 3:6] / 255.0)
-   #      # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
-   #      # color_map = np.random.rand(255, 3)
-   #      # v.color_map(color_map)
-   #      # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
-   #      # mid_column_sum = dm[:, 127].sum()
+   def test_get_DEM(self):
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+
+        # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
+        # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
+        lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
+        lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
+        lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
+        lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
+        lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
+        lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
+        lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
+
+        lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+        lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
+        lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
+
+        zoom = 2
+
+        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+        # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
+        # dm = pano1.get_depthmap()
+        DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, zoom=zoom)
+        # self.assertEqual(DEM.shape, (1333, 1333))
+
+        point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=2)['DOM']
+
+        ground_points = pano1.get_ground_points(zoom=zoom)
+
+        ground_mask = pano1.get_depthmap(zoom=zoom)['ground_mask']
+
+        arr_row_col = np.argwhere(ground_mask > 0)
+
+        pixels = pano1.get_pixel_from_row_col(arr_row_col[:, 1].ravel(), arr_row_col[:, 0].ravel(), zoom=zoom, type='pano')
+        P = np.concatenate([ground_points, pixels], axis=1)
+
+
+
+        P = P[P[:, 3] < 25]
+        # v = pptk.viewer(P[:, :3])
+        v = pptk.viewer(point_cloud[:, :3])
+
+        v.set(point_size=0.01, show_axis=True, show_grid=False)
+
+        v.attributes(point_cloud[:, 3:6] / 255.0)
+        # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+        # color_map = np.random.rand(255, 3)
+        # v.color_map(color_map)
+        # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+        # mid_column_sum = dm[:, 127].sum()
 
 
 
@@ -206,90 +222,115 @@ class TestPano(unittest.TestCase):
 
 
 
-    def test_col_row_to_points(self):
-        # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-        lat, lon = 38.9484225, -77.0294996 # DC
-        panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
-        panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    # def test_col_row_to_points(self):
+    #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+    #     lat, lon = 38.9484225, -77.0294996 # DC
+    #     panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
+    #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    #
+    #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
+    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=r'test_results')
+    #     zoom = 2
+    #
+    #     # pano1.get_panorama(zoom=2)
+    #
+    #     # pano1.get_DOM(zoom=2, type="DOM")
+    #
+    #     image_width = pano1.jdata['Data']['level_sizes'][zoom][0][1]
+    #     image_height = pano1.jdata['Data']['level_sizes'][zoom][0][0]
+    #
+    #     nx, ny = (image_width, image_height)
+    #     x_space = np.linspace(0, nx - 1, nx)
+    #     y_space = np.linspace(0, ny - 1, ny)
+    #
+    #     xv, yv = np.meshgrid(x_space, y_space)
+    #     xv = xv.astype(int)
+    #     yv = yv.astype(int)
+    #
+    #
+    #
+    #     # read pixels from a image
+    #     file_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
+    #     file_path = r'--rT8OYN1YM3tkQ45-dtwQ.png'
+    #     # file_path = r'D:\Code\StreetView\gsv_pano\--BGis6it-dZqjEr1UR0jg.png'
+    #     pil_img = Image.open(file_path)
+    #     np_img = np.array(pil_img)
+    #     arr_rowcol = np.argwhere(np_img > -1)
+    #
+    #     timer_start = time.perf_counter()
+    #     #
+    #     offset_row = 0
+    #     offset_col =0
+    #
+    #
+    #
+    #     offset_row = 1024*2
+    #     arr_col = arr_rowcol[:, 1] + offset_col
+    #     arr_row = arr_rowcol[:, 0] + offset_row
+    #     # P = pano1.col_row_to_points(arr_col, arr_row, zoom=zoom)
+    #     P = pano1.col_row_to_points(xv.ravel(), yv.ravel(), zoom=zoom)
+    #
+    #     ground_mask = pano1.get_depthmap(zoom=zoom)['ground_mask']
+    #     # xv = xv * ground_mask
+    #     # yv = yv * ground_mask
+    #     # pano1.set_segmentation_path(file_path)
+    #     pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, type='pano')
+    #
+    #     # pixels = pano1.get_depthmap(zoom=zoom)['normal_vector_map']
+    #     # pixels = pixels.reshape((-1, 3))
+    #
+    #     # print("Len(pixels):", len(pixels))
+    #     # pixels[:, 0] = np.where(pixels[:,  0] < 10, pixels[:, 0], 0)
+    #     # pixels[:, 1] = np.where(pixels[:,  1] > 100, pixels[:, 1], 255)
+    #     # pixels[:, 2] = np.where(pixels[:,  2] > 100, pixels[:, 1], 255)
+    #     # pixels = pixels[ pixels[:,  1] > 100]
+    #     # thetas, phis = pano1.col_row_to_angles(xv.ravel(), yv.ravel())
+    #
+    #     P = pano1.col_row_to_points(xv, yv, zoom=zoom)
+    #
+    #     P = np.concatenate([P, pixels], axis=1)
+    #
+    #
+    #     distance_threshole = 30
+    #     P = P[P[:, 3] < distance_threshole]
+    #     # P = P[P[:, 6] > 10]
+    #     # P = P[P[:, 4] < 138]
+    #     # P = P[P[:, 3] > 0]
+    #     timer_end = time.perf_counter()
+    #     print("Time spent (second):", timer_end - timer_start)
+    #
+    #     v = pptk.viewer(P[:, :3])
+    #     v.set(point_size=0.001, show_axis=True, show_grid=False)
+    #     # set color
+    #     v.attributes(P[:, 4:7] / 255.0)
+    #
+    #     # color_map = np.random.rand(255, 3)
+    #     # v.color_map(color_map)
+    #
+    #     # tolerance =  math.pi / image_height * 0.5
+    #     # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)
+    #     # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
 
-        # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
-        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=r'test_results')
-        zoom = 0
 
-        # pano1.get_panorama(zoom=2)
-
-        # pano1.get_DOM(zoom=2, type="DOM")
-
-        image_width = pano1.jdata['Data']['level_sizes'][zoom][0][1]
-        image_height = pano1.jdata['Data']['level_sizes'][zoom][0][0]
-
-        nx, ny = (image_width, image_height)
-        x_space = np.linspace(0, nx - 1, nx)
-        y_space = np.linspace(0, ny - 1, ny)
-
-        xv, yv = np.meshgrid(x_space, y_space)
-        xv = xv.astype(int)
-        yv = yv.astype(int)
-
-
-
-        # read pixels from a image
-        file_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
-        file_path = r'--rT8OYN1YM3tkQ45-dtwQ.png'
-        # file_path = r'D:\Code\StreetView\gsv_pano\--BGis6it-dZqjEr1UR0jg.png'
-        pil_img = Image.open(file_path)
-        np_img = np.array(pil_img)
-        arr_rowcol = np.argwhere(np_img > -1)
-
-        timer_start = time.perf_counter()
-        #
-        offset_row = 0
-        offset_col =0
-
-
-
-        offset_row = 1024*2
-        arr_col = arr_rowcol[:, 1] + offset_col
-        arr_row = arr_rowcol[:, 0] + offset_row
-        # P = pano1.col_row_to_points(arr_col, arr_row, zoom=zoom)
-        P = pano1.col_row_to_points(xv.ravel(), yv.ravel(), zoom=zoom)
-
-        ground_mask = pano1.get_depthmap()['ground_mask']
-
-        # pano1.set_segmentation_path(file_path)
-        # pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, type='pano')
-
-        # pixels = pano1.get_depthmap(zoom=zoom)['normal_vector_map']
-        # pixels = pixels.reshape((-1, 3))
-
-        # print("Len(pixels):", len(pixels))
-        # pixels[:, 0] = np.where(pixels[:,  0] < 10, pixels[:, 0], 0)
-        # pixels[:, 1] = np.where(pixels[:,  1] > 100, pixels[:, 1], 255)
-        # pixels[:, 2] = np.where(pixels[:,  2] > 100, pixels[:, 1], 255)
-        # pixels = pixels[ pixels[:,  1] > 100]
-        # thetas, phis = pano1.col_row_to_angles(xv.ravel(), yv.ravel())
-
-        P = pano1.col_row_to_points(xv, yv, zoom=zoom)
-
-        P = np.concatenate([P, pixels], axis=1)
-
-
-        distance_threshole = 25
-        P = P[P[:, 3] < distance_threshole]
-        # P = P[P[:, 6] > 10]
-        # P = P[P[:, 4] < 138]
-        # P = P[P[:, 3] > 0]
-        timer_end = time.perf_counter()
-        print("Time spent (second):", timer_end - timer_start)
-
-        v = pptk.viewer(P[:, :3])
-        v.set(point_size=0.001, show_axis=True, show_grid=False)
-        # set color
-        v.attributes(P[:, 4:7])
-
-        # color_map = np.random.rand(255, 3)
-        # v.color_map(color_map)
-
-        # tolerance =  math.pi / image_height * 0.5
-        # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)
-        # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
+    # def test_get_ground_points(self):
+    #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+    #     lat, lon = 38.9484225, -77.0294996 # DC
+    #     panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
+    #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    #
+    #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
+    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=r'test_results')
+    #     zoom = 2
+    #
+    #     timer_start = time.perf_counter()
+    #
+    #     P = pano1.get_ground_points(zoom=zoom)
+    #
+    #     distance_threshole = 30
+    #     P = P[P[:, 3] < distance_threshole]
+    #
+    #     timer_end = time.perf_counter()
+    #     print("Time spent (second):", timer_end - timer_start)
+    #
+    #     v = pptk.viewer(P[:, :3])
+    #     v.set(point_size=0.001, show_axis=True, show_grid=False)

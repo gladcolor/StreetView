@@ -26,6 +26,8 @@ from geopy.distance import geodesic
 from shapely.geometry import Point, Polygon
 from shapely.ops import nearest_points
 
+from scipy.ndimage import gaussian_filter
+
 import numpy as np
 from numpy import inf
 
@@ -686,15 +688,14 @@ class GSV_pano(object):
 
                 dem_coarse_np = z
 
-                pil_dem_coarse = Image.fromarray(dem_coarse_np).convert("L")
-                pil_dem_coarse = pil_dem_coarse.filter(ImageFilter.Kernel((3, 3),  (1, 1, 1, 1, 1, 1, 1, 1, 1)))
+                dem_coarse_np = gaussian_filter(dem_coarse_np, sigma=3)
 
 
                 w = int(width / resolution)
                 h = int(height / resolution)
 
-                # dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
-                dem_refined = pil_dem_coarse.resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+                dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+                # dem_refined = pil_dem_coarse.resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
                 dem_refined = np.array(dem_refined)
 
                 grid_col = np.linspace(-width / 2, width / 2, w)

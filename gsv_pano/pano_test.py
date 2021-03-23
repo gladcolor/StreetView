@@ -96,7 +96,7 @@ class TestPano(unittest.TestCase):
         lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
         lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
 
-        zoom = 2
+        zoom = 1
 
         pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
         # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())

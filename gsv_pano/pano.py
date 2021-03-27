@@ -716,7 +716,7 @@ class GSV_pano(object):
                 # need_colors = DEM_points
                 need_colors = DEM_points[DEM_points[:, 2] < 0]  # remove zero points.
                 theta, phi = self.XYZ_to_spherical(need_colors)
-                colors = self.find_pixel_to_thetaphi(theta, phi, type=type)
+                colors = self.find_pixel_to_thetaphi(theta, phi, zoom=zoom, type=type)
                 DEM_points [DEM_points[:, 2] < 0, 3:6] = colors
                 DEM_points[dem_mask.ravel() == 0, 3:6] = np.array([0, 0, 0])
 
@@ -831,11 +831,30 @@ class GSV_pano(object):
                            axis=1)
 
         rotate_x_radian = math.radians(90 - tilt_yaw_deg)
-        # rotate_x_radian = math.radians( tilt_yaw_deg  - 90 )
-        rotate_y_radian = math.radians( tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
-        # rotate_y_radian = math.radians(0)  # should  be negative according to the observation of highway ramp. ???
-        rotate_z_radian = math.radians(90 - pano_yaw_deg)
-        # rotate_z_radian = math.radians(0)
+        rotate_y_radian = math.radians(
+            -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+        # rotate_z_radian = math.radians(90 - pano_yaw_deg)
+        rotate_z_radian = math.radians(pano_yaw_deg)
+
+        pitch = self.jdata['Projection']['tilt_pitch_deg']
+        theta = self.jdata['Projection']['tilt_yaw_deg']
+        phi = math.radians(90 - pano_yaw_deg)
+        pitch = math.radians(pitch)
+        theta = math.radians(theta)
+        theta = (theta - pi / 2)
+        #
+        # m = np.eye(3)
+        # m = m.dot(utils.rotate_z(pitch))
+        # m = m.dot(utils.rotate_x(theta))
+        # # m = m.dot(utils.rotate_y(phi))
+        #
+        # P = P.dot(m.T)
+
+        #
+        # P = P.dot(utils.rotate_x(pitch))  # math.radians(-tilt_pitch_deg)  # pitch
+        # P = P.dot(utils.rotate_y(theta))  # math.radians(90 - tilt_yaw_deg)  # roll
+        # P = P.dot(utils.rotate_z(phi))  # math.radians(90 - pano_yaw_deg)  # yaw
+
 
         P = P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
         P = P.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
@@ -894,7 +913,7 @@ class GSV_pano(object):
                 img_np = np.array(img)[0:image_height, :, :]
                 colors = img_np.reshape(-1, 3)
 
-                normalvector = Image.fromarray(self.depthmap['plane_map']).resize((image_width, image_height), Image.NEAREST)
+                normalvector = Image.fromarray(self.depthmap['normal_vector_map']).resize((image_width, image_height), Image.NEAREST)
                 normalvector_np = np.array(normalvector)
                 normalvectors = normalvector_np.reshape(-1, 3)
 
@@ -976,7 +995,7 @@ class GSV_pano(object):
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
 
-    def download_panorama(self, prefix="", suffix="", zoom: int=5, check_size=False, load_img=False):
+    def download_panorama(self, zoom: int=3):
         """Reference:
                     https://developers.google.com/maps/documentation/javascript/streetview
                     See the part from "Providing Custom Street View Panoramas" section.
@@ -986,83 +1005,47 @@ class GSV_pano(object):
                     Make sure randomly use geo0 - geo3 server.
                     When zoom=4, a panorama image have 6 rows, 13 cols.
                 """
-        if prefix != "":
-            prefix += '_'
-        if suffix != "":
-            suffix = '_' + suffix
-
         try:
             if (str(self.panoId) == str(0)) or (len(self.panoId) < 20):
                 logger.info("%s is not a panoId. Returned None", self.panoId)
                 return None
 
-            if (self.panorama['image'] is None) or (zoom != self.panorama['zoom']):
-                tile_width = self.jdata['Data']['tile_width']
-                tile_height = self.jdata['Data']['tile_height']
+            tile_width = self.jdata['Data']['tile_width']
+            tile_height = self.jdata['Data']['tile_height']
 
-                zoom = int(zoom)
-                image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
-                image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+            zoom = int(zoom)
+            image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+            image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-                # passed
-                column_cnt = np.ceil(image_width / tile_width).astype(int)
-                row_cnt = np.ceil(image_height / tile_height).astype(int)
+            # passed
+            column_cnt = np.ceil(image_width / tile_width).astype(int)
+            row_cnt = np.ceil(image_height / tile_height).astype(int)
 
-                new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + '.jpg'))
+            target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
 
-                need_download = False
-                if os.path.exists(new_name):
-                    logger.info("Found existing panorama: %s", new_name)
-                    need_download = False
-                    if check_size:
-                        old_img = Image.open(new_name)
-                        if old_img.size != (image_width, image_height):
-                            need_download = True
+            for x in range(column_cnt):  # col
+                for y in range(row_cnt):  # row
+                    num = random.randint(0, 3)
+                    zoom = str(zoom)
+                    # example:
+                    #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
+                    # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
+                    url = 'https://geo' + str(
+                        num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
+                        x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
+                    file = urllib.request.urlopen(url)
+                    image = Image.open(file)
+                    if image.size != (tile_width, tile_width):
+                        image = image.resize((tile_width, tile_height))
+                    target.paste(image,
+                                 (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
 
-                    if load_img:
-                        old_img = Image.open(new_name)
-                        target = old_img
-                        self.panorama["image"] = np.array(target)
-                        self.panorama['zoom'] = int(zoom)
-                        return self.panorama
+            # if int(zoom) == 0:
+            #     target = target.crop((0, 0, image_width, image_height))
+            if target.size != (image_width, image_height):
+                target = target.crop((0, 0, image_width, image_height))
 
-                else:
-                    need_download = True
-
-                if need_download:  # download new panorama
-                    target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
-
-                    for x in range(column_cnt):  # col
-                        for y in range(row_cnt):  # row
-                            num = random.randint(0, 3)
-                            zoom = str(zoom)
-                            # example:
-                            #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
-                            # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
-                            url = 'https://geo' + str(
-                                num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
-                                x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                            file = urllib.request.urlopen(url)
-                            image = Image.open(file)
-                            if image.size != (tile_width, tile_width):
-                                image = image.resize((tile_width, tile_height))
-                            target.paste(image,
-                                         (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
-
-                    # if int(zoom) == 0:
-                    #     target = target.crop((0, 0, image_width, image_height))
-                    if target.size != (image_width, image_height):
-                        target = target.crop((0, 0, image_width, image_height))
-
-                    if self.saved_path != "":
-                        if not os.path.exists(self.saved_path):
-                            os.mkdir(self.saved_path)
-                        target.save(new_name)
-
-                        self.panorama["image"] = np.array(target)
-                        self.panorama['zoom'] = int(zoom)
-
-                    return self.panorama
+            return target
 
         except Exception as e:
             logger.exception("Error in get_panorama(): %s", e)
@@ -1083,13 +1066,14 @@ class GSV_pano(object):
         if suffix != "":
             suffix = '_' + suffix
 
+        target = None
+
         try:
             if (str(self.panoId) == str(0)) or (len(self.panoId) < 20):
                 logger.info("%s is not a panoId. Returned None", self.panoId)
                 return None
 
-            if (self.panorama['image'] is None) or (zoom != self.panorama['zoom']):
-                # print(adcode)  # Works well.
+            if (self.panorama['image'] is None) or (zoom != self.panorama['zoom']): # need to download
                 tile_width = self.jdata['Data']['tile_width']
                 tile_height = self.jdata['Data']['tile_height']
 
@@ -1097,74 +1081,34 @@ class GSV_pano(object):
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-                # passed
-                column_cnt = np.ceil(image_width / tile_width).astype(int)
-                row_cnt = np.ceil(image_height / tile_height).astype(int)
-
-                new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + '.jpg'))
+                new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + f'_{zoom}.jpg'))
 
                 if os.path.exists(new_name):
                     old_img = Image.open(new_name)
                     if old_img.size == (image_width, image_height):  # no need to download new image
-                        # column_cnt = 0
-                        # row_cnt = 0
                         target = old_img
                         logger.info("Found existing panorama: %s", new_name)
                         self.panorama["image"] = np.array(target)
                         self.panorama['zoom'] = int(zoom)
-
                         return self.panorama
                     # old_img.close()
 
-                    else: # download new panorama
+                    else:
                         pass
-                target = Image.new('RGB', (tile_width * column_cnt, tile_height * row_cnt))  # new image
+                else:
+                    target = self.download_panorama(zoom=zoom)
 
-                for x in range(column_cnt):  # col
-                    for y in range(row_cnt):  # row
-                        num = random.randint(0, 3)
-                        zoom = str(zoom)
-                        # example:
-                        #  https://geo2.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=KoQv4Ob8WNJ709enNrQCBQ
-                        # &output=tile&x=20&y=6&zoom=5&nbt&fover=2
-                        url = 'https://geo' + str(
-                            num) + '.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&panoid=' + self.panoId + '&output=tile&x=' + str(
-                            x) + '&y=' + str(y) + '&zoom=' + zoom + '&nbt&fover=2'
-                        # file = urllib.request.urlopen(url, timeout=20)
-                        # print(file)
-                        file = requests.get(url, timeout=60)
+                    if self.saved_path != "":
+                        if not os.path.exists(self.saved_path):
+                            os.mkdir(self.saved_path)
+                        target.save(new_name)
 
-                        # time.sleep(0.5)
+                    self.panorama["image"] = np.array(target)
+                    self.panorama['zoom'] = int(zoom)
+                    return self.panorama
 
-                        if file.status_code != 200:
-                            time.sleep(1)
-                            url[11] = str(3- int(url[11]))
-                            file = requests.get(url, timeout=60, verify=False)
-
-                        image_bytes = BytesIO(file.content)
-
-                        image = Image.open(image_bytes)
-                        if image.size != (tile_width, tile_width):
-                            image = image.resize((tile_width, tile_height))
-                        target.paste(image, (tile_width * x, tile_height * y, tile_width * (x + 1), tile_height * (y + 1)))
-
-
-
-            # if int(zoom) == 0:
-            #     target = target.crop((0, 0, image_width, image_height))
-            target = target.crop((0, 0, image_width, image_height))
-            # target.show()
-
-
-            if self.saved_path != "":
-                if not os.path.exists(self.saved_path):
-                    os.mkdir(self.saved_path)
-                target.save(new_name)
-
-            self.panorama["image"] = np.array(target)
-            self.panorama['zoom'] = int(zoom)
-
-            return self.panorama
+            else:
+                return self.panorama
 
         except Exception as e:
             logger.exception("Error in get_panorama(): %s, %s", e, url)

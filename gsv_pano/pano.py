@@ -362,6 +362,54 @@ class GSV_pano(object):
 
         return ground_points
 
+    def calculate_DEM(self, ground_points, width=40, height=40, resolution=0.1, dem_coarse_resolution = 0.4):
+        P = ground_points
+        P = P[P[:, 0] < width/2]
+        P = P[P[:, 0] > -width/2]
+        P = P[P[:, 1] < height/2]
+        P = P[P[:, 1] > -height/2]
+
+        # convert to grid coordinates systems
+        P_col = (P[:, 0]/dem_coarse_resolution + int(width / dem_coarse_resolution / 2)).astype(int)
+        P_row = (int(height / dem_coarse_resolution / 2) - P[:, 1] / dem_coarse_resolution).astype(int)
+
+        dem_coarse_np = np.ones((int(height / dem_coarse_resolution), int(width / dem_coarse_resolution))) * -999
+        dem_coarse_np[P_row, P_col] = P[:, 2]
+
+        grid_col = np.linspace(-width/2,  width/2,  dem_coarse_np.shape[1])
+        grid_row = np.linspace(height/2, -height/2, dem_coarse_np.shape[0])
+
+        # resolution = 0.03
+        w = int(width / resolution)
+        h = int(height / resolution)
+        # dem_fined = np.array(Image.fromarray(dem_coarse_np).resize((w, h), Image.LINEAR))
+
+        grid_col = np.linspace(-width/2,  width/2, w)
+        grid_row = np.linspace(height/2, -height/2, h)
+
+        # make a Kriging interpolation model
+        # https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/examples/00_ordinary.html#sphx-glr-examples-00-ordinary-py
+
+        idx = np.argwhere(dem_coarse_np > -100)
+        z = dem_coarse_np[dem_coarse_np > -100]
+
+        cols = dem_coarse_np.shape[1]
+        rows = dem_coarse_np.shape[0]
+        xx, yy = idx[:,1].astype(float), idx[:,0].astype(float)
+        OK = OrdinaryKriging(
+        xx,
+        yy,
+        z,
+        variogram_model="linear",
+        verbose=False,
+        enable_plotting=False,
+        )
+        z, ss = OK.execute("grid", np.arange(0.0, cols, 1.0), np.arange(0.0, rows, 1.0))
+        dem_coarse_np = z
+        dem_coarse_np = gaussian_filter(dem_coarse_np, sigma=1)
+
+
+        return dem_coarse_np
 
     # unfinished............
     def get_DEM(self, width = 40, height = 40, resolution=0.4, zoom=0):  # return: numpy array,

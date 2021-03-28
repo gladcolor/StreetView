@@ -81,6 +81,11 @@ class TestPano(unittest.TestCase):
    # Not OK, 2020 - 12 - 29
    def test_get_DEM(self):
         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # # NJIT kinney street
+        panoId_2019 = "9t4cfX1WMnqGL9Jcv8TiFQ"
+        panoId_2019 = "ARYuiC08k4hlknJQzrhdHQ"
+        panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
+        panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
+        panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
 
         # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
         # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
@@ -97,9 +102,11 @@ class TestPano(unittest.TestCase):
         lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
 
         zoom = 4
+        json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
 
-        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-        # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
+        # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
+        # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
+        pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
 
         # dm = pano1.get_depthmap()
         # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
@@ -109,18 +116,26 @@ class TestPano(unittest.TestCase):
         # point_cloud = pano1.get_point_cloud(zoom=zoom)['point_cloud']
 
 
-        ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
-        DEM = pano1.calculate_DEM(ground_points)
-        P = np.argwhere(DEM > -100)
-        P = np.concatenate([P, DEM[DEM > -1000].ravel().reshape(-1, 1)], axis=1)
-        thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
+        # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
+        DOM_resolution= 0.03
+        # DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2)
+
+        DOM = pano1.get_DOM(width = 40, height = 40, resolution=DOM_resolution, zoom=5, img_type="DOM")
+        points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=5)['DEM']
+        P = np.argwhere(points > -100)
+
+        z = points[points > -1000].ravel().reshape(-1, 1)
+        P = np.concatenate([P, z], axis=1)
+        # thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
         v = pptk.viewer(P[:, :3])
         v.set(point_size=0.01, show_axis=True, show_grid=False)
+        # v.attributes(P[:, 2] )
+        v.attributes(DOM['DOM'].reshape((-1, 3))/255.0 )
 
         # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
         # ground_mask = pano1.get_depthmap(zoom=zoom)['ground_mask']
         # arr_row_col = np.argwhere(ground_mask > 0)
-        # pixels = pano1.get_pixel_from_row_col(arr_row_col[:, 1].ravel(), arr_row_col[:, 0].ravel(), zoom=zoom, type='pano')
+        # pixels = pano1.get_pixel_from_row_col(arr_row_col[:, 1].ravel(), arr_row_col[:, 0].ravel(), zoom=zoom, img_type='pano')
         # P = np.concatenate([ground_points, pixels], axis=1)
         # P = P[P[:, 3] < 20]
         # v = pptk.viewer(P[:, :3])
@@ -173,8 +188,8 @@ class TestPano(unittest.TestCase):
     #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="K:\Research\street_view_depthmap")
     #     pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
     #     to_theta = 0
-    #     # rimg = pano1.clip_depthmap(to_theta=to_theta, to_phi=90, zoom=3, type="depthmap", saved_path="K:\Research\street_view_depthmap")
-    #     rimg = pano1.clip_pano(to_theta=to_theta, to_phi=-90, width=1024*2, height=768*2, zoom=4, type="pano", saved_path=os.getcwd())
+    #     # rimg = pano1.clip_depthmap(to_theta=to_theta, to_phi=90, zoom=3, img_type="depthmap", saved_path="K:\Research\street_view_depthmap")
+    #     rimg = pano1.clip_pano(to_theta=to_theta, to_phi=-90, width=1024*2, height=768*2, zoom=4, img_type="pano", saved_path=os.getcwd())
     #     PIL.Image.fromarray(rimg).show()
     #
     #     self.assertEqual((768, 1024), rimg.shape)
@@ -194,7 +209,7 @@ class TestPano(unittest.TestCase):
     #     pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
     #     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
     #     pano1.set_segmentation_path(full_path=full_path)
-    #     DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=0, type='segmentation')['DOM']
+    #     DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=0, img_type='segmentation')['DOM']
     #     self.assertEqual((800, 800, 3), DOM.shape)
     #     PIL.Image.fromarray(DOM).show()
 
@@ -248,7 +263,7 @@ class TestPano(unittest.TestCase):
     #
     #     # pano1.get_panorama(zoom=2)
     #
-    #     # pano1.get_DOM(zoom=2, type="DOM")
+    #     # pano1.get_DOM(zoom=2, img_type="DOM")
     #
     #     image_width = pano1.jdata['Data']['level_sizes'][zoom][0][1]
     #     image_height = pano1.jdata['Data']['level_sizes'][zoom][0][0]
@@ -288,7 +303,7 @@ class TestPano(unittest.TestCase):
     #     # xv = xv * ground_mask
     #     # yv = yv * ground_mask
     #     # pano1.set_segmentation_path(file_path)
-    #     pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, type='pano')
+    #     pixels = pano1.get_pixel_from_row_col(xv.ravel(), yv.ravel(), zoom=zoom, img_type='pano')
     #
     #     # pixels = pano1.get_depthmap(zoom=zoom)['normal_vector_map']
     #     # pixels = pixels.reshape((-1, 3))

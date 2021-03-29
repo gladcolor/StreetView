@@ -174,28 +174,31 @@ class TestPano(unittest.TestCase):
      # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
 
 
-   def test_get_segmentation(self):
-
-        # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-        # full_path = r'J:\Research\StreetView\gsv_pano\AZK1jDGIZC1zmuooSZCzEg.png'
-        # full_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
-        # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"
-        seg_dir = r'D:\DC_segmented'
-        seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
-
-        for idx, seg_file in enumerate(seg_files[0:]):
-             panoId = os.path.basename(seg_file)[:-4]
-             pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
-             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
-             pano1.set_segmentation_path(full_path=seg_file)
-             DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
-             # palette = Image.open(seg_file).getpalette()
-             # palette = np.array(palette,dtype=np.uint8)
-
-             # pil_img = PIL.Image.fromarray(DOM['DOM'])
-             # pil_img.putpalette(palette)
-             # self.assertEqual((800, 800, 3), DOM.shape)
-             # pil_img.show()
+   # def test_get_segmentation(self):
+   #
+   #      # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+   #      # full_path = r'J:\Research\StreetView\gsv_pano\AZK1jDGIZC1zmuooSZCzEg.png'
+   #      # full_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
+   #      # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"
+   #      seg_dir = r'D:\DC_segmented'
+   #      pano_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+   #      seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
+   #      pano_files = glob.glob(os.path.join(pano_dir, "*.jpg"))
+   #      saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\test_results'
+   #
+   #      for idx, seg_file in enumerate(pano_files[11:12]):
+   #           panoId = os.path.basename(seg_file)[:-4]
+   #           pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+   #           # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
+   #           pano1.set_segmentation_path(full_path=seg_file)
+   #           DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='DOM',  fill_clipped_seg=True)
+   #           # palette = Image.open(seg_file).getpalette()
+   #           # palette = np.array(palette,dtype=np.uint8)
+   #
+   #           pil_img = PIL.Image.fromarray(DOM['DOM'])
+   #           # pil_img.putpalette(palette)
+   #           # self.assertEqual((800, 800, 3), DOM.shape)
+   #           pil_img.show()
 
     # def test_col_row_to_angles(self):
     #     lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
@@ -325,28 +328,46 @@ class TestPano(unittest.TestCase):
     #     # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
 
 
-    # def test_get_ground_points(self):
-    #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-    #     lat, lon = 38.9484225, -77.0294996 # DC
-    #     panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
-    #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
-    #
-    #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
-    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=r'test_results')
-    #     zoom = 2
-    #
-    #     timer_start = time.perf_counter()
-    #
-    #     P = pano1.get_ground_points(zoom=zoom)
-    #
-    #     distance_threshole = 30
-    #     P = P[P[:, 3] < distance_threshole]
-    #
-    #     timer_end = time.perf_counter()
-    #     print("Time spent (second):", timer_end - timer_start)
-    #
-    #     v = pptk.viewer(P[:, :3])
-    #     v.set(point_size=0.001, show_axis=True, show_grid=False)
+    def test_get_ground_points(self):
+        # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+        lat, lon = 38.9484225, -77.0294996 # DC
+        panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
+        panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+
+        # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
+        saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\test_results'
+        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path, crs_local=6487)
+        zoom = 5
+
+        timer_start = time.perf_counter()
+
+        P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+
+
+
+        img_w = 40
+        img_h = 40
+
+        distance_threshole = img_w * 1.5
+
+        # P = P[P[:, 3] < distance_threshole]
+        P = P[P[:, 0] < img_w/2]
+        P = P[P[:, 0] > -img_w/2]
+        P = P[P[:, 1] < img_h/2]
+        P = P[P[:, 1] > -img_h/2]
+
+
+
+        timer_end = time.perf_counter()
+        print("Time spent (second):", timer_end - timer_start)
+
+        np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
+        new_name = os.path.join(saved_path, "points_to_image.tif")
+        pano1.save_image(np_img, new_name, worldfile)
+
+        v = pptk.viewer(P[:, :3])
+        v.set(point_size=0.001, show_axis=True, show_grid=False)
+        v.attributes(P[:, 4:7]/255.0)
 
 
      # passed 2021-03-26,

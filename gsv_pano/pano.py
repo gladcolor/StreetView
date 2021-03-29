@@ -81,7 +81,8 @@ logging.basicConfig(level=logging.INFO,
                 filemode='w')
 
 
-
+GROUND_VECTOR_THRES = 10
+DEM_SMOOTH_SIGMA    = 3
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
     path = default_path
@@ -262,17 +263,13 @@ class GSV_pano(object):
                 depthMap = depthmap_dict['depthMap']
 
                 # move up a row
-                depthMap[:-1] = depthMap[1:]
-
-                normal_vector_map = depthmap_dict['normal_vector_map']
-                normal_vector_map[:-1] = normal_vector_map[1:]
-                # normal_vector_map[:1] = normal_vector_map[1:2]
-                depthmap_dict['normal_vector_map'] = normal_vector_map
-
-                plane_idx_map = depthmap_dict['plane_idx_map']
-                plane_idx_map[:-1] = plane_idx_map[1:]
-                # plane_idx_map[:1] = plane_idx_map[1:2]
-                depthmap_dict['plane_idx_map'] = plane_idx_map
+                # depthMap[:-1] = depthMap[1:]
+                # normal_vector_map = depthmap_dict['normal_vector_map']
+                # normal_vector_map[:-1] = normal_vector_map[1:]
+                # depthmap_dict['normal_vector_map'] = normal_vector_map
+                # plane_idx_map = depthmap_dict['plane_idx_map']
+                # plane_idx_map[:-1] = plane_idx_map[1:]
+                # depthmap_dict['plane_idx_map'] = plane_idx_map
 
 
                 dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(int)
@@ -300,7 +297,7 @@ class GSV_pano(object):
                 # dm_mask = np.array(dm_mask)
 
                 # depthmap_dict['normal_vector_map'] has been rescaled to [0, 255] from (-1,1).
-                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < 10, 1, 0).astype(int)  # < 10 is correct.
+                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(int)  # < 10 is correct.
                 # ground_mask[:, 0] = np.where(ground_mask[:,  0] > 100, ground_mask[:, 0], 200)
                 # ground_mask[:, 2] = np.where(ground_mask[:,  2] < 10,1, 0)
                 #
@@ -370,7 +367,7 @@ class GSV_pano(object):
 
         return self.depthmap
 
-    def get_ground_points(self, zoom=0):
+    def get_ground_points(self, zoom=0, color=False, img_type='pano'):
 
         depthmap = self.get_depthmap(zoom=zoom)['depthMap']
         ground_mask = self.get_depthmap(zoom=zoom)['ground_mask']
@@ -381,10 +378,13 @@ class GSV_pano(object):
         arr_row = arr_rowcol[:, 0]
 
         ground_points = self.col_row_to_points(arr_col, arr_row, zoom=zoom)
+        if color:
+            colors = self.get_pixel_from_row_col(arr_col, arr_row, zoom=zoom, img_type=img_type)
+            ground_points = np.concatenate([ground_points, colors], axis=1)
 
         return ground_points
 
-    def calculate_DEM(self, ground_points, width=50, height=50, resolution=0.05, dem_coarse_resolution = 0.4, smooth_sigma=3):
+    def calculate_DEM(self, ground_points, width=50, height=50, resolution=0.05, dem_coarse_resolution = 0.4, smooth_sigma=DEM_SMOOTH_SIGMA):
         P = ground_points
         P = P[P[:, 0] < width/2]
         P = P[P[:, 0] > -width/2]
@@ -461,8 +461,53 @@ class GSV_pano(object):
 
         return self.DEM
 
+    def points_to_DOM(self, Xs, Ys, pixels, resolution):
+        try:
+            minX = min(Xs)
+            maxY = max(Ys)
+            if len(Xs) != len(Ys):
+                print("len(Xs) != len(Ys)")
+                return None, None
+
+            if len(pixels) != len(Ys):
+                print("len(pixels) != len(Ys)")
+                return None, None
+
+            rangeX = max(Xs) - minX
+            rangeY = maxY - min(Ys)
+            w = int(rangeX / resolution)
+            h = int(rangeY / resolution)
+            channels = len(pixels.shape)
+            if channels == 2:
+                channels = pixels.shape[1]
+
+            cols = ((Xs - minX) / resolution)
+            cols = cols.astype(int)
+            cols = np.where(cols > w - 1, w - 1, cols)
+            rows = (maxY - Ys) / resolution
+            rows = rows.astype(int)
+            rows = np.where(rows > h - 1, h - 1, rows)
+
+
+            if channels == 1:
+                np_image = np.zeros((h, w))
+            else:
+                np_image = np.zeros((h, w, channels))
+
+            transformer = utils.epsg_transform(4326, self.crs_local)  # New Jersey state plane, meter
+            x_m, y_m = transformer.transform(self.lat, self.lon)
+
+            np_image[rows, cols] = pixels
+
+            worldfile = [resolution, 0, 0, -resolution, x_m - rangeX / 2, y_m + rangeY / 2]
+
+            return np_image, worldfile
+        except Exception as e:
+            print("Error in points_to_DOM():", e)
+
+
     # unfinished............
-    def get_DEM(self, width=40, height=40, resolution=0.4, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2):  # return: numpy array,
+    def get_DEM(self, width=40, height=40, resolution=0.4, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=0):  # return: numpy array,
 
         new_name = os.path.join(self.saved_path, self.panoId + f"_DEM_{resolution:.2f}.tif")
         worldfile_name = new_name.replace(".tif", ".tfw")
@@ -833,8 +878,8 @@ class GSV_pano(object):
         image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
         image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-        thetas = np.pi / 2 - (arr_row + 1) / image_height * np.pi
-        phis = (arr_col  ) / image_width * (np.pi * 2) - np.pi
+        thetas = np.pi / 2 - (arr_row ) / image_height * np.pi
+        phis = (arr_col ) / image_width * (np.pi * 2) - np.pi
         return thetas, phis
 
 
@@ -858,15 +903,9 @@ class GSV_pano(object):
         tilt_pitch_deg = self.jdata['Projection']['tilt_pitch_deg']
         elevation_egm96_m = self.jdata['Location']['elevation_egm96_m']
 
-        distances = depthmap[arr_row.astype(int), (arr_col).astype(int)]
+        # distances = depthmap[arr_row.astype(int), (arr_col).astype(int)]
+        distances = depthmap[np.ceil(arr_row).astype(int), (arr_col).astype(int)]
 
-        # normalvector = Image.fromarray(self.depthmap['plane_map']).resize((image_width, image_height), Image.NEAREST)
-        # normalvector_np = np.array(normalvector)
-        # normalvectors = normalvector_np.reshape(-1, 3)
-        #
-        # plane_idx = Image.fromarray(self.depthmap['plane_idx_map']).resize((image_width, image_height), Image.NEAREST)
-        # plane_np = np.array(plane_idx)
-        # planes = plane_np.reshape(-1, 1)
 
         arr_theta, arr_phi = self.col_row_to_angles(arr_col, arr_row, zoom=zoom)
 
@@ -874,13 +913,11 @@ class GSV_pano(object):
         thetas_cos = np.cos(arr_theta)
         phis_sin = np.sin(arr_phi)
         phis_cos = np.cos(arr_phi)
-        # R = thetas_cos * dm_np  # * dm_mask
-        R = thetas_cos * distances  # * dm_mask
 
-        # z = dm_np * thetas_sin
+        R = thetas_cos * distances
+
         z = distances * thetas_sin
-        # x = R * phis_cos
-        # y = R * phis_sin
+
         y = R * phis_cos
         x = R * phis_sin
         P = np.concatenate([x.ravel().reshape(-1, 1), y.ravel().reshape(-1, 1), z.ravel().reshape(-1, 1)],
@@ -1245,6 +1282,32 @@ class GSV_pano(object):
             cv2.imwrite(new_name.replace(".jpg", ".tif"), new_img)
 
         return new_img
+
+
+    def save_image(self, np_img, new_name, worldfile):
+        ext_name = "." + new_name[-3] + new_name[-1] + 'w'
+        worldfile_name = new_name.replace(".tif", ext_name)
+        saved_path = os.path.dirname(new_name)
+        # save image
+        if saved_path != "":
+            try:
+                if not os.path.exists(saved_path):
+                    os.mkdir(saved_path)
+                try:
+                    im = Image.fromarray(np_img)
+                except Exception as e:
+                    # print(e)
+                    im = Image.fromarray(np_img.astype(np.uint8))
+                im.save(new_name)
+
+                with open(worldfile_name, 'w') as wf:
+                    for line in worldfile:
+                        # print(line)
+                        wf.write(str(line) + '\n')
+            except Exception as e:
+                print("Error in save_image(): ", self.saved_path, e)
+
+
 
     def clip_depthmap(self, to_theta=0, to_phi=0, width=1024, height=768, fov_h_deg=90, zoom=5, img_type="depthmap",
                   saved_path=os.getcwd()):

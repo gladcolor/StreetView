@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 import os
 import math
 import fiona
@@ -6,8 +7,9 @@ import yaml
 import multiprocessing as mp
 from pano import GSV_pano
 import random
-import shapefile
+# import shapefile
 import glob
+import time
 
 from tqdm import tqdm
 
@@ -119,6 +121,60 @@ def get_DOMs():
             print("Error :", e, seg_file)
             continue
 
+def quick_DOM():
+
+    seg_dir = r'D:\DC_segmented'
+    pano_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+    seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
+    pano_files = glob.glob(os.path.join(pano_dir, "*.jpg"))
+    saved_path = r'F:\Research\sidewalk_wheelchair\DOMs'
+    resolution = 0.05
+
+    img_w = 40
+    img_h = 40
+    zoom = 4
+
+    for idx, pano_file in enumerate(pano_files[0:]):
+
+        print(f"Processing: {idx} / {len(pano_files)}, {pano_file}")
+
+        timer_start = time.perf_counter()
+
+        distance_threshole = img_w * 1.5
+
+        panoId = os.path.basename(pano_file)[:-6]
+        pano1 = GSV_pano(panoId=panoId, saved_path=pano_dir, crs_local=6487)
+
+        pano1.get_depthmap(zoom=zoom)
+
+        pano1.depthmap['ground_mask'] = np.where(pano1.depthmap['depthMap'] < distance_threshole, 1, 0)
+        mask_h, mask_w = pano1.depthmap['ground_mask'].shape
+        pano1.depthmap['ground_mask'][int(mask_h / 4 * 3):, :] = 0
+
+        P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+
+
+
+        # P = P[P[:, 3] < distance_threshole]
+        P = P[P[:, 0] < img_w/2]
+        P = P[P[:, 0] > -img_w/2]
+        P = P[P[:, 1] < img_h/2]
+        P = P[P[:, 1] > -img_h/2]
+
+        timer_end = time.perf_counter()
+
+
+        np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=resolution)
+        new_name = os.path.join(saved_path, f"{panoId}_DOM_{resolution:0.2f}.tif")
+        pano1.save_image(np_img, new_name, worldfile)
+
+        print("Time spent (second):", timer_end - timer_start)
+        #
+        # v = pptk.viewer(P[:, :3])
+        # v.set(point_size=0.001, show_axis=True, show_grid=False)
+        # v.attributes(P[:, 4:7]/255.0)
+
 if __name__ == '__main__':
     # download_panos_DC()
-    get_DOMs()
+    # get_DOMs()
+    quick_DOM()

@@ -40,7 +40,7 @@ import yaml
 
 import PIL
 from PIL import Image, features
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import cv2
 
@@ -634,8 +634,10 @@ class GSV_pano(object):
                 w, h = img_pil.size
                 large_img = Image.new('P', (w * 1, h * 4))  # new image
                 large_img.paste(img_pil, (0, h*2))
+                draw = ImageDraw.Draw(large_img)
+                draw.rectangle([0, h * 3, w, h * 4], fill=10, width=0)
                 img_pil = large_img
-                # img_pil.show()
+                img_pil.show()
 
             self.segmenation['segmentation'] = np.array(img_pil)
 
@@ -944,7 +946,7 @@ class GSV_pano(object):
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-                dm_resized = Image.fromarray(depthmap).resize((image_width, image_height), Image.LINEAR)
+                dm_resized = Image.fromarray(depthmap).resize((image_width, image_height), Image.BICUBIC)
                 kernel = morphology.disk(2)
                 dm_mask = morphology.erosion(depthmap, kernel)
                 dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
@@ -1031,14 +1033,7 @@ class GSV_pano(object):
                 P = P[P[:, 3] < distance_threshole]
                 P = P[P[:, 3] > 0]
 
-                # keep the ground points.
-                # P = P[P[:, -1] < 10]
 
-                # theta2, phi2 = self.XYZ_to_spherical(P)
-
-
-                # keep the ground points.
-                # P = P[P[:, -1] < 10]
 
                 # P = P[:, :6]
                 self.point_cloud['point_cloud'] = P

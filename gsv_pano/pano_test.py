@@ -185,7 +185,7 @@ class TestPano(unittest.TestCase):
 
         for idx, seg_file in enumerate(seg_files[0:]):
              panoId = os.path.basename(seg_file)[:-4]
-             pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
+             pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
              # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
              pano1.set_segmentation_path(full_path=seg_file)
              DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',  fill_clipped_seg=True)

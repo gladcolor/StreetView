@@ -637,7 +637,7 @@ class GSV_pano(object):
                 draw = ImageDraw.Draw(large_img)
                 draw.rectangle([0, h * 3, w, h * 4], fill=10, width=0)
                 img_pil = large_img
-                img_pil.show()
+                # img_pil.show()
 
             self.segmenation['segmentation'] = np.array(img_pil)
 

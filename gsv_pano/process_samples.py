@@ -97,22 +97,27 @@ def get_DOMs():
     # full_path = r'J:\Research\StreetView\gsv_pano\AZK1jDGIZC1zmuooSZCzEg.png'
     # full_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
     # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"
-    seg_dir = r'D:\DC_segmented'
+    seg_dir = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_segmented'
     seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
 
-    for idx, seg_file in enumerate(seg_files[0:]):
-        panoId = os.path.basename(seg_file)[:-4]
-        pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
-        # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
-        pano1.set_segmentation_path(full_path=seg_file)
-        DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
-        # palette = Image.open(seg_file).getpalette()
-        # palette = np.array(palette,dtype=np.uint8)
+    for idx, seg_file in enumerate(seg_files[1:]):
+        try:
+            print("Processing: ", idx, seg_file)
+            panoId = os.path.basename(seg_file)[:-4]
+            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=r"K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_DOMs")
+            # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
+            pano1.set_segmentation_path(full_path=seg_file)
+            DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
+            # palette = Image.open(seg_file).getpalette()
+            # palette = np.array(palette,dtype=np.uint8)
 
-        # pil_img = PIL.Image.fromarray(DOM['DOM'])
-        # pil_img.putpalette(palette)
-        # self.assertEqual((800, 800, 3), DOM.shape)
-        # pil_img.show()
+            # pil_img = PIL.Image.fromarray(DOM['DOM'])
+            # pil_img.putpalette(palette)
+            # self.assertEqual((800, 800, 3), DOM.shape)
+            # pil_img.show()
+        except Exception as e:
+            print("Error :", e, seg_file)
+            continue
 
 if __name__ == '__main__':
     # download_panos_DC()

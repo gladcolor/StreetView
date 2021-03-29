@@ -260,6 +260,21 @@ class GSV_pano(object):
                 # compute position and values of pixels
                 depthmap_dict = utils.computeDepthMap(header, data["indices"], data["planes"])
                 depthMap = depthmap_dict['depthMap']
+
+                # move up a row
+                depthMap[:-1] = depthMap[1:]
+
+                normal_vector_map = depthmap_dict['normal_vector_map']
+                normal_vector_map[:-1] = normal_vector_map[1:]
+                # normal_vector_map[:1] = normal_vector_map[1:2]
+                depthmap_dict['normal_vector_map'] = normal_vector_map
+
+                plane_idx_map = depthmap_dict['plane_idx_map']
+                plane_idx_map[:-1] = plane_idx_map[1:]
+                # plane_idx_map[:1] = plane_idx_map[1:2]
+                depthmap_dict['plane_idx_map'] = plane_idx_map
+
+
                 dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(int)
 
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
@@ -268,19 +283,10 @@ class GSV_pano(object):
                 self.depthmap['width'] = image_width
                 self.depthmap['height'] = image_height
 
-                # kernel = morphology.disk(2)
-
-                # dm_mask = morphology.erosion(depthMap, kernel)
-
-
-
                 # resize
                 depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
                 depthMap = np.array(depthMap)
 
-
-                # dm_mask = Image.fromarray(dm_mask)
-                # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
 
                 # dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
                 # dm_mask = morphology.erosion(dm_mask, kernel)
@@ -462,10 +468,12 @@ class GSV_pano(object):
         worldfile_name = new_name.replace(".tif", ".tfw")
 
         if os.path.exists(new_name):
-            self.DEM['DEM'] = np.array(Image.open(new_name))
+
             # self.DEM['colors'] = colors
             self.DEM['resolution'] = resolution
             transformer = utils.epsg_transform(4326, self.crs_local)  # New Jersey state plane, meter
+            elevation_egm96_m = self.jdata['Location']['elevation_egm96_m']
+            self.DEM['DEM'] = np.array(Image.open(new_name)) #  - elevation_egm96_m
 
             x_m, y_m = transformer.transform(self.lat, self.lon)
             self.DEM['central_x'] = x_m
@@ -562,7 +570,7 @@ class GSV_pano(object):
 
         rotate_x_radian = math.radians(90 - tilt_yaw_deg)
         rotate_y_radian = math.radians(
-            tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+            -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
         # rotate_z_radian = math.radians(90 - pano_yaw_deg)
         rotate_z_radian = math.radians(pano_yaw_deg)
 
@@ -608,7 +616,7 @@ class GSV_pano(object):
 
         return theta, phi
 
-    def get_segmentation(self, zoom=4):
+    def get_segmentation(self, zoom=4, fill_clipped_seg=False):
 
         if not os.path.exists(self.segmenation['full_path']):
             logger.error("No full_path for segmentation file! ", self.panoId, exc_info=True)
@@ -617,17 +625,17 @@ class GSV_pano(object):
 
         if self.segmenation['segmentation'] is None:
             img_pil = Image.open(self.segmenation['full_path'])
-            img_pil = img_pil.convert('RGB')
+            # img_pil = img_pil.convert('RGB')
 
             # fill the clipped segmentation:
 
-            fill_clipped_seg = True
+            # fill_clipped_seg = True
             if fill_clipped_seg:
                 w, h = img_pil.size
-                large_img = Image.new('RGB', (w * 1, h * 4))  # new image
+                large_img = Image.new('P', (w * 1, h * 4))  # new image
                 large_img.paste(img_pil, (0, h*2))
                 img_pil = large_img
-                img_pil.show()
+                # img_pil.show()
 
             self.segmenation['segmentation'] = np.array(img_pil)
 
@@ -638,7 +646,7 @@ class GSV_pano(object):
         self.segmenation['full_path'] = full_path
 
 
-    def get_pixel_from_row_col(self, arr_col, arr_row, zoom=4, img_type="pano"):
+    def get_pixel_from_row_col(self, arr_col, arr_row, zoom=4, img_type="pano", fill_clipped_seg=False):
         '''
 
         :param arr_row:
@@ -651,7 +659,7 @@ class GSV_pano(object):
         if img_type == "pano":
             np_img = self.get_panorama(zoom=zoom)['image']
         if img_type == "seg":
-            np_img = self.get_segmentation(zoom=zoom)['segmentation']
+            np_img = self.get_segmentation(zoom=zoom, fill_clipped_seg=fill_clipped_seg)['segmentation']
 
         if len(np_img.shape) > 2:
             image_height, image_width, channel = np_img.shape
@@ -663,7 +671,7 @@ class GSV_pano(object):
 
 
 
-    def find_pixel_to_thetaphi(self, theta, phi, zoom=4, img_type="DOM"):
+    def find_pixel_to_thetaphi(self, theta, phi, zoom=4, img_type="DOM", fill_clipped_seg=False):
         ''':argument
         theata, phi: numpy array
         type: DOM or segmentation
@@ -673,7 +681,7 @@ class GSV_pano(object):
             panorama = self.get_panorama(zoom=zoom)['image']
 
         if img_type == "segmentation":
-            panorama = self.get_segmentation()['segmentation']
+            panorama = self.get_segmentation(zoom=zoom, fill_clipped_seg=fill_clipped_seg)['segmentation']
 
         if len(panorama.shape) > 2:
             image_height, image_width, channel = panorama.shape
@@ -696,7 +704,7 @@ class GSV_pano(object):
 
         return panorama[row, col]
 
-    def calculate_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, img_type="DOM"):
+    def calculate_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, img_type="DOM", fill_clipped_seg=False):
         w = int(width / resolution)
         h = int(height / resolution)
 
@@ -720,16 +728,19 @@ class GSV_pano(object):
 
         thetas, phis = self.XYZ_to_spherical(XYZs)  # input：meters
 
-        colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type=img_type)
-
-        DOM_points = colors.reshape((h, w, 3))
+        colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type=img_type, fill_clipped_seg=fill_clipped_seg)
+        channels = int(colors.size / w / h)
+        if channels > 2:
+            DOM_points = colors.reshape((h, w, 3))
+        if channels == 1:
+            DOM_points = colors.reshape((h, w))
 
         self.DOM['DOM'] = DOM_points
 
 
         return self.DOM
 
-    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, img_type="DOM"):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
         """
         :param width:
         :param height:
@@ -769,18 +780,32 @@ class GSV_pano(object):
                                           height = height,
                                           resolution=resolution,
                                           zoom=4,
-                                          img_type="DOM"
+                                          img_type=img_type,
+                                          fill_clipped_seg=fill_clipped_seg
                                           )
 
                 if self.saved_path != "":
                         if not os.path.exists(self.saved_path):
                             os.mkdir(self.saved_path)
                         # im = Image.fromarray(self.DEM['DEM'])
-                        im = Image.fromarray(DOM['DOM'].astype("uint8"), "RGB")
+                        channels = 1
+                        if len(DOM['DOM'].shape) > 2:
+                            channels = DOM['DOM'].shape[2]
+                        if channels == 3:
+                            im = Image.fromarray(DOM['DOM'].astype("uint8"), "RGB")
+
+                        if channels == 1:
+                            im = Image.fromarray(DOM['DOM'].astype("uint8"), "P")
+                            try:
+                                palette = Image.open(self.segmenation['full_path']).getpalette()
+                                im.putpalette(palette)
+                            except Exception as e:
+                                print("Error in Image.putpalette():", e)
+
                         new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
                         worldfile_name = new_name.replace(".tif", ".tfw")
                         worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
-                        im.show()
+                        # im.show()
                         im.save(new_name)
 
                         with open(worldfile_name, 'w') as wf:
@@ -806,8 +831,8 @@ class GSV_pano(object):
         image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
         image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-        thetas = np.pi / 2 - (arr_row + 0.5) / image_height * np.pi
-        phis = (arr_col + 0.5) / image_width * (np.pi * 2) - np.pi
+        thetas = np.pi / 2 - (arr_row + 1) / image_height * np.pi
+        phis = (arr_col  ) / image_width * (np.pi * 2) - np.pi
         return thetas, phis
 
 
@@ -823,23 +848,13 @@ class GSV_pano(object):
         image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
         image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
-        # dm_resized = Image.fromarray(depthmap).resize((image_width, image_height), Image.LINEAR)
-        # kernel = morphology.disk(2)
-        # dm_mask = morphology.erosion(depthmap, kernel)
-        # dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
-        # dm_mask = Image.fromarray(dm_mask)
-        # dm_mask = dm_mask.resize((image_width, image_height), Image.NEAREST)
-        # dm_mask = np.array(dm_mask)
         self.point_cloud["dm_mask"] = depthmap
-        # dm_mask[0, :] = 1  # show the camera center.
+
 
         tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
         pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
         tilt_pitch_deg = self.jdata['Projection']['tilt_pitch_deg']
         elevation_egm96_m = self.jdata['Location']['elevation_egm96_m']
-
-        # dm_np = np.array(dm_resized).astype(float)
-        # dm_np = dm_np * dm_mask
 
         distances = depthmap[arr_row.astype(int), (arr_col).astype(int)]
 

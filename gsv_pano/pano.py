@@ -384,7 +384,7 @@ class GSV_pano(object):
 
         return ground_points
 
-    def calculate_DEM(self, ground_points, width=50, height=50, resolution=0.05, dem_coarse_resolution = 0.4, smooth_sigma=2):
+    def calculate_DEM(self, ground_points, width=50, height=50, resolution=0.05, dem_coarse_resolution = 0.4, smooth_sigma=3):
         P = ground_points
         P = P[P[:, 0] < width/2]
         P = P[P[:, 0] > -width/2]

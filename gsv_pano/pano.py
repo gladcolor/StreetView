@@ -505,6 +505,49 @@ class GSV_pano(object):
         except Exception as e:
             print("Error in points_to_DOM():", e)
 
+    def get_road_plane(self, resolution=0.1, width=40, height=40):
+        img_w = int(width / resolution * 1.7)
+        img_h = int(height / resolution * 1.7)
+
+        tilt_yaw_deg = self.jdata['Projection']['tilt_yaw_deg']
+        pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
+        tilt_pitch_deg = self.jdata['Projection']['tilt_pitch_deg']
+        elevation_egm96_m = self.jdata['Location']['elevation_egm96_m']
+
+        grid_col = np.linspace(-width/2,  width/2, img_w)
+        grid_row = np.linspace(height/2, -height/2, img_h)
+        Xs, Ys = np.meshgrid(grid_col, grid_row)
+
+        rotate_x_radian = math.radians(90 - tilt_yaw_deg)
+        rotate_y_radian = math.radians(
+        -tilt_pitch_deg)  # should  be negative according to the observation of highway ramp. ???
+        # rotate_z_radian = math.radians(90 - pano_yaw_deg)
+        rotate_z_radian = math.radians(pano_yaw_deg)
+        self.get_DEM(zoom=0)
+        camera_height = self.DEM['camera_height'] - elevation_egm96_m
+
+        zoom = 3
+
+        np_plane = np.ones((img_h, img_w)) * camera_height
+        P = np.concatenate([Xs.ravel().reshape(-1, 1), Ys.ravel().reshape(-1, 1), np_plane[np_plane > -999].reshape((-1, 1))], axis=1)
+        P = P.dot(utils.rotate_x(rotate_x_radian))  # math.radians(90 - tilt_yaw_deg)  # roll
+        P = P.dot(utils.rotate_y(rotate_y_radian))  # math.radians(-tilt_pitch_deg)  # pitch
+        P = P.dot(utils.rotate_z(rotate_z_radian))  # math.radians(90 - pano_yaw_deg)  # yaw
+
+        thetas, phis = self.XYZ_to_spherical(P)  # input：meters
+        colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type="DOM")
+
+        P = np.concatenate([P, colors], axis=1)
+
+
+
+    # P[:, 2] = P[:, 2] + elevation_egm96_m
+
+
+        max_slope = math.radians(15)
+        w_temp = img_w
+
+        return P
 
     # unfinished............
     def get_DEM(self, width=40, height=40, resolution=0.4, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=0):  # return: numpy array,
@@ -528,6 +571,7 @@ class GSV_pano(object):
             central_col = int(self.DEM['DEM'].shape[1] / 2)
             camera_height = self.DEM['DEM'][central_row, central_col]
             self.DEM['camera_height'] = camera_height
+            self.DEM['zoom'] = zoom
 
             return self.DEM
 
@@ -783,11 +827,12 @@ class GSV_pano(object):
             DOM_points = colors.reshape((h, w))
 
         self.DOM['DOM'] = DOM_points
+        self.DOM['DOM_points'] = np.concatenate([XYZs, colors], axis=1)
 
 
         return self.DOM
 
-    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=4, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
         """
         :param width:
         :param height:
@@ -1197,7 +1242,7 @@ class GSV_pano(object):
                 return self.panorama
 
         except Exception as e:
-            logger.exception("Error in get_panorama(): %s, %s", e, url)
+            logger.exception("Error in get_panorama(): %s, %s", e)
             return None
 
 

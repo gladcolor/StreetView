@@ -327,47 +327,73 @@ class TestPano(unittest.TestCase):
     #     # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)
     #     # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
 
-
-    def test_get_ground_points(self):
-        # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-        lat, lon = 38.9484225, -77.0294996 # DC
-        panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
+    def test_get_road_plane(self):
         panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
-
-        # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
-        saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\test_results'
-        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path, crs_local=6487)
-        zoom = 5
 
         timer_start = time.perf_counter()
 
-        P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+        pano1 = GSV_pano(panoId=panoId_2019, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
 
+        width=40
+        height=40
+        P = pano1.get_road_plane(resolution=0.05, width=width, height=height)
 
-
-        img_w = 40
-        img_h = 40
-
-        distance_threshole = img_w * 1.5
-
-        # P = P[P[:, 3] < distance_threshole]
-        P = P[P[:, 0] < img_w/2]
-        P = P[P[:, 0] > -img_w/2]
-        P = P[P[:, 1] < img_h/2]
-        P = P[P[:, 1] > -img_h/2]
-
-
+        DOM = pano1.get_DOM(resolution=0.05, zoom=3, img_type="DOM")
+        v0 = pptk.viewer(DOM['DOM_points'][:, :3])
+        v0.set(point_size=0.001, show_axis=True, show_grid=False)
+        v0.attributes(DOM['DOM_points'][:, 3:6]/255.0)
+        # Image.fromarray(DOM['DOM']).show()
 
         timer_end = time.perf_counter()
         print("Time spent (second):", timer_end - timer_start)
-
-        np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
-        new_name = os.path.join(saved_path, "points_to_image.tif")
-        pano1.save_image(np_img, new_name, worldfile)
+        # np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
+        # new_name = os.path.join(saved_path, "points_to_image.tif")
+        # pano1.save_image(np_img, new_name, worldfile)
 
         v = pptk.viewer(P[:, :3])
         v.set(point_size=0.001, show_axis=True, show_grid=False)
-        v.attributes(P[:, 4:7]/255.0)
+        v.attributes(P[:, 3:6]/255.0)
+
+# def test_get_ground_points(self):
+    #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
+    #     lat, lon = 38.9484225, -77.0294996 # DC
+    #     panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
+    #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    #
+    #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
+    #     saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\test_results'
+    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path, crs_local=6487)
+    #     zoom = 5
+    #
+    #     timer_start = time.perf_counter()
+    #
+    #     P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+    #
+    #
+    #
+    #     img_w = 40
+    #     img_h = 40
+    #
+    #     distance_threshole = img_w * 1.5
+    #
+    #     # P = P[P[:, 3] < distance_threshole]
+    #     P = P[P[:, 0] < img_w/2]
+    #     P = P[P[:, 0] > -img_w/2]
+    #     P = P[P[:, 1] < img_h/2]
+    #     P = P[P[:, 1] > -img_h/2]
+    #
+    #
+    #
+    #     timer_end = time.perf_counter()
+    #     print("Time spent (second):", timer_end - timer_start)
+    #
+    #     np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
+    #     new_name = os.path.join(saved_path, "points_to_image.tif")
+    #     pano1.save_image(np_img, new_name, worldfile)
+    #
+    #     v = pptk.viewer(P[:, :3])
+    #     v.set(point_size=0.001, show_axis=True, show_grid=False)
+    #     v.attributes(P[:, 4:7]/255.0)
 
 
      # passed 2021-03-26,

@@ -1169,8 +1169,24 @@ class GSV_pano(object):
 
                 new_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + f'_{zoom}.jpg'))
 
+                # if a fined image exists:
+                max_zoom = 5
+                for img_zoom in range(zoom, max_zoom + 1, 1):
+                    jpg_name = os.path.join(self.saved_path, (prefix + self.panoId + suffix + f'_{img_zoom}.jpg'))
+                    if os.path.exists(jpg_name):
+                        new_name = jpg_name
+
+
+
+
                 if os.path.exists(new_name):
                     old_img = Image.open(new_name)
+                    img_zoom = int(new_name[-5])
+
+                    if img_zoom > zoom:
+                        old_img = old_img.resize((image_width, image_height))
+                        print(f"Resize zoom-leve {img_zoom} to zoom-level {zoom}: {new_name}")
+
                     if old_img.size == (image_width, image_height):  # no need to download new image
                         target = old_img
                         logger.info("Found existing panorama: %s", new_name)

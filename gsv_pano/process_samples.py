@@ -10,6 +10,7 @@ import random
 # import shapefile
 import glob
 import time
+from PIL import Image
 
 from tqdm import tqdm
 
@@ -134,41 +135,66 @@ def quick_DOM():
     img_h = 40
     zoom = 4
 
-    for idx, pano_file in enumerate(pano_files[0:]):
+    # pano_files.reverse()
+    # pano_files = pano_files[:]
 
-        print(f"Processing: {idx} / {len(pano_files)}, {pano_file}")
+    for idx, pano_file in enumerate(pano_files[120000:]):
 
-        timer_start = time.perf_counter()
+        try:
 
-        distance_threshole = img_w * 1.5
+            print(f"Processing: {idx} / {len(pano_files)}, {pano_file}")
+            panoId = os.path.basename(pano_file)[:-6]
 
-        panoId = os.path.basename(pano_file)[:-6]
-        pano1 = GSV_pano(panoId=panoId, saved_path=pano_dir, crs_local=6487)
+            new_name = os.path.join(saved_path, f"{panoId}_DOM_{resolution:0.2f}.tif")
+            if os.path.exists(new_name):
+                print(f"Skip processed panoramas: {panoId}")
+                continue
 
-        pano1.get_depthmap(zoom=zoom)
+            img_zoom = int(pano_file[-5])
 
-        pano1.depthmap['ground_mask'] = np.where(pano1.depthmap['depthMap'] < distance_threshole, 1, 0)
-        mask_h, mask_w = pano1.depthmap['ground_mask'].shape
-        pano1.depthmap['ground_mask'][int(mask_h / 4 * 3):, :] = 0
+            if img_zoom == 4:
+                print("Skipe: ", pano_file)
+                continue
 
-        P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+            # if img_zoom == 5:
+            #     img_zoom5 = Image.open(pano_file)
+            #     pano_file = pano_file.replace("_5.jpg", "_4.jpg")
 
+            timer_start = time.perf_counter()
 
-
-        # P = P[P[:, 3] < distance_threshole]
-        P = P[P[:, 0] < img_w/2]
-        P = P[P[:, 0] > -img_w/2]
-        P = P[P[:, 1] < img_h/2]
-        P = P[P[:, 1] > -img_h/2]
-
-        timer_end = time.perf_counter()
+            distance_threshole = img_w * 1.5
 
 
-        np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=resolution)
-        new_name = os.path.join(saved_path, f"{panoId}_DOM_{resolution:0.2f}.tif")
-        pano1.save_image(np_img, new_name, worldfile)
+            pano1 = GSV_pano(panoId=panoId, saved_path=pano_dir, crs_local=6487)
 
-        print("Time spent (second):", timer_end - timer_start)
+            pano1.get_depthmap(zoom=zoom)
+
+            pano1.depthmap['ground_mask'] = np.where(pano1.depthmap['depthMap'] < distance_threshole, 1, 0)
+            mask_h, mask_w = pano1.depthmap['ground_mask'].shape
+            pano1.depthmap['ground_mask'][int(mask_h / 4 * 3):, :] = 0
+
+
+
+            P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+
+
+
+            # P = P[P[:, 3] < distance_threshole]
+            P = P[P[:, 0] < img_w/2]
+            P = P[P[:, 0] > -img_w/2]
+            P = P[P[:, 1] < img_h/2]
+            P = P[P[:, 1] > -img_h/2]
+
+            timer_end = time.perf_counter()
+
+
+            np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=resolution)
+
+            pano1.save_image(np_img, new_name, worldfile)
+
+            print("Time spent (second):", timer_end - timer_start)
+        except Exception as e:
+            print("Error in quick_DOM():", pano_file, e)
         #
         # v = pptk.viewer(P[:, :3])
         # v.set(point_size=0.001, show_axis=True, show_grid=False)

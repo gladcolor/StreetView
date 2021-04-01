@@ -832,6 +832,9 @@ class GSV_pano(object):
 
         return self.DOM
 
+    def get_DOM_points(self):
+        pass
+
     def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
         """
         :param width:

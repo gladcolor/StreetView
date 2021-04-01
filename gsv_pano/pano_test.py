@@ -327,32 +327,96 @@ class TestPano(unittest.TestCase):
     #     # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)
     #     # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
 
-    def test_get_road_plane(self):
-        panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    def test_get_contour(self):
+        seg_file = r'--69cR9y-yjGxq3c-uPBRw.png'
+        panoId = seg_file[:-4]
+        saved_path = r'D:\Code\StreetView\gsv_pano\test_results'
 
-        timer_start = time.perf_counter()
+        rows_offset = 2048
+        cols_offset = 0
+        zoom = 4
 
-        pano1 = GSV_pano(panoId=panoId_2019, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
+        pil_img = Image.open(seg_file)
 
-        width=40
-        height=40
-        P = pano1.get_road_plane(resolution=0.05, width=width, height=height)
+        pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
 
-        DOM = pano1.get_DOM(resolution=0.05, zoom=3, img_type="DOM")
-        v0 = pptk.viewer(DOM['DOM_points'][:, :3])
-        v0.set(point_size=0.001, show_axis=True, show_grid=False)
-        v0.attributes(DOM['DOM_points'][:, 3:6]/255.0)
-        # Image.fromarray(DOM['DOM']).show()
+        # DOM = pano1.get_DOM(zoom=4, resolution=0.05, fill_clipped_seg=True)
 
-        timer_end = time.perf_counter()
-        print("Time spent (second):", timer_end - timer_start)
-        # np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
-        # new_name = os.path.join(saved_path, "points_to_image.tif")
-        # pano1.save_image(np_img, new_name, worldfile)
+        target_ids = [12]
+        np_img = np.array(pil_img)
 
-        v = pptk.viewer(P[:, :3])
-        v.set(point_size=0.001, show_axis=True, show_grid=False)
-        v.attributes(P[:, 3:6]/255.0)
+        np_img_binary = np.zeros(np_img.shape)
+        for i in target_ids:
+            np_img_binary = np.logical_or(np_img_binary, np_img == i)
+
+        np_img_binary = np_img_binary.astype(np.uint8)
+
+        # cv2_opened = np.where(cv2_opened == 0, 0, 255).astype(np.uint8)
+
+        # opened_color = cv2.merge((cv2_opened, cv2_opened, cv2_opened))
+
+        morph_kernel_open  = (10, 10)
+        morph_kernel_close = (20, 20)
+        g_close = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_close)
+        g_open  = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_open)
+
+        cv2_img_closed = cv2.morphologyEx(np_img_binary, cv2.MORPH_CLOSE, g_close) # fill small gaps
+        cv2_img_opened = cv2.morphologyEx(cv2_img_closed, cv2.MORPH_OPEN, g_open)
+
+        raw_contours, hierarchy = cv2.findContours(cv2_img_opened.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        cv_img_color = cv2.cvtColor(np_img, cv2.COLOR_GRAY2BGR)
+        # cv2.drawContours(cv_img_color, raw_contours, )
+        cv_img_con = cv2.drawContours(cv_img_color, raw_contours[18:19], -1, (0, 255, 0), 2)
+
+        # contours = [np.squeeze(cont) for cont in raw_contours[18:19]]
+        contours = [np.squeeze(cont) for cont in raw_contours[:]]
+
+
+        for idx, contour in enumerate(contours):
+            cols = contour[:, 0] + cols_offset
+            rows = contour[:, 1] + rows_offset
+            contour_points = pano1.col_row_to_points(cols, rows, zoom=zoom)
+            print("contour_points:", contour_points)
+
+            for x, y in zip(contour_points[:, 0] + 20,  20-contour_points[:, 1]):
+                cv2.circle(cv_img_con, (int(x*30), int(y*30)), 2, (0, 255, 0), 2)
+
+        win_name = "opencv"
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+        cv2.moveWindow(win_name, 100, 100)
+        cv2.imshow(win_name, cv_img_con)
+        cv2.resizeWindow(win_name, 1600, 200)
+        cv2.waitKey(0)
+
+
+
+    # def test_get_road_plane(self):     # not good!
+    #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    #
+    #     timer_start = time.perf_counter()
+    #
+    #     pano1 = GSV_pano(panoId=panoId_2019, crs_local=6487, saved_path=r"D:\Code\StreetView\gsv_pano\test_results")
+    #
+    #     width=40
+    #     height=40
+    #     P = pano1.get_road_plane(resolution=0.05, width=width, height=height)
+    #
+    #     DOM = pano1.get_DOM(resolution=0.05, zoom=3, img_type="DOM")
+    #     v0 = pptk.viewer(DOM['DOM_points'][:, :3])
+    #     v0.set(point_size=0.001, show_axis=True, show_grid=False)
+    #     v0.attributes(DOM['DOM_points'][:, 3:6]/255.0)
+    #     # Image.fromarray(DOM['DOM']).show()
+    #
+    #     timer_end = time.perf_counter()
+    #     print("Time spent (second):", timer_end - timer_start)
+    #     # np_img, worldfile = pano1.points_to_DOM(P[:, 0], P[:, 1], P[:, 4:7], resolution=0.05)
+    #     # new_name = os.path.join(saved_path, "points_to_image.tif")
+    #     # pano1.save_image(np_img, new_name, worldfile)
+    #
+    #     v = pptk.viewer(P[:, :3])
+    #     v.set(point_size=0.001, show_axis=True, show_grid=False)
+    #     v.attributes(P[:, 3:6]/255.0)
 
 # def test_get_ground_points(self):
     #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ

@@ -110,6 +110,7 @@ def get_DOMs():
     while len(seg_files) > 0:
         seg_file = seg_files.pop()
     # for idx, seg_file in enumerate(seg_files[1:]):
+        start_time = time.perf_counter()
         try:
             print("Processing: ", total_cnt - len(seg_files), seg_file)
             panoId = os.path.basename(seg_file)[:-4]
@@ -122,9 +123,9 @@ def get_DOMs():
             Links = pano1.jdata['Links']
             for link in Links:
                 temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
-                if temp_name in seg_file:
-                    seg_file.remove(temp_name)
-                    seg_file.append(temp_name)
+                if temp_name in seg_files:
+                    seg_files.remove(temp_name)
+                    seg_files.append(temp_name)
                 #
                 # else:
                 #     if (not os.path.exists(temp_name)):
@@ -136,6 +137,8 @@ def get_DOMs():
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
             pano1.set_segmentation_path(full_path=seg_file)
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
+
+            print("Time spent (seconds): ", time.perf_counter() - start_time, '\n')
             # palette = Image.open(seg_file).getpalette()
             # palette = np.array(palette,dtype=np.uint8)
 
@@ -227,5 +230,5 @@ def quick_DOM():
 
 if __name__ == '__main__':
     # download_panos_DC()
-    # get_DOMs()
-    quick_DOM()
+    get_DOMs()
+    # quick_DOM()

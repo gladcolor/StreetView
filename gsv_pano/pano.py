@@ -415,6 +415,8 @@ class GSV_pano(object):
         idx = np.argwhere(dem_coarse_np > -100)
         z = dem_coarse_np[dem_coarse_np > -100]
 
+        # mask = np.where(dem_coarse_np > -100, 1, 0)
+
         cols = dem_coarse_np.shape[1]
         rows = dem_coarse_np.shape[0]
         xx, yy = idx[:,1].astype(float), idx[:,0].astype(float)
@@ -428,8 +430,17 @@ class GSV_pano(object):
         enable_plotting=False,
         )
 
-        z, ss = OK.execute("grid", np.arange(0.0, cols, 1.0), np.arange(0.0, rows, 1.0))
-        dem_coarse_np = z
+        empty_idx = np.argwhere(dem_coarse_np < -100)
+
+        z, ss = OK.execute(style="points",    # "mask" is not good and slow (*1.5 times)
+                           xpoints=empty_idx[:, 1].astype(float),   # np.arange(0.0, cols, 1.0),
+                           ypoints=empty_idx[:, 0].astype(float),   # np.arange(0.0, rows, 1.0),
+                           # mask = mask,
+                           backend='vectorized')  # backend: "C" is very slow (X 7 times)
+        # https://pykrige.readthedocs.io/en/latest/generated/pykrige.ok.OrdinaryKriging.html
+
+        # dem_coarse_np = z
+        dem_coarse_np[empty_idx[:, 0], empty_idx[:, 1]] = z
         dem_coarse_np = gaussian_filter(dem_coarse_np, sigma=smooth_sigma)
 
         dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
@@ -671,7 +682,7 @@ class GSV_pano(object):
 
         X = XYZs[:, 0]
         Y = XYZs[:, 1]
-        Z = XYZs[:, 2]
+        Z = XYZs[:, 2] -  self.jdata['Location']['elevation_egm96_m']
 
         R = np.sqrt(X**2 + Y**2)
 
@@ -805,11 +816,11 @@ class GSV_pano(object):
         DEM = self.get_DEM(width=width,
                            height=height,
                            resolution=resolution,
-                           dem_coarse_resolution=0.4,
+                           dem_coarse_resolution=2,
                            zoom=zoom)
 
         Xs, Ys = np.meshgrid(grid_col, grid_row)
-        Zs = DEM['DEM'] - self.jdata['Location']['elevation_egm96_m']
+        Zs = DEM['DEM']  # - self.jdata['Location']['elevation_egm96_m']
         XYZs = np.concatenate(
             [Xs.ravel().reshape(-1, 1), Ys.ravel().reshape(-1, 1), Zs.ravel().reshape(-1, 1)],
             axis=1)
@@ -827,6 +838,7 @@ class GSV_pano(object):
             DOM_points = colors.reshape((h, w))
 
         self.DOM['DOM'] = DOM_points
+        # XYZs[:, 2] = XYZs[:, 2] + self.jdata['Location']['elevation_egm96_m']
         self.DOM['DOM_points'] = np.concatenate([XYZs, colors], axis=1)
 
 

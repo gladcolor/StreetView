@@ -79,58 +79,64 @@ class TestPano(unittest.TestCase):
 
 
    # OK, 2021 - 03 - 28
-   # def test_get_DEM(self):
-   #      panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # # NJIT kinney street
-   #      panoId_2019 = "9t4cfX1WMnqGL9Jcv8TiFQ"
-   #      panoId_2019 = "ARYuiC08k4hlknJQzrhdHQ"
-   #      panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
-   #      panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
-   #      panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
-   #
-   #      # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
-   #      # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
-   #      lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
-   #      lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
-   #      lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
-   #      lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
-   #      lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #      lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #      lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
-   #
-   #      lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-   #      lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
-   #      lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
-   #
-   #      zoom = 4
-   #      json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
-   #
-   #      # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
-   #      # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
-   #      pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
-   #
-   #      # dm = pano1.get_depthmap()
-   #      # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
-   #      # self.assertEqual(DEM.shape, (1333, 1333))
-   #
-   #      # point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=zoom)['DOM']
-   #      # point_cloud = pano1.get_point_cloud(zoom=zoom)['point_cloud']
-   #
-   #
-   #      # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
-   #      DOM_resolution= 0.03
-   #      # DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2)
-   #
-   #      DOM = pano1.get_DOM(width = 40, height = 40, resolution=DOM_resolution, zoom=5, img_type="DOM")
-   #      points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=5)['DEM']
-   #      P = np.argwhere(points > -100)
-   #
-   #      z = points[points > -1000].ravel().reshape(-1, 1)
-   #      P = np.concatenate([P, z], axis=1)
-   #      # thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
-   #      v = pptk.viewer(P[:, :3])
-   #      v.set(point_size=0.01, show_axis=True, show_grid=False)
-   #      # v.attributes(P[:, 2] )
-   #      v.attributes(DOM['DOM'].reshape((-1, 3))/255.0 )
+   def test_get_DEM(self):
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # # NJIT kinney street
+        panoId_2019 = "9t4cfX1WMnqGL9Jcv8TiFQ"
+        panoId_2019 = "ARYuiC08k4hlknJQzrhdHQ"
+        panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
+        panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
+        panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
+
+        # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
+        # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
+        lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
+        lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
+        lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
+        lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
+        lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
+        lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
+        lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
+
+        lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+        lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
+        lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
+
+        zoom = 4
+        json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
+
+        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
+        # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
+        # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
+
+        # dm = pano1.get_depthmap()
+        # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
+        # self.assertEqual(DEM.shape, (1333, 1333))
+
+        # point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=zoom)['DOM']
+        # point_cloud = pano1.get_point_cloud(zoom=zoom)['point_cloud']
+
+
+        # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
+        DOM_resolution= 0.05
+        # DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2)
+        timer_start = time.perf_counter()
+#     thetas, phis = pano1.col_row_to_angles(xv, yv)
+#
+        DOM = pano1.get_DOM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
+        # points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom)['DEM']
+        timer_end = time.perf_counter()
+        print("Time spent (second):", timer_end - timer_start)
+        points = DOM['DOM_points']
+        # P = np.argwhere(points > -100)
+
+        # z = points[points > -1000].ravel().reshape(-1, 1)
+        # P = np.concatenate([P, z], axis=1)
+        # thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
+        # pixels = pano1.find_pixel_to_thetaphi(thetas, phis, zoom=zoom)
+        v = pptk.viewer(points[:, :3])
+        v.set(point_size=0.01, show_axis=True, show_grid=False)
+        # v.attributes(pixels /255.0)
+        v.attributes(points[:, 3:6]/255.0 )
 
 
 
@@ -327,67 +333,67 @@ class TestPano(unittest.TestCase):
     #     # self.assertTrue(abs(thetas[0] - math.pi/2) < tolerance)
     #     # self.assertTrue(abs(phis[0] + math.pi) < tolerance)
 
-    def test_get_contour(self):
-        seg_file = r'--69cR9y-yjGxq3c-uPBRw.png'
-        panoId = seg_file[:-4]
-        saved_path = r'D:\Code\StreetView\gsv_pano\test_results'
-
-        rows_offset = 2048
-        cols_offset = 0
-        zoom = 4
-
-        pil_img = Image.open(seg_file)
-
-        pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
-
-        # DOM = pano1.get_DOM(zoom=4, resolution=0.05, fill_clipped_seg=True)
-
-        target_ids = [12]
-        np_img = np.array(pil_img)
-
-        np_img_binary = np.zeros(np_img.shape)
-        for i in target_ids:
-            np_img_binary = np.logical_or(np_img_binary, np_img == i)
-
-        np_img_binary = np_img_binary.astype(np.uint8)
-
-        # cv2_opened = np.where(cv2_opened == 0, 0, 255).astype(np.uint8)
-
-        # opened_color = cv2.merge((cv2_opened, cv2_opened, cv2_opened))
-
-        morph_kernel_open  = (10, 10)
-        morph_kernel_close = (20, 20)
-        g_close = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_close)
-        g_open  = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_open)
-
-        cv2_img_closed = cv2.morphologyEx(np_img_binary, cv2.MORPH_CLOSE, g_close) # fill small gaps
-        cv2_img_opened = cv2.morphologyEx(cv2_img_closed, cv2.MORPH_OPEN, g_open)
-
-        raw_contours, hierarchy = cv2.findContours(cv2_img_opened.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        cv_img_color = cv2.cvtColor(np_img, cv2.COLOR_GRAY2BGR)
-        # cv2.drawContours(cv_img_color, raw_contours, )
-        cv_img_con = cv2.drawContours(cv_img_color, raw_contours[18:19], -1, (0, 255, 0), 2)
-
-        # contours = [np.squeeze(cont) for cont in raw_contours[18:19]]
-        contours = [np.squeeze(cont) for cont in raw_contours[:]]
-
-
-        for idx, contour in enumerate(contours):
-            cols = contour[:, 0] + cols_offset
-            rows = contour[:, 1] + rows_offset
-            contour_points = pano1.col_row_to_points(cols, rows, zoom=zoom)
-            print("contour_points:", contour_points)
-
-            for x, y in zip(contour_points[:, 0] + 20,  20-contour_points[:, 1]):
-                cv2.circle(cv_img_con, (int(x*30), int(y*30)), 2, (0, 255, 0), 2)
-
-        win_name = "opencv"
-        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-        cv2.moveWindow(win_name, 100, 100)
-        cv2.imshow(win_name, cv_img_con)
-        cv2.resizeWindow(win_name, 1600, 200)
-        cv2.waitKey(0)
+    # def test_get_contour(self):
+    #     seg_file = r'--69cR9y-yjGxq3c-uPBRw.png'
+    #     panoId = seg_file[:-4]
+    #     saved_path = r'D:\Code\StreetView\gsv_pano\test_results'
+    #
+    #     rows_offset = 2048
+    #     cols_offset = 0
+    #     zoom = 4
+    #
+    #     pil_img = Image.open(seg_file)
+    #
+    #     pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+    #
+    #     # DOM = pano1.get_DOM(zoom=4, resolution=0.05, fill_clipped_seg=True)
+    #
+    #     target_ids = [12]
+    #     np_img = np.array(pil_img)
+    #
+    #     np_img_binary = np.zeros(np_img.shape)
+    #     for i in target_ids:
+    #         np_img_binary = np.logical_or(np_img_binary, np_img == i)
+    #
+    #     np_img_binary = np_img_binary.astype(np.uint8)
+    #
+    #     # cv2_opened = np.where(cv2_opened == 0, 0, 255).astype(np.uint8)
+    #
+    #     # opened_color = cv2.merge((cv2_opened, cv2_opened, cv2_opened))
+    #
+    #     morph_kernel_open  = (10, 10)
+    #     morph_kernel_close = (20, 20)
+    #     g_close = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_close)
+    #     g_open  = cv2.getStructuringElement(cv2.MORPH_RECT, morph_kernel_open)
+    #
+    #     cv2_img_closed = cv2.morphologyEx(np_img_binary, cv2.MORPH_CLOSE, g_close) # fill small gaps
+    #     cv2_img_opened = cv2.morphologyEx(cv2_img_closed, cv2.MORPH_OPEN, g_open)
+    #
+    #     raw_contours, hierarchy = cv2.findContours(cv2_img_opened.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    #
+    #     cv_img_color = cv2.cvtColor(np_img, cv2.COLOR_GRAY2BGR)
+    #     # cv2.drawContours(cv_img_color, raw_contours, )
+    #     cv_img_con = cv2.drawContours(cv_img_color, raw_contours[18:19], -1, (0, 255, 0), 2)
+    #
+    #     # contours = [np.squeeze(cont) for cont in raw_contours[18:19]]
+    #     contours = [np.squeeze(cont) for cont in raw_contours[:]]
+    #
+    #
+    #     for idx, contour in enumerate(contours):
+    #         cols = contour[:, 0] + cols_offset
+    #         rows = contour[:, 1] + rows_offset
+    #         contour_points = pano1.col_row_to_points(cols, rows, zoom=zoom)
+    #         print("contour_points:", contour_points)
+    #
+    #         for x, y in zip(contour_points[:, 0] + 20,  20-contour_points[:, 1]):
+    #             cv2.circle(cv_img_con, (int(x*30), int(y*30)), 2, (0, 255, 0), 2)
+    #
+    #     win_name = "opencv"
+    #     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+    #     cv2.moveWindow(win_name, 100, 100)
+    #     cv2.imshow(win_name, cv_img_con)
+    #     cv2.resizeWindow(win_name, 1600, 200)
+    #     cv2.waitKey(0)
 
 
 

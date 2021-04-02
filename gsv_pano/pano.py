@@ -82,7 +82,8 @@ logging.basicConfig(level=logging.INFO,
 
 
 GROUND_VECTOR_THRES = 10
-DEM_SMOOTH_SIGMA    = 3
+DEM_SMOOTH_SIGMA    = 1
+DEM_COARSE_RESOLUTION = 0.8
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
     path = default_path
@@ -132,7 +133,8 @@ class GSV_pano(object):
                     "elevation_egm96_m": None,
                     "camera_height": None
                     }
-        self.DOM = {"DOM": None, "zoom": None, "resolution": None} #
+        self.DOM = {"DOM": None, "zoom": None, "resolution": None,
+                    "DOM_points": None} #
 
         try:
 
@@ -561,7 +563,7 @@ class GSV_pano(object):
         return P
 
     # unfinished............
-    def get_DEM(self, width=40, height=40, resolution=0.4, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=0):  # return: numpy array,
+    def get_DEM(self, width=40, height=40, resolution=0.4, dem_coarse_resolution=DEM_COARSE_RESOLUTION, zoom=1, smooth_sigma=0):  # return: numpy array,
 
         new_name = os.path.join(self.saved_path, self.panoId + f"_DEM_{resolution:.2f}.tif")
         worldfile_name = new_name.replace(".tif", ".tfw")
@@ -816,7 +818,7 @@ class GSV_pano(object):
         DEM = self.get_DEM(width=width,
                            height=height,
                            resolution=resolution,
-                           dem_coarse_resolution=2,
+                           dem_coarse_resolution=DEM_COARSE_RESOLUTION,
                            zoom=zoom)
 
         Xs, Ys = np.meshgrid(grid_col, grid_row)
@@ -833,19 +835,43 @@ class GSV_pano(object):
         colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type=img_type, fill_clipped_seg=fill_clipped_seg)
         channels = int(colors.size / w / h)
         if channels > 2:
-            DOM_points = colors.reshape((h, w, 3))
+            np_DOM = colors.reshape((h, w, 3))
         if channels == 1:
-            DOM_points = colors.reshape((h, w))
+            np_DOM = colors.reshape((h, w))
 
-        self.DOM['DOM'] = DOM_points
+        self.DOM['DOM'] = np_DOM
         # XYZs[:, 2] = XYZs[:, 2] + self.jdata['Location']['elevation_egm96_m']
-        self.DOM['DOM_points'] = np.concatenate([XYZs, colors], axis=1)
-
+        # self.DOM['DOM_points'] = np.concatenate([XYZs, colors], axis=1)
+        # self.DOM['DOM_points'] = self.get_DOM_points(width=width, height=height, resolution=resolution,
+        #                                              zoom=zoom, img_type=img_type,fill_clipped_seg=fill_clipped_seg)
 
         return self.DOM
 
-    def get_DOM_points(self):
-        pass
+    def get_DOM_points(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):
+        w = int(width / resolution)
+        h = int(height / resolution)
+
+        grid_col = np.linspace(-width/2,  width/2, w)
+        grid_row = np.linspace(height/2, -height/2, h)
+        DEM = self.get_DEM(width = width, height = height,
+                           resolution=resolution,
+                           zoom=zoom,
+                           dem_coarse_resolution=DEM_COARSE_RESOLUTION,
+                           smooth_sigma=DEM_SMOOTH_SIGMA)
+        DOM = self.get_DOM(width = width, height = height, resolution=resolution, zoom=zoom, img_type=img_type,fill_clipped_seg=fill_clipped_seg)
+
+        Xs, Ys = np.meshgrid(grid_col, grid_row)
+        Zs = DEM['DEM']  # - self.jdata['Location']['elevation_egm96_m']
+        XYZs = np.concatenate([Xs.ravel().reshape(-1, 1),
+                              Ys.ravel().reshape(-1, 1),
+                              Zs.ravel().reshape(-1, 1)],
+                              axis=1)
+
+        colors = DOM['DOM'].reshape((-1, 3))
+        DOM_points = np.concatenate([XYZs, colors], axis=1)
+        self.DOM['DOM_points'] = DOM_points
+
+        return DOM_points
 
     def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
         """
@@ -867,12 +893,18 @@ class GSV_pano(object):
 
         if os.path.exists(new_name):
             self.DOM['DOM'] = np.array(Image.open(new_name))
+            # self.DOM["DOM_points"] = self.get_DOM_points(width=width,
+            #                                              height=height,
+            #                                              resolution=resolution,
+            #                                              zoom=zoom,
+            #                                              img_type=img_type,
+            #                                              fill_clipped_seg=fill_clipped_seg)
             # self.DEM['colors'] = colors
 
             # get the camera height
-            central_row = int(self.DOM['DOM'].shape[0] / 2)
-            central_col = int(self.DOM['DOM'].shape[1] / 2)
-            camera_height = self.DOM['DOM'][central_row, central_col]
+            # central_row = int(self.DOM['DOM'].shape[0] / 2)
+            # central_col = int(self.DOM['DOM'].shape[1] / 2)
+            # camera_height = self.DOM['DOM'][central_row, central_col]
 
             return self.DOM
 

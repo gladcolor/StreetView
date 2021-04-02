@@ -79,89 +79,101 @@ class TestPano(unittest.TestCase):
 
 
    # OK, 2021 - 03 - 28
-   def test_get_DEM(self):
-        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # # NJIT kinney street
-        panoId_2019 = "9t4cfX1WMnqGL9Jcv8TiFQ"
-        panoId_2019 = "ARYuiC08k4hlknJQzrhdHQ"
-        panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
-        panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
-        panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
-
-        # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
-        # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
-        lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
-        lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
-        lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
-        lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
-        lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
-        lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
-        lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
-
-        lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-        lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
-        lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
-
-        zoom = 4
-        json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
-
-        pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
-        # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
-        # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
-
-        # dm = pano1.get_depthmap()
-        # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
-        # self.assertEqual(DEM.shape, (1333, 1333))
-
-        # point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=zoom)['DOM']
-        # point_cloud = pano1.get_point_cloud(zoom=zoom)['point_cloud']
-
-
-        # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
-        DOM_resolution= 0.05
-        # DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2)
-        timer_start = time.perf_counter()
-#     thetas, phis = pano1.col_row_to_angles(xv, yv)
+#    def test_get_DEM(self):    # note:
+#         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # # NJIT kinney street
+#         panoId_2019 = "9t4cfX1WMnqGL9Jcv8TiFQ"
+#         panoId_2019 = "ARYuiC08k4hlknJQzrhdHQ"
+#         panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
+#         panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
+#         panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
 #
-        DOM = pano1.get_DOM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
-        # points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom)['DEM']
-        timer_end = time.perf_counter()
-        print("Time spent (second):", timer_end - timer_start)
-        points = DOM['DOM_points']
+#         # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
+#         # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
+#         lat, lon = 33.9977081,-81.0236725 # Henderson St. UofSC
+#         lat, lon = 33.9901799,-81.0181874 # Enoree Ave. UofSC
+#         lat, lon = 33.9888126,-81.0156712 # South Greg. UofSC
+#         lat, lon = 33.9889036,-81.0157056 # South Greg. UofSC
+#         lat, lon = 40.7122216,-74.2551131 # 1971 Ostwood Terrace, Millrun, Union, NJ
+#         lat, lon = 40.712275,-74.2552067 # 1971 Ostwood Terrace, Millrun, Union, NJ
+#         lat, lon = 40.7123314,-74.2553002 # 1971 Ostwood Terrace, Millrun, Union, NJ
+#
+#         lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+#         lon, lat = -77.0685390, 38.9265898  # Watchington, DC.
+#         lat, lon = 40.7068861, -74.2569793  # to Franklin elem.
+#
+#         zoom = 4
+#         json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
+#
+#         pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
+#         # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
+#         # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
+#
+#         # dm = pano1.get_depthmap()
+#         # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
+#         # self.assertEqual(DEM.shape, (1333, 1333))
+#
+#         # point_cloud = pano1.get_DOM(width=40, height=40, resolution=0.03, zoom=zoom)['DOM']
+#         # point_cloud = pano1.get_point_cloud(zoom=zoom)['point_cloud']
+#
+#
+#         # ground_points = pano1.get_ground_points(zoom=zoom)  # looks okay  2021-03-26
+#         DOM_resolution= 0.05
+#         # DEM = pano1.get_DEM(width=40, height=40, resolution=0.1, dem_coarse_resolution=0.4, zoom=1, smooth_sigma=2)
+#         timer_start = time.perf_counter()
+# #     thetas, phis = pano1.col_row_to_angles(xv, yv)
+# #
+#         DOM = pano1.get_DOM(width = 30, height = 30, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
+#         # points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom)['DEM']
+#         timer_end = time.perf_counter()
+#         print("Time spent (second):", timer_end - timer_start)
+        # points = DOM['DOM_points']
         # P = np.argwhere(points > -100)
 
         # z = points[points > -1000].ravel().reshape(-1, 1)
         # P = np.concatenate([P, z], axis=1)
         # thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
         # pixels = pano1.find_pixel_to_thetaphi(thetas, phis, zoom=zoom)
+        # v = pptk.viewer(points[:, :3])
+        # v.set(point_size=0.01, show_axis=True, show_grid=False)
+        # v.attributes(pixels /255.0)
+        # v.attributes(points[:, 3:6]/255.0 )
+
+
+
+
+
+    def test_get_DOM(self):
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
+
+        # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"  # NJIT kinney street
+
+        # panoId_2019 = "LF85GNgr34Rs4wy0_a6lkQ"  # NJIT kinney street
+        # panoId_2019 = "A3ABgCfEs9T5_TNGkFteXw"  # NJIT kinney street
+        # lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+        # lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+        lat, lon = 40.7084995,-74.2556749  # 1.  Walker Ave to Franklin elem. school, NJ
+        lat, lon = 40.7084382,-74.2557599  # 2.  Walker Ave to Franklin elem. school, NJ
+        lat, lon = 40.7086017,-74.2555401  # 3.  Walker Ave to Franklin elem. school, NJ
+
+        # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+
+        start_time = time.perf_counter()
+
+        pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526, saved_path=os.getcwd())
+        zoom = 4
+        DOM_resolution = 0.05
+
+
+
+        DOM_points = pano1.get_DOM_points(width=40, height=40, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
+        print("Time spent (seconds): ", time.perf_counter() - start_time)
+        points = DOM_points
+        # print(DOM_points)
         v = pptk.viewer(points[:, :3])
         v.set(point_size=0.01, show_axis=True, show_grid=False)
-        # v.attributes(pixels /255.0)
+
         v.attributes(points[:, 3:6]/255.0 )
 
-
-
-
-
-    # def test_get_DOM(self):
-    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
-    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
-    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
-    #     panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"  # NJIT kinney street
-    #
-    #     # panoId_2019 = "LF85GNgr34Rs4wy0_a6lkQ"  # NJIT kinney street
-    #     # panoId_2019 = "A3ABgCfEs9T5_TNGkFteXw"  # NJIT kinney street
-    #     # lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-    #     # lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
-    #     lat, lon = 40.7084995,-74.2556749  # 1.  Walker Ave to Franklin elem. school, NJ
-    #     lat, lon = 40.7084382,-74.2557599  # 2.  Walker Ave to Franklin elem. school, NJ
-    #     lat, lon = 40.7086017,-74.2555401  # 3.  Walker Ave to Franklin elem. school, NJ
-    #
-    #     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-    #     pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd())
-    #
-    #     DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=0)['DOM']
-    #
-    #     self.assertEqual(DOM.shape, (600, 600))
 
     # def test_clip_pano(self, to_phi=90):
     #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"

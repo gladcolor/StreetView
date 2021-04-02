@@ -103,14 +103,39 @@ def get_DOMs():
     seg_dir = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_segmented'
     seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
 
-    for idx, seg_file in enumerate(seg_files[1:]):
+    saved_path = r"K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_DOMs"
+
+    resolution = 0.05
+    total_cnt = len(seg_files)
+    while len(seg_files) > 0:
+        seg_file = seg_files.pop()
+    # for idx, seg_file in enumerate(seg_files[1:]):
         try:
-            print("Processing: ", idx, seg_file)
+            print("Processing: ", total_cnt - len(seg_files), seg_file)
             panoId = os.path.basename(seg_file)[:-4]
-            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=r"K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_DOMs")
+
+            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+
+            new_name = os.path.join(saved_path, panoId + f"_DOM_{resolution:.2f}.tif")
+            is_processed = os.path.exists(new_name)
+
+            Links = pano1.jdata['Links']
+            for link in Links:
+                temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
+                if temp_name in seg_file:
+                    seg_file.remove(temp_name)
+                    seg_file.append(temp_name)
+                #
+                # else:
+                #     if (not os.path.exists(temp_name)):
+                #         pass
+
+            if is_processed:
+                continue
+
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
             pano1.set_segmentation_path(full_path=seg_file)
-            DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
+            DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
             # palette = Image.open(seg_file).getpalette()
             # palette = np.array(palette,dtype=np.uint8)
 

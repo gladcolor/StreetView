@@ -10,6 +10,7 @@ import random
 # import shapefile
 import glob
 import time
+import datetime
 from PIL import Image
 
 from tqdm import tqdm
@@ -92,27 +93,15 @@ def download_panos_DC():
     #     logger.info("Processing row #: %d, %f, %f", i, lon, lat)
     #     get_panorama(lon, lat, saved_path)
 
-
-
-
-def get_DOMs():
-    # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
-    # full_path = r'J:\Research\StreetView\gsv_pano\AZK1jDGIZC1zmuooSZCzEg.png'
-    # full_path = r'D:\Code\StreetView\gsv_pano\-0D29S37SnmRq9Dju9hkqQ.png'
-    # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"
-    seg_dir = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_segmented'
-    seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
-
-    saved_path = r"K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_DOMs"
-
-    resolution = 0.05
+def get_DOM(pid_id, seg_files, saved_path, resolution):
+    seg_dir = os.path.dirname(seg_files[0])
     total_cnt = len(seg_files)
+    start_time_all = time.perf_counter()
     while len(seg_files) > 0:
         seg_file = seg_files.pop()
-    # for idx, seg_file in enumerate(seg_files[1:]):
         start_time = time.perf_counter()
         try:
-            print("Processing: ", total_cnt - len(seg_files), seg_file)
+            print("Process No.", pid_id, "is processing: ", total_cnt - len(seg_files), seg_file)
             panoId = os.path.basename(seg_file)[:-4]
 
             pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
@@ -126,10 +115,6 @@ def get_DOMs():
                 if temp_name in seg_files:
                     seg_files.remove(temp_name)
                     seg_files.append(temp_name)
-                #
-                # else:
-                #     if (not os.path.exists(temp_name)):
-                #         pass
 
             if is_processed:
                 continue
@@ -137,8 +122,12 @@ def get_DOMs():
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
             pano1.set_segmentation_path(full_path=seg_file)
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
-
-            print("Time spent (seconds): ", time.perf_counter() - start_time, '\n')
+            total_time = (time.perf_counter() - start_time_all)
+            def delta_time(seconds):
+                return time.strftime("%H:%M:%S", time.gmtime(seconds))
+            efficency = total_time / (total_cnt - len(seg_files))
+            time_remain = efficency * len(seg_files)
+            print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {delta_time(total_time)} , time remain: {delta_time(time_remain)}  \n")
             # palette = Image.open(seg_file).getpalette()
             # palette = np.array(palette,dtype=np.uint8)
 
@@ -149,6 +138,31 @@ def get_DOMs():
         except Exception as e:
             print("Error :", e, seg_file)
             continue
+
+
+def get_DOMs():
+
+    seg_dir = r'D:\Research\sidewalk_wheelchair\DC_segmented'
+    seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
+    random.shuffle(seg_files)
+
+    saved_path = r"D:\Research\sidewalk_wheelchair\DC_DOMs"
+
+    resolution = 0.05
+
+    seg_files_mp = mp.Manager().list()
+    for f in seg_files:
+        seg_files_mp.append(f)
+
+    process_cnt = 8
+    pool = mp.Pool(processes=process_cnt)
+
+    for i in range(process_cnt):
+        pid_id = i
+        pool.apply_async(get_DOM, args=(pid_id, seg_files_mp, saved_path, resolution))
+    pool.close()
+    pool.join()
+
 
 def quick_DOM():
 
@@ -166,7 +180,7 @@ def quick_DOM():
     # pano_files.reverse()
     # pano_files = pano_files[:]
 
-    for idx, pano_file in enumerate(pano_files[120000:]):
+    for idx, pano_file in enumerate(pano_files[20000:]):
 
         try:
 

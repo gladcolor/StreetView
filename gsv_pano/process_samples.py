@@ -124,7 +124,12 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
             total_time = (time.perf_counter() - start_time_all)
             def delta_time(seconds):
-                return time.strftime("%H:%M:%S", time.gmtime(seconds))
+                delta1 = datetime.timedelta(seconds=seconds)
+                str_delta1 = str(delta1)
+                decimal_digi = 0
+                point_pos = str_delta1.rfind(".")
+                str_delta1 = str_delta1[:point_pos]
+                return str_delta1
             efficency = total_time / (total_cnt - len(seg_files))
             time_remain = efficency * len(seg_files)
             print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {delta_time(total_time)} , time remain: {delta_time(time_remain)}  \n")

@@ -104,21 +104,21 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             print("Process No.", pid_id, "is processing: ", total_cnt - len(seg_files), seg_file)
             panoId = os.path.basename(seg_file)[:-4]
 
-            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+           # pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
 
             new_name = os.path.join(saved_path, panoId + f"_DOM_{resolution:.2f}.tif")
             is_processed = os.path.exists(new_name)
 
-            Links = pano1.jdata['Links']
-            for link in Links:
-                temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
-                if temp_name in seg_files:
-                    seg_files.remove(temp_name)
-                    seg_files.append(temp_name)
+           # Links = pano1.jdata['Links']
+            #for link in Links:
+            #     temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
+            #    if temp_name in seg_files:
+            #        seg_files.remove(temp_name)
+            #        seg_files.append(temp_name)
 
             if is_processed:
                 continue
-
+            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
             pano1.set_segmentation_path(full_path=seg_file)
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
@@ -159,7 +159,7 @@ def get_DOMs():
     for f in seg_files:
         seg_files_mp.append(f)
 
-    process_cnt = 8
+    process_cnt = 18
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):

@@ -11,6 +11,7 @@ import random
 import glob
 import time
 import datetime
+import  utils
 from PIL import Image
 
 from tqdm import tqdm
@@ -109,12 +110,12 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             new_name = os.path.join(saved_path, panoId + f"_DOM_{resolution:.2f}.tif")
             is_processed = os.path.exists(new_name)
 
-           # Links = pano1.jdata['Links']
-            #for link in Links:
-            #     temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
-            #    if temp_name in seg_files:
-            #        seg_files.remove(temp_name)
-            #        seg_files.append(temp_name)
+            Links = pano1.jdata['Links']
+            for link in Links:
+                temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
+                if temp_name in seg_files:
+                   seg_files.remove(temp_name)
+                   seg_files.append(temp_name)
 
             if is_processed:
                 continue
@@ -247,7 +248,44 @@ def quick_DOM():
         # v.set(point_size=0.001, show_axis=True, show_grid=False)
         # v.attributes(P[:, 4:7]/255.0)
 
+def merge_measurements():
+    sorted_file = r'D:\Research\sidewalk_wheelchair\sorted_panoIds.txt'
+    saved_file = r'D:\Research\sidewalk_wheelchair\widths_all.txt'
+    widths_dir = r'D:\Research\sidewalk_wheelchair\DC_DOMs_measuremens'
+    sorted_panoIds = open(sorted_file, 'r').readlines()
+    sorted_panoIds = [x[:-1] for x in sorted_panoIds][:]
+
+
+
+    with open(saved_file, 'w') as f:
+        f.writelines('center_x,center_y,length,col,row,end_x,end_y\n')
+        for idx, panoId in enumerate(sorted_panoIds):
+            try:
+                file_name = os.path.join(widths_dir, f'{panoId}_widths.txt')
+                if not os.path.exists(file_name):
+                    print("No width measurement!")
+                    continue
+                print(f'Processed {idx} / {len(sorted_panoIds)}')
+                lines = open(file_name, 'r').readlines()[1:]
+                f.writelines(''.join(lines))
+            except Exception as e:
+                print("Error in merge_measurements:", e)
+                continue
+
+
+    # print(sorted_panoIds)
+
+
+
+
+
+
+def sort_jsons():
+    utils.sort_pano_jsons(r'D:\Research\sidewalk_wheelchair\DC_DOMs', saved_path=r'D:\Research\sidewalk_wheelchair')
+
 if __name__ == '__main__':
+    merge_measurements()
+    # sort_jsons()
     # download_panos_DC()
-    get_DOMs()
+    # get_DOMs()
     # quick_DOM()

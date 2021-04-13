@@ -3,6 +3,7 @@ import json
 import base64
 import struct
 import PIL
+import glob
 import os
 # import fiona
 
@@ -367,3 +368,41 @@ def epsg_transform(in_epsg, out_epsg):
     # crs_local =  CRS.from_proj4(f"+proj=tmerc +lat_0={lat} +lon_0={lon} +datum=WGS84 +units=m +no_defs")
     # print(crs_local)
     return Transformer.from_crs(in_epsg, out_epsg)
+
+def sort_pano_jsons(json_dir, saved_path=''):
+    files = glob.glob(os.path.join(json_dir, "*.json"))[:]
+    panoIds = [os.path.basename(f)[:-5] for f in files]
+    panoIds = sorted(panoIds, reverse=False)
+    sorted_panoIds = []
+    cnt = 0
+    while len(panoIds) > 0:
+        try:
+            panoId = panoIds.pop()
+
+            cnt += 1
+            print(f"Processed {cnt} / {len(files)}")
+            sorted_panoIds.append(panoId)
+            json_file = os.path.join(json_dir, panoId + ".json")
+            jdata = json.load(open(json_file, 'r'))
+            Links = jdata['Links']
+            for link in Links:
+                link_panoId = link['panoId']
+                # if link_panoId in sorted_panoIds:
+                #     panoIds.append(link_panoId)
+                if link_panoId in panoIds:
+                    panoIds.remove(link_panoId)
+                    panoIds.append(link_panoId)
+                    print(link_panoId)
+
+
+        except Exception as e:
+            print("Error in sort_pano_jsons:", e)
+            continue
+    if saved_path != "":
+        os.makedirs(saved_path, exist_ok=True)
+        with open(os.path.join(saved_path, 'sorted_panoIds.txt'), 'w') as f:
+            f.writelines('\n'.join(sorted_panoIds))
+
+
+
+    return list

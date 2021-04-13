@@ -96,20 +96,28 @@ def refactorJson(jdata):
         # model
         newJson['model']['depth_map'] = jdata[1][0][5][0][5][1][2]
 
+        newJson['Location']['country'] = ""
+        newJson['Location']['description'] = ""
+        newJson['Location']['region'] = ""
+
         try:
             newJson['Location']['country'] = jdata[1][0][5][0][1][4]
         except Exception as e:
-            print("Error in obtain new Json['Location']['country']:", e)
+            # print("Error in obtain new Json['Location']['country']:", e)
+            logging.exception("Error in obtain new Json['Location']['country']: %s" % e)
+
 
         try:
             newJson['Location']['description'] = jdata[1][0][3][2][0][0]
         except Exception as e:
-            print("Error in obtain new Json['Location']['description']:", e)
+            # print("Error in obtain new Json['Location']['description']:", e)
+            logging.exception("Error in obtain new Json['Location']['description']: %s" % e)
 
         try:
             newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
         except Exception as e:
-            print("Error in obtain new Json['Location']['region']:", e)
+            # print("Error in obtain new Json['Location']['region']:", e)
+            logging.exception("Error in obtain new Json['Location']['region']: %s" % e)
 
     except Exception as e:
         print("Error in refactorJson():", e)
@@ -117,10 +125,11 @@ def refactorJson(jdata):
     return newJson
 
 def getTimeMachine(jdata):
+    timemachine_list = []
     try:
         pano_list = jdata[1][0][5][0][3][0]
         dates = jdata[1][0][5][0][8]
-        timemachine_list = []
+
         if dates is None:
             return timemachine_list
 

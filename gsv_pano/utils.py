@@ -37,37 +37,55 @@ def refactorJson(jdata):
 
 
         # Data
-        newJson['Data']['image_width'] = jdata[1][0][2][2][1]
-        newJson['Data']['image_height'] = jdata[1][0][2][2][0]
-        newJson['Data']['tile_width'] = jdata[1][0][2][3][1][0]
-        newJson['Data']['tile_height'] = jdata[1][0][2][3][1][1]
-        newJson['Data']['level_sizes'] = jdata[1][0][2][3][0]
-        newJson['Data']['image_date'] = jdata[1][0][6][7]
-        newJson['Data']['imagery_type'] =  jdata[1][0][0][0]
-        newJson['Data']['copyright'] =  jdata[1][0][4][0][0][0][0]
-
-        # Projection
-        newJson['Projection']['projection_type'] = 'spherical'
-        newJson['Projection']['pano_yaw_deg'] = float(jdata[1][0][5][0][1][2][0])
-        newJson['Projection']['tilt_yaw_deg'] =  float(jdata[1][0][5][0][1][2][1])
-        newJson['Projection']['tilt_pitch_deg'] =  float(jdata[1][0][5][0][1][2][2])
+        try:
+            newJson['Data']['image_width'] = jdata[1][0][2][2][1]
+            newJson['Data']['image_height'] = jdata[1][0][2][2][0]
+            newJson['Data']['tile_width'] = jdata[1][0][2][3][1][0]
+            newJson['Data']['tile_height'] = jdata[1][0][2][3][1][1]
+            newJson['Data']['level_sizes'] = jdata[1][0][2][3][0]
+            newJson['Data']['image_date'] = jdata[1][0][6][7]
+            newJson['Data']['imagery_type'] =  jdata[1][0][0][0]
+            newJson['Data']['copyright'] =  jdata[1][0][4][0][0][0][0]
+        except Exception as e:
+            print("Error in obtain new Json['Data']:", e)
 
         # Location
-        newJson['Location']['panoId'] = jdata[1][0][1][1]
-        newJson['Location']['zoomLevels'] = ''
-        newJson['Location']['lat'] = jdata[1][0][5][0][1][0][2]
-        newJson['Location']['lng'] = jdata[1][0][5][0][1][0][3]
-        newJson['Location']['original_lat'] = ''
-        newJson['Location']['original_lng'] = ''
-        newJson['Location']['elevation_wgs84_m'] = ""
-        newJson['Location']['description'] = jdata[1][0][3][2][0][0]
-        newJson['Location']['streetRange'] = ''
+        try:
+            newJson['Location']['panoId'] = jdata[1][0][1][1]
+            newJson['Location']['zoomLevels'] = ''
+            newJson['Location']['lat'] = jdata[1][0][5][0][1][0][2]
+            newJson['Location']['lng'] = jdata[1][0][5][0][1][0][3]
+            newJson['Location']['original_lat'] = ''
+            newJson['Location']['original_lng'] = ''
+            newJson['Location']['elevation_wgs84_m'] = ""
+        except Exception as e:
+            # print("Error in obtain new Json['Location']:", e)
+            print("Error in obtain new Json['Location']:", e, newJson['Location']['panoId'])
+        try:
 
-        newJson['Location']['country'] = ''
-        newJson['Location']['region'] = ''
+            newJson['Location']['streetRange'] = ''
+            newJson['Location']['country'] = ''
+            newJson['Location']['region'] = ''
+            newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
+
+        except Exception as e:
+            # print("Error in obtain new Json['Location']:", e)
+            print("Error in obtain new Json['Location'] 2:", e, newJson['Location']['panoId'])
 
 
-        newJson['Location']['elevation_egm96_m'] = jdata[1][0][5][0][1][1][0]
+        # Projection
+        try:
+            newJson['Projection']['projection_type'] = 'spherical'
+            newJson['Projection']['pano_yaw_deg'] = float(jdata[1][0][5][0][1][2][0])
+            newJson['Projection']['tilt_yaw_deg'] =  float(jdata[1][0][5][0][1][2][1])
+            newJson['Projection']['tilt_pitch_deg'] =  float(jdata[1][0][5][0][1][2][2])
+        except Exception as e:
+            print("Error in obtain newJson['Projection']: newJson['Location']", newJson['Location'])
+
+            print("Error in obtain new Json['Projection']:", e, newJson['Location']['panoId'])
+            print("Error in obtain new Json['Projection']:", e, jdata[1][0][5][0])
+
+
 
         # Links
         newJson['Links'] = getLinks(jdata)
@@ -82,6 +100,11 @@ def refactorJson(jdata):
             newJson['Location']['country'] = jdata[1][0][5][0][1][4]
         except Exception as e:
             print("Error in obtain new Json['Location']['country']:", e)
+
+        try:
+            newJson['Location']['description'] = jdata[1][0][3][2][0][0]
+        except Exception as e:
+            print("Error in obtain new Json['Location']['description']:", e)
 
         try:
             newJson['Location']['region'] =  jdata[1][0][3][2][1][0]

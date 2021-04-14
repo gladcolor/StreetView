@@ -250,7 +250,7 @@ def quick_DOM():
 
 def merge_measurements():
     sorted_file = r'D:\Research\sidewalk_wheelchair\sorted_panoIds.txt'
-    saved_file = r'D:\Research\sidewalk_wheelchair\widths_all.txt'
+    saved_file = r'D:\Research\sidewalk_wheelchair\widths_all2.txt'
     widths_dir = r'D:\Research\sidewalk_wheelchair\DC_DOMs_measuremens'
     sorted_panoIds = open(sorted_file, 'r').readlines()
     sorted_panoIds = [x[:-1] for x in sorted_panoIds][:]
@@ -276,7 +276,8 @@ def merge_measurements():
     # print(sorted_panoIds)
 
 
-
+def dir_json_to_csv_list():
+    utils.dir_jsons_to_list(r"D:\Research\sidewalk_wheelchair\DC_DOMs", saved_name=r'D:\Research\sidewalk_wheelchair\jsons.csv')
 
 
 
@@ -285,6 +286,7 @@ def sort_jsons():
 
 if __name__ == '__main__':
     merge_measurements()
+    # dir_json_to_csv_list()
     # sort_jsons()
     # download_panos_DC()
     # get_DOMs()

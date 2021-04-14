@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 import zlib
 import math
+from tqdm import tqdm
 
 
 import logging
@@ -438,3 +439,140 @@ def sort_pano_jsons(json_dir, saved_path=''):
 
 
     return list
+
+
+def dir_jsons_to_list(json_dir, saved_name):
+    jsons_list = glob.glob(os.path.join(json_dir, "*.json"))
+    list_txt = open(saved_name, 'w', encoding="utf-8")
+    list_txt.writelines('image_width,image_height,tile_width,tile_height,image_date,imagery_type,\
+projection_type,pano_yaw_deg,tilt_yaw_deg,tilt_pitch_deg,panoId,zoomLevels,lat,lng,original_lat,original_lng,elevation_wgs84_m,\
+description,streetRange,region,country,elevation_egm96_m,\
+links_cnt,link_forward_yawDeg,link_f_panoId,link_f_road_argb,link_f_description,\
+link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_others')
+    for idx, file in tqdm(enumerate(jsons_list)):
+        try:
+            f = open(file, 'r')
+            json_data = json.load(f)
+
+            # default values
+            image_width = '0'
+            image_height = '0'
+            tile_width = '0'
+            tile_height = '0'
+            image_date = '0000-00'
+            imagery_type = '1'
+
+            projection_type = '-1'
+            pano_yaw_deg = '-999'
+            tilt_yaw_deg = '-999'
+            tilt_pitch_deg = '-999'
+
+            panoId = '0'
+            zoomLevels = '-1'
+            lat = '-999'
+            lng = '-999'
+            original_lat = '-999'
+            original_lng = '-999'
+            elevation_wgs84_m = '-9999'
+            description = '-'
+            streetRange = '-'
+            region = '-'
+            country = '-'
+            elevation_egm96_m = '-9999'
+
+            Data = json_data.get('Data')
+            if Data:
+                image_width = Data.get('image_width', image_width)
+                image_height = Data.get('image_height', image_height)
+                tile_width = Data.get('tile_width', tile_width)
+                tile_height = Data.get('tile_height', tile_height)
+                image_date = Data.get('image_date', image_date)
+                imagery_type = Data.get('imagery_type', imagery_type)
+
+            Projection = json_data.get('Projection')
+            if Projection:
+                projection_type = Projection.get('projection_type', projection_type)
+                pano_yaw_deg = Projection.get('pano_yaw_deg', pano_yaw_deg)
+                tilt_yaw_deg = Projection.get('tilt_yaw_deg', tilt_yaw_deg)
+                tilt_pitch_deg = Projection.get('tilt_pitch_deg', tilt_pitch_deg)
+
+            Location = json_data.get('Location')
+            if Location:
+                panoId = Location.get('panoId', panoId)
+                zoomLevels = Location.get('zoomLevels', zoomLevels)
+                lat = Location.get('lat', lat)
+                lng = Location.get('lng', lng)
+                original_lat = Location.get('original_lat', original_lat)
+                original_lng = Location.get('original_lng', original_lng)
+                elevation_wgs84_m = Location.get('elevation_wgs84_m', elevation_wgs84_m)
+                description = Location.get('description', description).replace(",", ';')
+                streetRange = Location.get('streetRange', streetRange)
+                region = Location.get('region', region).replace(",", ';')
+                country = Location.get('country', country).replace(",", ';')
+                elevation_egm96_m = Location.get('elevation_egm96_m', elevation_egm96_m)
+
+            Links = json_data.get('Links')
+
+            contents = [image_width, image_height, tile_width, tile_height, image_date, imagery_type, \
+                        projection_type, pano_yaw_deg, tilt_yaw_deg, tilt_pitch_deg, \
+                        panoId, zoomLevels, lat, lng, original_lat, original_lng, elevation_wgs84_m, description,
+                        streetRange, region, country, elevation_egm96_m]
+
+            contents = [str(x) for x in contents]
+            #             f.writelines(','.encode('utf-8', 'ignore'))
+            list_txt.writelines('\n' + ','.join(contents))
+
+            if Links:
+                Cnt_links = len(Links)
+
+                list_txt.writelines(',' + str(Cnt_links))
+
+                # find the forward_link
+                yaw_in_links = [float(link['yawDeg']) for link in Links]
+                pano_yaw_deg = float(pano_yaw_deg)
+                diff = [abs(yawDeg - pano_yaw_deg) for yawDeg in yaw_in_links]
+                idx_min = diff.index(min(diff))
+                forward_link = Links[idx_min]
+
+                # find the backward_link
+                idx_max = diff.index(max(diff))
+                backward_link = Links[idx_max]
+
+                #                 print(idx_max, idx_min)
+
+                for link in [forward_link, backward_link]:
+                    yawDeg = str(link.get('yawDeg', '-999'))
+                    panoId = link.get('panoId', '0')
+                    road_argb = link.get('road_argb', '0x80fdf872')
+                    description = link.get('description', '-').replace(",", ';')
+                    if description == '':
+                        description = '-'
+                    contents = [yawDeg, panoId, road_argb, description]
+                    contents = ',' + ','.join(contents)
+                    list_txt.writelines(contents)
+
+                if len(Links) > 2:
+                    if idx_max < idx_min:
+                        idx_max, idx_min = idx_min, idx_max
+
+                    Links.pop(idx_max)
+                    Links.pop(idx_min)
+
+                    list_txt.writelines(',')
+                    content_list = []
+                    for link in Links:
+                        yawDeg = str(link.get('yawDeg', '-999'))
+                        panoId = link.get('panoId', '0')
+                        road_argb = link.get('road_argb', '0x80fdf872')
+                        description = link.get('description', '-').replace(",", ';')
+                        if description == '':
+                            description = '-'
+                        contents = [yawDeg, panoId, road_argb, description]
+                        content_list.append('|'.join(contents))
+
+                    list_txt.writelines('|'.join(content_list))
+
+        except Exception as e:
+            print("Error in reading json:", file, '-- ', e)
+            continue
+    list_txt.close()

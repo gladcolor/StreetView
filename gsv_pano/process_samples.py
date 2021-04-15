@@ -16,6 +16,9 @@ import fiona
 import json
 import geopandas as gpd
 from PIL import Image
+import matplotlib.pyplot as plt
+from adjustText import adjust_text
+from numpy import linalg as LA
 
 from tqdm import tqdm
 
@@ -121,8 +124,11 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             for link in Links:
                 temp_name = os.path.join(seg_dir, link['panoId'] +'.png')
                 if temp_name in seg_files:
-                   seg_files.remove(temp_name)
-                   seg_files.append(temp_name)
+                    try:
+                        seg_files.remove(temp_name)
+                        seg_files.append(temp_name)
+                    except:
+                        pass
 
             if is_processed:
                 continue
@@ -255,6 +261,8 @@ def quick_DOM():
         # v.set(point_size=0.001, show_axis=True, show_grid=False)
         # v.attributes(P[:, 4:7]/255.0)
 
+
+
 def merge_measurements():
     sorted_file = r'D:\Research\sidewalk_wheelchair\sorted_panoIds.txt'
     saved_file = r'D:\Research\sidewalk_wheelchair\widths_all2.txt'
@@ -282,7 +290,7 @@ def merge_measurements():
 
     # print(sorted_panoIds)
 
-def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=0, depthmap=False, process_cnt=3):
+def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=0, depthmap=False, process_cnt=10):
     '''
     Download street view images according to the given polygon
     :param polyon:
@@ -310,7 +318,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
         seed_points_mp.append((row['lon'], row['lat']))
 
     print("Start...")
-    print(f"Generate {len(in_points)} in polygon.bounds {polyon.bounds}")
+    print(f"Generate {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
 
     # random.shuffle(seed_points_mp)
 
@@ -320,6 +328,8 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     for p in pending_panoId:
         pending_panoId_mp.append(p)
+
+    # download_panoramas_from_seed_points(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, True)
 
     pool = mp.Pool(processes=process_cnt)
 
@@ -368,22 +378,27 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                     continue
                 else:
                     pano2 = GSV_pano(panoId=panoId)
-                    print("Downloaded: ", pano2.panoId)
+                    # print("Downloaded: ", pano2.panoId)
 
 
                 lon = pano2.lon
                 lat = pano2.lat
                 pt = Point(lon, lat)
-                if pt.within(polygon) or (step < max_step):
+                if pt.within(polygon) and (step < max_step):
                     with open(json_name, 'w') as f:
                         json.dump(pano2.jdata, f)
                         # downloaded_cnt += 1
                     step += 1
+                    if step % 100 == 0:
+                        print(f"Process (PID) {os.getpid()} has walked {step} steps.")
                     links = pano2.jdata["Links"]
                     for link in links:
                         link_panoId = link['panoId']
                         if link_panoId in pending_panoIds:
-                            pending_panoIds.remove(link_panoId)
+                            try:
+                                pending_panoIds.remove(link_panoId)
+                            except:
+                                pass
                         pending_panoIds.append(link_panoId)
 
                         # print(link_panoId)
@@ -398,7 +413,7 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
 
         print(f"Downloaded {step} panoramas for this seed point.")
 
-def collect_links_from_panoramas_mp(json_dir, process_cnt=6):
+def collect_links_from_panoramas_mp(json_dir, process_cnt=10):
     json_files = glob.glob(os.path.join(json_dir, "*.json"))
     panoIds = [os.path.basename(f)[:-5] for f in json_files]
     if len(json_files) < 5 * process_cnt:
@@ -462,8 +477,8 @@ def find_neighors_from_json_files(panoIds, pending_Ids, json_dir):
 
 
 
-def dir_json_to_csv_list():
-    utils.dir_jsons_to_list(r"D:\Research\sidewalk_wheelchair\DC_DOMs", saved_name=r'D:\Research\sidewalk_wheelchair\jsons.csv')
+def dir_json_to_csv_list(json_dir, saved_name):
+    utils.dir_jsons_to_list(json_dir, saved_name)
 
 
 
@@ -471,13 +486,143 @@ def sort_jsons():
     utils.sort_pano_jsons(r'D:\Research\sidewalk_wheelchair\DC_DOMs', saved_path=r'D:\Research\sidewalk_wheelchair')
 
 
-def down_panoramas():
-    shape_file = r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\State_of_Washington_DC.shp'
+def download_panoramas():
+    shape_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\State_of_Washington_DC.shp'
     AOI = gpd.read_file(shape_file)
-    saved_path = r'D:\Research\sidewalk_wheelchair'
+    saved_path = r'D:\Research\sidewalk_wheelchair\jsons'
 
-    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True)
+    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
     # pass
+
+def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=8):
+
+    json_files = glob.glob(os.path.join(json_dir, "*.json"))
+    panoIds = [os.path.basename(f)[:-5] for f in json_files]
+
+    # draw_panorama_apex(panoIds[0:20], json_dir, saved_path, local_crs)
+
+    panoIds_mp = mp.Manager().list()
+    for p in panoIds[:]:
+        panoIds_mp.append(p)
+
+    results_mp = mp.Manager().list()
+
+    pool = mp.Pool(processes=process_cnt)
+    for i in range(process_cnt):
+        pool.apply_async(draw_panorama_apex, args=(panoIds_mp, json_dir, saved_path, results_mp, local_crs))
+    pool.close()
+    pool.join()
+
+    utils.save_a_list(results_mp, r'D:\Research\sidewalk_wheelchair\degrees.txt')
+
+
+
+def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
+    print("PID: ", os.getpid())
+    total_cnt = len(panoIds)
+    print("total_cnt:", total_cnt)
+    processed_cnt = 0
+    while len(panoIds) > 0:
+        panoId = panoIds.pop()
+
+        processed_cnt += 1
+        if len(results) % 100 == 0:
+            print(f"Processed {len(results)} jsons.")
+
+        json_file = os.path.join(json_dir, panoId + ".json")
+        if os.path.exists(json_file):
+
+            local_crs = 6487
+            pano = GSV_pano(json_file=json_file, crs_local=local_crs)
+
+            Links = pano.jdata["Links"]
+            if len(Links) < 2:
+                # print(f"Error in draw_panorama_apex(): {pano.panoId} has no 2 panoramas in Links.")
+                continue
+
+            try:
+
+                json_file_0 = os.path.join(json_dir, Links[0]['panoId'] + ".json")
+                json_file_1 = os.path.join(json_dir, Links[1]['panoId'] + ".json")
+
+                pano_0 = GSV_pano(json_file=json_file_0, crs_local=local_crs)
+                pano_1 = GSV_pano(json_file=json_file_1, crs_local=local_crs)
+
+                if (pano_1.panoId == 0) or (pano_0.panoId == 0):
+                    # print("Error in Links:")
+                    continue
+                # pano_1 = GSV_pano(panoId=Links[1]['panoId'])
+
+                # print("Line 532")
+
+                transformer = utils.epsg_transform(in_epsg=4326, out_epsg=local_crs)
+                xy = transformer.transform(pano.lat, pano.lon)
+                xy0 = transformer.transform(pano_0.lat, pano_0.lon)
+                xy1 = transformer.transform(pano_1.lat, pano_1.lon)
+                pts = np.array([xy0, xy, xy1])
+
+                # calculate angle
+                a = (pano.y - pano_0.y, pano.x - pano_0.x)
+                a = np.array(a)
+                b = (pano.y - pano_1.y, pano.x - pano_1.x)
+                b = np.array(b)
+                angle = np.arccos(np.dot(a, b) / (LA.norm(a) * LA.norm(b)))
+                angle_deg = np.degrees(angle)
+                # print("Line 540")
+
+                draw_fig = False
+
+                results.append(f"{pano.panoId},{angle_deg:.2f}")
+
+                if draw_fig:
+                    max_x = pts[:, 0].max()
+                    max_y = pts[:, 1].max()
+                    min_x = pts[:, 0].min()
+                    min_y = pts[:, 1].min()
+
+                    range_x = max_x - min_x
+                    range_y = max_y - min_y
+
+                    range_max = max(range_y, range_x) * 1.5
+                    x_center = (max_x + min_x) /2
+                    y_center = (max_y + min_y) /2
+
+                    plt.axis('scaled')
+                    # plt.axis("off")
+
+
+                    plt.xlim(x_center - range_max /2, x_center + range_max /2)
+                    plt.ylim(y_center - range_max /2, y_center + range_max /2)
+
+                    plt.plot(pts[:, 0], pts[:, 1])
+                    plt.scatter(pts[:, 0], pts[:, 1], marker='o', color='red')
+                    anno_texts = [pano_0.panoId, pano.panoId, pano_1.panoId]
+
+
+                    texts = []
+                    for i, txt in enumerate(anno_texts):
+                        texts.append(plt.annotate(txt, pts[i], ha='center'))
+                    # plt.axis('square')
+
+                    adjust_text(texts, only_move={'points': 'y', 'texts': 'y'},
+                                expand_text=(1.25, 1.3),
+                                expand_objects=(1.25, 1.4),
+                                expand_align=(1.25, 1.4),
+                                arrowprops=dict(arrowstyle="->", color='r', lw=0.5))
+
+
+                    # print(f"angle: {angle_deg:.2f}")
+                    # plt.show()
+                    ax = plt.gca()
+                    # plt.title(f"{pano.panoId}: {angle_deg:.2f}")
+                    ax.xaxis.set_label_position('top')
+                    ax.set_title(f"{pano.panoId}: {angle_deg:.2f}", y=1.0, pad=-14)
+                    plt.savefig(os.path.join(saved_path, panoId + '.png'))
+
+            except Exception as e:
+                print(f"Error in draw_panorama_apex():", e, json_file)
+                continue
+
 
 
 if __name__ == '__main__':
@@ -485,9 +630,12 @@ if __name__ == '__main__':
     # print(len(pending_Ids))
     # utils.save_a_list(pending_Ids, r'H:\Research\sidewalk_wheelchair\pendingIds.txt')
 
-    down_panoramas()
+    # draw_panorama_apex_mp(saved_path=r"E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\apexes",
+    #                    json_dir=r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas')
+
+    # download_panoramas()
     # merge_measurements()
-    # dir_json_to_csv_list()
+    dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()
     # download_panos_DC()
     # get_DOMs()

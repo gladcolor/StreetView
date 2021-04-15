@@ -104,7 +104,7 @@ logger = logging.getLogger('LOG.file')
 logging.shutdown()
 
 class GSV_pano(object):
-    def __init__(self, panoId="", json_file='', request_lon=None, request_lat=None, request_address='', crs_local=None, saved_path=''):
+    def __init__(self, panoId=0, json_file='', request_lon=None, request_lat=None, request_address='', crs_local=None, saved_path=''):
         self.panoId = panoId  # test case: BM1Qt23drK3-yMWxYfOfVg
         self.request_lon = request_lon  # test case: -74.18154077638651
         self.request_lat = request_lat  # test case: 40.73031168738437
@@ -115,6 +115,10 @@ class GSV_pano(object):
         self.saved_path = saved_path
         self.crs_local = crs_local
         self.json_file = json_file
+        self.x = None
+        self.y = None
+        self.z = None
+        self.normal_height = None
 
 
         # image storage: numpy array
@@ -141,6 +145,14 @@ class GSV_pano(object):
 
         try:
 
+            if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
+                # print("panoid: ", self.panoId)
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                self.lon = self.jdata['Location']['lng']
+                self.lat = self.jdata['Location']['lat']
+            # else:
+            #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
+
             if os.path.exists(self.json_file):
                 try:
                     jdata = json.load(open(self.json_file, 'r'))
@@ -155,12 +167,13 @@ class GSV_pano(object):
             if request_lat and request_lon:
                 if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
                     self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
-            if self.panoId != 0:
-                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
-                self.lon = self.jdata['Location']['lng']
-                self.lat = self.jdata['Location']['lat']
-            else:
-                logging.info("Found no paoraom in GSV_pano _init__(): lon: %f, lat: %f", self.lon, self.lat)
+
+
+            if self.crs_local and (self.lat is not None) and (self.lon is not None ):
+                transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
+                self.x, self.y = transformer.transform(self.lat, self.lon)
+
+
 
         except Exception as e:
             logging.exception("Error in GSV_pano _init__(): %s", e)

@@ -550,6 +550,7 @@ link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_othe
                 tile_width = Data.get('tile_width', tile_width)
                 tile_height = Data.get('tile_height', tile_height)
                 image_date = Data.get('image_date', image_date)
+                image_date = str(image_date).replace(", ", "-").replace("[", "").replace("]", "")
                 imagery_type = Data.get('imagery_type', imagery_type)
 
             Projection = json_data.get('Projection')
@@ -639,3 +640,4 @@ link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_othe
             print("Error in reading json:", file, '-- ', e)
             continue
     list_txt.close()
+

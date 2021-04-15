@@ -8,7 +8,7 @@ handlers:
   console:
     class : logging.StreamHandler
     formatter: simple
-    level   : INFO
+    level   : DEBUG
 #    level   : DEBUG
     stream  : ext://sys.stdout
   file:
@@ -19,7 +19,7 @@ handlers:
     mode: w
   error:
     class: logging.handlers.RotatingFileHandler
-    level: ERROR
+    level: DEBUG
     formatter: simple
     filename: error.log
     maxBytes: 10485760

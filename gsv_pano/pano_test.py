@@ -144,6 +144,7 @@ class TestPano(unittest.TestCase):
 
     def test_get_DOM(self):
         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
+        panoId_2019 = "-ft2bZI1Ial4C6N_iwmmvw"
 
         # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"  # NJIT kinney street
 

@@ -6,6 +6,8 @@ import PIL
 import glob
 import os
 # import fiona
+import multiprocessing as mp
+import random
 
 from pyproj import Transformer
 
@@ -15,10 +17,13 @@ import numpy as np
 import zlib
 import math
 from tqdm import tqdm
-
+import geopandas as gpd
 
 import logging
-logging.basicConfig(filename="info.log", level=logging.INFO, format="%(asctime)s - %(funcName)s - %(levelname)s - %(message)s")
+logging.basicConfig(filename="info.log", level=logging.DEBUG, format="%(asctime)s - %(funcName)s - %(levelname)s - %(message)s")
+
+
+logging.shutdown()
 
 def refactorJson(jdata):
     newJson = {}
@@ -105,20 +110,23 @@ def refactorJson(jdata):
             newJson['Location']['country'] = jdata[1][0][5][0][1][4]
         except Exception as e:
             # print("Error in obtain new Json['Location']['country']:", e)
-            logging.exception("Error in obtain new Json['Location']['country']: %s" % e)
+            pass
+            # logging.exception("Error in obtain new Json['Location']['country']: %s" % e)
 
 
         try:
             newJson['Location']['description'] = jdata[1][0][3][2][0][0]
         except Exception as e:
             # print("Error in obtain new Json['Location']['description']:", e)
-            logging.exception("Error in obtain new Json['Location']['description']: %s" % e)
+            pass
+            # logging.exception("Error in obtain new Json['Location']['description']: %s" % e)
 
         try:
             newJson['Location']['region'] =  jdata[1][0][3][2][1][0]
         except Exception as e:
+            pass
             # print("Error in obtain new Json['Location']['region']:", e)
-            logging.exception("Error in obtain new Json['Location']['region']: %s" % e)
+            # logging.exception("Error in obtain new Json['Location']['region']: %s" % e)
 
     except Exception as e:
         print("Error in refactorJson():", e)
@@ -160,14 +168,14 @@ def getTimeMachine(jdata):
         return timemachine_list
 
     except Exception as e:
-        logging.exception("Error in getLinks().")
+        # logging.exception("Error in getLinks().")
         return timemachine_list
 
 
 def getLinks(jdata):
     link_list = []
     try:
-        pano_list = jdata[1][0][5][0][3][0]
+        pano_list =   jdata[1][0][5][0][3][0]
         jdata_links = jdata[1][0][5][0][6]
         link_list = []
         for link in jdata_links:
@@ -192,6 +200,57 @@ def getLinks(jdata):
     except Exception as e:
         logging.exception("Error in getLinks().")
         return link_list
+
+# def sort_pano_links(links_dict):
+#     new_dict = {}
+#     yaw_in_links = [float(link['yawDeg']) for link in links_dict]
+#     pano_yaw_deg = float(pano_yaw_deg)
+#     diff = [abs(yawDeg - pano_yaw_deg) for yawDeg in yaw_in_links]
+#     idx_min = diff.index(min(diff))
+#     forward_link = Links[idx_min]
+#
+#     # find the backward_link
+#     idx_max = diff.index(max(diff))
+#     backward_link = Links[idx_max]
+#
+#     #                 print(idx_max, idx_min)
+#
+#     for link in [forward_link, backward_link]:
+#         yawDeg = str(link.get('yawDeg', '-999'))
+#         panoId = link.get('panoId', '0')
+#         road_argb = link.get('road_argb', '0x80fdf872')
+#         description = link.get('description', '-').replace(",", ';')
+#         if description == '':
+#             description = '-'
+#         contents = [yawDeg, panoId, road_argb, description]
+#         contents = ',' + ','.join(contents)
+#         list_txt.writelines(contents)
+#
+#     if len(Links) > 2:
+#         if idx_max < idx_min:
+#             idx_max, idx_min = idx_min, idx_max
+#
+#         Links.pop(idx_max)
+#         Links.pop(idx_min)
+#
+#         list_txt.writelines(',')
+#         content_list = []
+#         for link in Links:
+#             yawDeg = str(link.get('yawDeg', '-999'))
+#             panoId = link.get('panoId', '0')
+#             road_argb = link.get('road_argb', '0x80fdf872')
+#             description = link.get('description', '-').replace(",", ';')
+#             if description == '':
+#                 description = '-'
+#             contents = [yawDeg, panoId, road_argb, description]
+#             content_list.append('|'.join(contents))
+
+    # return new_dict
+
+
+
+
+    # print("ok")
 
 def compressJson(jdata):
 
@@ -395,6 +454,10 @@ def computeDepthMap(header, indices, planes):
 
     return {"width": w, "height": h, "depthMap": depthMap, "normal_vector_map": normal_vector_map, 'plane_idx_map': plane_idx_map}
 
+def save_a_list(lst, saved_file):
+    with open(saved_file, 'w') as f:
+        lst_cleaned = [str(line).replace('\n', '') for line in lst]
+        f.writelines("\n".join(lst_cleaned))
 
 def epsg_transform(in_epsg, out_epsg):
     # crs_4326 = CRS.from_epsg(4326)
@@ -425,7 +488,7 @@ def sort_pano_jsons(json_dir, saved_path=''):
                 if link_panoId in panoIds:
                     panoIds.remove(link_panoId)
                     panoIds.append(link_panoId)
-                    print(link_panoId)
+                    # print(link_panoId)
 
 
         except Exception as e:

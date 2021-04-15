@@ -74,7 +74,7 @@ import utils
 import logging.config
 
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
                 filename='Pano.log',
@@ -99,6 +99,9 @@ def setup_logging(default_path='log_config.yaml', logName='', default_level=logg
 yaml_path = 'log_config.yaml'
 setup_logging(yaml_path)
 logger = logging.getLogger('LOG.file')
+
+
+logging.shutdown()
 
 class GSV_pano(object):
     def __init__(self, panoId="", json_file='', request_lon=None, request_lat=None, request_address='', crs_local=None, saved_path=''):

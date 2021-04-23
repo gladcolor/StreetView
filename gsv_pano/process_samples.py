@@ -45,7 +45,7 @@ logger = logging.getLogger('LOG.file')
 
 logging.shutdown()
 
-def get_panorama(mp_list, saved_path):
+def get_panorama(mp_list, saved_path, zoom=4):
     total = len(mp_list)
     saved_path = saved_path
     processed_cnt = 0
@@ -53,7 +53,7 @@ def get_panorama(mp_list, saved_path):
         try:
             i, lon, lat = mp_list.pop(0)
             pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
-            pano1.download_panorama(zoom=5)
+            pano1.download_panorama(zoom=zoom)
 
             processed_cnt = total - len(mp_list)
             print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}. {processed_cnt} / {total}")
@@ -62,42 +62,95 @@ def get_panorama(mp_list, saved_path):
             print(e)
             continue
 
-def download_panos_DC():
-    logger.info("Started...")
-    saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
-    shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m2.shp'
-    points = fiona.open(shp_path)
+def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
+    total_cnt = len(json_file_list)
+    pre_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+    while len(json_file_list) > 0:
+        try:
+            json_file = json_file_list.pop()
+            basename = os.path.basename(json_file)[:-5] + "_5.jpg"
+            new_name = os.path.join(pre_dir, basename)
+            if os.path.exists(new_name):
+                print(f"{basename} exits, resample the current file.")
+                img_pil = Image.open(new_name)
+                w, h = img_pil.size
+                w = int(w/2)
+                h = int(h/2)
+                img_pil = img_pil.resize((w, h))
+                zoom4_pano_name = os.path.join(saved_path, os.path.basename(json_file)[:-5] + "_4.jpg")
+                img_pil.save(zoom4_pano_name)
+                continue
+            pano1 = GSV_pano(json_file=json_file, saved_path=saved_path)
+            pano1.get_panorama(zoom=zoom)
+        except Exception as e:
+            logging.error("Error in downoad_panoramas_from_json_list(): %s, %s" % e % json_file, exc_info=True)
 
-    skips = 9710
-    points = points[:]
+def download_panos_DC_from_jsons():
+    logger.info("Started...")
+    saved_path = r'H:\Research\sidewalk_wheelchairs\DC_panoramas_4'
+    json_files_path = r'D:\Research\sidewalk_wheelchair\jsons'
+
+    json_files = glob.glob(os.path.join(json_files_path, "*.json"))
+
+
+
+    # panoIds = [os.path.basename(f)[:-5] for f in json_files]
+
 
     logger.info("Making mp_list...")
-    lonlats_mp = mp.Manager().list()
+    panoIds_mp = mp.Manager().list()
 
-    for i in range(len(points) - skips):
-        i += skips
-        # geometry = points[i]['geometry']['coordinates'] # using fiona
-        geometry = points[i].shape.__geo_interface__['coordinates'] # using pyshp
+    skips = 250000
+    for f in json_files[skips:]:
+        panoIds_mp.append(f)
 
-        lon, lat = geometry
-        lonlats_mp.append((i, lon, lat))
-    logger.info("Finished mp_list (%d records).", len(lonlats_mp))
 
-    cut_point = 100000
-    lonlats_mp_first100 = lonlats_mp[:cut_point]
-    random.shuffle(lonlats_mp_first100)
-    lonlats_mp[:cut_point] = lonlats_mp_first100
-
-    random.shuffle(lonlats_mp)
-
-    process_cnt = 5
+    process_cnt = 1
+    zoom = 4
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):
-        pool.apply_async(get_panorama, args=(lonlats_mp, saved_path))
+        pool.apply_async(downoad_panoramas_from_json_list, args=(panoIds_mp, saved_path, zoom))
     pool.close()
     pool.join()
 
+
+
+def download_panos_DC():
+        logger.info("Started...")
+        saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+        shp_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\road_pts_30m2.shp'
+        points = fiona.open(shp_path)
+
+        skips = 9710
+        points = points[:]
+
+        logger.info("Making mp_list...")
+        lonlats_mp = mp.Manager().list()
+
+        for i in range(len(points) - skips):
+            i += skips
+            # geometry = points[i]['geometry']['coordinates'] # using fiona
+            geometry = points[i].shape.__geo_interface__['coordinates']  # using pyshp
+
+            lon, lat = geometry
+            lonlats_mp.append((i, lon, lat))
+        logger.info("Finished mp_list (%d records).", len(lonlats_mp))
+
+        cut_point = 100000
+        lonlats_mp_first100 = lonlats_mp[:cut_point]
+        random.shuffle(lonlats_mp_first100)
+        lonlats_mp[:cut_point] = lonlats_mp_first100
+
+        random.shuffle(lonlats_mp)
+
+        process_cnt = 5
+        pool = mp.Pool(processes=process_cnt)
+
+        for i in range(process_cnt):
+            pool.apply_async(get_panorama, args=(lonlats_mp, saved_path))
+        pool.close()
+        pool.join()
     # for i in tqdm(range(len(points))):
     #     geometry = points[i]['geometry']['coordinates']
     #     lon, lat = geometry
@@ -265,30 +318,58 @@ def quick_DOM():
 
 def merge_measurements():
     sorted_file = r'D:\Research\sidewalk_wheelchair\sorted_panoIds.txt'
-    saved_file = r'D:\Research\sidewalk_wheelchair\widths_all2.txt'
-    widths_dir = r'D:\Research\sidewalk_wheelchair\DC_DOMs_measuremens'
+    saved_file0 = r'D:\Research\sidewalk_wheelchair\widths_all4_not_touched.txt'
+    saved_file1 = r'D:\Research\sidewalk_wheelchair\widths_all4_touched.txt'
+    widths_dir = r'D:\Research\sidewalk_wheelchair\DC_DOMs_measuremens2'
     sorted_panoIds = open(sorted_file, 'r').readlines()
     sorted_panoIds = [x[:-1] for x in sorted_panoIds][:]
 
+    header = r'panoId,contour_num,center_x,center_y,length,col,row,end_x,end_y,cover_ratio,is_touched'
 
+    touched_lines = []
+    not_touched_lines = []
 
-    with open(saved_file, 'w') as f:
-        f.writelines('center_x,center_y,length,col,row,end_x,end_y\n')
-        for idx, panoId in enumerate(sorted_panoIds):
-            try:
-                file_name = os.path.join(widths_dir, f'{panoId}_widths.txt')
-                if not os.path.exists(file_name):
-                    print("No width measurement!")
-                    continue
-                print(f'Processed {idx} / {len(sorted_panoIds)}')
-                lines = open(file_name, 'r').readlines()[1:]
-                f.writelines(''.join(lines))
-            except Exception as e:
-                print("Error in merge_measurements:", e)
+    two_lists = [not_touched_lines, touched_lines]
+
+    cover_ratio_threshold = 0.85
+
+    for idx, panoId in enumerate(sorted_panoIds):
+        try:
+
+            file_name = os.path.join(widths_dir, f'{panoId}_widths.csv')
+            if not os.path.exists(file_name):
+                print("No width measurement!")
                 continue
+            if idx % 100 == 0:
+                print(f'Processed {idx} / {len(sorted_panoIds)}')
+
+            lines = open(file_name, 'r').readlines()[1:]
+            for line in lines:
+                fields = line.split(',')
+                cover_ratio = float(fields[9])
+                is_touched = int(line[-2])
+                if (cover_ratio > cover_ratio_threshold) and (is_touched == 0):
+                    two_lists[0].append(line)
+                else:
+                    two_lists[1].append(line)
 
 
-    # print(sorted_panoIds)
+        except Exception as e:
+            print("Error in merge_measurements:", e)
+            continue
+
+    print("Writing: ", saved_file0)
+
+    with open(saved_file0, 'w') as f:
+        f.writelines(header + '\n')
+        f.writelines(''.join(two_lists[0]))
+
+    print("Writing: ", saved_file1)
+    with open(saved_file1, 'w') as f:
+        f.writelines(header + '\n')
+        f.writelines(''.join(two_lists[1]))
+
+    print("Done.")
 
 def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=0, depthmap=False, process_cnt=10):
     '''
@@ -635,8 +716,9 @@ if __name__ == '__main__':
 
     # download_panoramas()
     # merge_measurements()
-    dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
+    # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()
     # download_panos_DC()
+    download_panos_DC_from_jsons()
     # get_DOMs()
     # quick_DOM()

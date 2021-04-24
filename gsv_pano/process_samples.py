@@ -65,9 +65,17 @@ def get_panorama(mp_list, saved_path, zoom=4):
 def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
     total_cnt = len(json_file_list)
     pre_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+    start_time_all = time.perf_counter()
     while len(json_file_list) > 0:
         try:
+            start_time = time.perf_counter()
             json_file = json_file_list.pop()
+            basename = os.path.basename(json_file)[:-5] + "_4.jpg"
+            new_name = os.path.join(saved_path, basename)
+            if os.path.exists(new_name):
+                print(f"{basename} exits, continue.")
+                continue
+
             basename = os.path.basename(json_file)[:-5] + "_5.jpg"
             new_name = os.path.join(pre_dir, basename)
             if os.path.exists(new_name):
@@ -82,8 +90,14 @@ def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
                 continue
             pano1 = GSV_pano(json_file=json_file, saved_path=saved_path)
             pano1.get_panorama(zoom=zoom)
+            total_time = (time.perf_counter() - start_time_all)
+            efficency = total_time / (total_cnt - len(json_file_list))
+            time_remain = efficency * len(json_file_list)
+            print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {utils.delta_time(total_time)} , time remain: {utils.delta_time(time_remain)}  \n")
+
         except Exception as e:
-            logging.error("Error in downoad_panoramas_from_json_list(): %s, %s" % e % json_file, exc_info=True)
+            logging.error("Error in downoad_panoramas_from_json_list(): %s, %s" % (e, json_file), exc_info=True)
+            continue
 
 def download_panos_DC_from_jsons():
     logger.info("Started...")
@@ -91,22 +105,23 @@ def download_panos_DC_from_jsons():
     json_files_path = r'D:\Research\sidewalk_wheelchair\jsons'
 
     json_files = glob.glob(os.path.join(json_files_path, "*.json"))
-
+    zoom = 4
 
 
     # panoIds = [os.path.basename(f)[:-5] for f in json_files]
 
+    # downoad_panoramas_from_json_list(json_files, saved_path, zoom)
 
     logger.info("Making mp_list...")
     panoIds_mp = mp.Manager().list()
 
-    skips = 250000
+    skips = 24400
     for f in json_files[skips:]:
         panoIds_mp.append(f)
 
 
-    process_cnt = 1
-    zoom = 4
+    process_cnt = 10
+
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):
@@ -157,6 +172,7 @@ def download_panos_DC():
     #     logger.info("Processing row #: %d, %f, %f", i, lon, lat)
     #     get_panorama(lon, lat, saved_path)
 
+
 def get_DOM(pid_id, seg_files, saved_path, resolution):
     seg_dir = os.path.dirname(seg_files[0])
     total_cnt = len(seg_files)
@@ -190,13 +206,7 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             pano1.set_segmentation_path(full_path=seg_file)
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
             total_time = (time.perf_counter() - start_time_all)
-            def delta_time(seconds):
-                delta1 = datetime.timedelta(seconds=seconds)
-                str_delta1 = str(delta1)
-                decimal_digi = 0
-                point_pos = str_delta1.rfind(".")
-                str_delta1 = str_delta1[:point_pos]
-                return str_delta1
+
             efficency = total_time / (total_cnt - len(seg_files))
             time_remain = efficency * len(seg_files)
             print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {delta_time(total_time)} , time remain: {delta_time(time_remain)}  \n")

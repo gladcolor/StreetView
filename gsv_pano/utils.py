@@ -11,7 +11,7 @@ import random
 
 from pyproj import Transformer
 
-
+import datetime
 import pandas as pd
 import numpy as np
 import zlib
@@ -503,6 +503,15 @@ def sort_pano_jsons(json_dir, saved_path=''):
 
     return list
 
+
+
+def delta_time(seconds):
+    delta1 = datetime.timedelta(seconds=seconds)
+    str_delta1 = str(delta1)
+    decimal_digi = 0
+    point_pos = str_delta1.rfind(".")
+    str_delta1 = str_delta1[:point_pos]
+    return str_delta1
 
 def dir_jsons_to_list(json_dir, saved_name):
     jsons_list = glob.glob(os.path.join(json_dir, "*.json"))

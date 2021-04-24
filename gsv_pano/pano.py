@@ -1272,6 +1272,11 @@ class GSV_pano(object):
                 tile_height = self.jdata['Data']['tile_height']
 
                 zoom = int(zoom)
+                max_zoom = len(self.jdata['Data']['level_sizes']) - 1
+                if zoom > max_zoom:
+                    logger.info("%s has no zoom %d panorama. Used zoom %d instead." % (self.panoId, zoom, max_zoom))
+                    zoom = max_zoom
+                # zoom = min(zoom, max_zoom)
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
 
@@ -1321,7 +1326,7 @@ class GSV_pano(object):
                 return self.panorama
 
         except Exception as e:
-            logger.exception("Error in get_panorama(): %s, %s", e)
+            logger.exception("Error in get_panorama(): %s " % e)
             return None
 
 

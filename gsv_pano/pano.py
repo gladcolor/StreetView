@@ -145,14 +145,6 @@ class GSV_pano(object):
 
         try:
 
-            if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
-                # print("panoid: ", self.panoId)
-                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
-                self.lon = self.jdata['Location']['lng']
-                self.lat = self.jdata['Location']['lat']
-            # else:
-            #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
-
             if os.path.exists(self.json_file):
                 try:
                     jdata = json.load(open(self.json_file, 'r'))
@@ -163,6 +155,20 @@ class GSV_pano(object):
 
                 except Exception as e:
                     logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
+            else:
+                basename = os.path.basename(json_file)[:22]
+                if panoId == 0:
+                    panoId = basename
+
+            if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
+                # print("panoid: ", self.panoId)
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                self.lon = self.jdata['Location']['lng']
+                self.lat = self.jdata['Location']['lat']
+            # else:
+            #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
+
+
 
             if request_lat and request_lon:
                 if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):

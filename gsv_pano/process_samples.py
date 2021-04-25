@@ -585,18 +585,23 @@ def download_panoramas():
     down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
     # pass
 
-def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=8):
+def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=10):
 
+    print("Start to collect json files...")
     json_files = glob.glob(os.path.join(json_dir, "*.json"))
     panoIds = [os.path.basename(f)[:-5] for f in json_files]
 
-    # draw_panorama_apex(panoIds[0:20], json_dir, saved_path, local_crs)
+    print(f"Start to process {len(panoIds)} files...")
+    results_mp = mp.Manager().list()
+
+
+    # draw_panorama_apex(panoIds[0:20], json_dir, saved_path, results_mp, local_crs)
 
     panoIds_mp = mp.Manager().list()
     for p in panoIds[:]:
         panoIds_mp.append(p)
 
-    results_mp = mp.Manager().list()
+
 
     pool = mp.Pool(processes=process_cnt)
     for i in range(process_cnt):
@@ -613,6 +618,9 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
     total_cnt = len(panoIds)
     print("total_cnt:", total_cnt)
     processed_cnt = 0
+
+    transformer = utils.epsg_transform(in_epsg=4326, out_epsg=local_crs)
+
     while len(panoIds) > 0:
         panoId = panoIds.pop()
 
@@ -624,7 +632,9 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
         if os.path.exists(json_file):
 
             local_crs = 6487
-            pano = GSV_pano(json_file=json_file, crs_local=local_crs)
+            # print(json_file)
+            pano = GSV_pano(json_file=json_file)
+
 
             Links = pano.jdata["Links"]
             if len(Links) < 2:
@@ -636,8 +646,12 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
                 json_file_0 = os.path.join(json_dir, Links[0]['panoId'] + ".json")
                 json_file_1 = os.path.join(json_dir, Links[1]['panoId'] + ".json")
 
-                pano_0 = GSV_pano(json_file=json_file_0, crs_local=local_crs)
-                pano_1 = GSV_pano(json_file=json_file_1, crs_local=local_crs)
+                # print("json_file_0:", json_file_0)
+
+                pano_0 = GSV_pano(json_file=json_file_0)
+                pano_1 = GSV_pano(json_file=json_file_1)
+
+                # print("pano_1.panoId:", pano_1.panoId)
 
                 if (pano_1.panoId == 0) or (pano_0.panoId == 0):
                     # print("Error in Links:")
@@ -646,16 +660,17 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
 
                 # print("Line 532")
 
-                transformer = utils.epsg_transform(in_epsg=4326, out_epsg=local_crs)
+                # print("Line 572")
                 xy = transformer.transform(pano.lat, pano.lon)
                 xy0 = transformer.transform(pano_0.lat, pano_0.lon)
                 xy1 = transformer.transform(pano_1.lat, pano_1.lon)
                 pts = np.array([xy0, xy, xy1])
+                # print("Line 577")
 
                 # calculate angle
-                a = (pano.y - pano_0.y, pano.x - pano_0.x)
+                a = (xy[1] - xy0[1], xy[0] - xy0[0])
                 a = np.array(a)
-                b = (pano.y - pano_1.y, pano.x - pano_1.x)
+                b = (xy[1] - xy1[1], xy[0] - xy1[0])
                 b = np.array(b)
                 angle = np.arccos(np.dot(a, b) / (LA.norm(a) * LA.norm(b)))
                 angle_deg = np.degrees(angle)
@@ -721,8 +736,8 @@ if __name__ == '__main__':
     # print(len(pending_Ids))
     # utils.save_a_list(pending_Ids, r'H:\Research\sidewalk_wheelchair\pendingIds.txt')
 
-    # draw_panorama_apex_mp(saved_path=r"E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\apexes",
-    #                    json_dir=r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas')
+    # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
+    #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
     # download_panoramas()
     # merge_measurements()

@@ -169,9 +169,9 @@ class GSV_pano(object):
                     self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
 
 
-            if self.crs_local and (self.lat is not None) and (self.lon is not None ):
-                transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
-                self.x, self.y = transformer.transform(self.lat, self.lon)
+            # if self.crs_local and (self.lat is not None) and (self.lon is not None ):
+            #     transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
+            #     self.x, self.y = transformer.transform(self.lat, self.lon)
 
 
 

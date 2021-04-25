@@ -10,7 +10,7 @@ import multiprocessing as mp
 import random
 
 from pyproj import Transformer
-
+from numpy import linalg as LA
 import datetime
 import pandas as pd
 import numpy as np
@@ -170,6 +170,8 @@ def getTimeMachine(jdata):
     except Exception as e:
         # logging.exception("Error in getLinks().")
         return timemachine_list
+
+
 
 
 def getLinks(jdata):
@@ -503,7 +505,29 @@ def sort_pano_jsons(json_dir, saved_path=''):
 
     return list
 
+def degree_difference(angle1, angle2):
+    diff = abs(angle1 - angle2) % 360
+    if diff > 180:
+        diff = 360 - diff
+    return diff
 
+def find_forward_bacwark_link(Links, pano_yaw_deg):
+    if Links:
+        Cnt_links = len(Links)
+
+    # find the forward_link
+    yaw_in_links = [float(link['yawDeg']) for link in Links]
+    pano_yaw_deg = float(pano_yaw_deg)
+    diff = [degree_difference(yawDeg, pano_yaw_deg) for yawDeg in yaw_in_links]
+
+
+    idx_min = diff.index(min(diff))
+    forward_link = Links[idx_min]
+
+    # find the backward_link
+    idx_max = diff.index(max(diff))
+    backward_link = Links[idx_max]
+    return (forward_link, backward_link)
 
 def delta_time(seconds):
     delta1 = datetime.timedelta(seconds=seconds)

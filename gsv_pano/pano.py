@@ -147,11 +147,12 @@ class GSV_pano(object):
 
             if os.path.exists(self.json_file):
                 try:
-                    jdata = json.load(open(self.json_file, 'r'))
-                    self.jdata = jdata
-                    self.panoId = self.jdata['Location']['panoId']
-                    self.lon = self.jdata['Location']['lng']
-                    self.lat = self.jdata['Location']['lat']
+                    with open(self.json_file, 'r') as f:
+                        jdata = json.load(f)
+                        self.jdata = jdata
+                        self.panoId = self.jdata['Location']['panoId']
+                        self.lon = self.jdata['Location']['lng']
+                        self.lat = self.jdata['Location']['lat']
 
                 except Exception as e:
                     logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
@@ -159,6 +160,7 @@ class GSV_pano(object):
                 basename = os.path.basename(json_file)[:22]
                 if panoId == 0:
                     panoId = basename
+                    self.panoId = panoId
 
             if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
                 # print("panoid: ", self.panoId)
@@ -263,6 +265,11 @@ class GSV_pano(object):
         resized_mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
         resized_mask = np.array(resized_mask)
         return resized_mask
+
+    def calculate_xy(self):
+        if self.crs_local and (self.lat is not None) and (self.lon is not None ):
+            transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
+            self.x, self.y = transformer.transform(self.lat, self.lon)
 
 
     def get_depthmap(self, zoom, saved_path=""):  # return: {}

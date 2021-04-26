@@ -266,10 +266,17 @@ class GSV_pano(object):
         resized_mask = np.array(resized_mask)
         return resized_mask
 
-    def calculate_xy(self):
+    def calculate_xy(self, transformer=None):
+        if transformer and (self.lat is not None) and (self.lon is not None ):
+            self.x, self.y = transformer.transform(self.lat, self.lon)
+            return self.x, self.y
+
         if self.crs_local and (self.lat is not None) and (self.lon is not None ):
             transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
             self.x, self.y = transformer.transform(self.lat, self.lon)
+            return self.x, self.y
+
+
 
 
     def get_depthmap(self, zoom, saved_path=""):  # return: {}

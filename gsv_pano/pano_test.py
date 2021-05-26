@@ -36,26 +36,31 @@ class TestPano(unittest.TestCase):
     # def test_get_depthmap(self):
     #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
     #     pano1 = GSV_pano(panoId=panoId_2019)
-    #     dm = pano1.get_depthmap()
+    #     dm = pano1.get_depthmap(zoom=0)
+    #
     #     mid_column_sum = dm[:, 127].sum()
     #     print(mid_column_sum)
     #     self.assertEqual(round(mid_column_sum, 5), 864.18066)
 
     # OK, 2020 - 12 - 29
-    # def test_get_point_cloud(self):
-    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-    #     pano1 = GSV_pano(panoId=panoId_2019)
-    #     dm = pano1.get_depthmap()
-    #     point_cloud = pano1.get_point_cloud(distance_threshole=20, zoom=3)['point_cloud']
-    #     P = point_cloud
-    #     v = pptk.viewer(P[:, :3])
-    #     v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
-    #     # color_map = np.random.rand(255, 3)
-    #     # v.color_map(color_map)
-    #     # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
-    #     mid_column_sum = dm[:, 127].sum()
-    #     v.set(point_size=0.001, show_axis=True, show_grid=True)
-    #     self.assertEqual(round(mid_column_sum, 5), 864.18066)
+    def test_get_point_cloud(self):
+        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
+        panoId_2019 = "8PHWULc5liwQMHSE7LqFnA"
+        # lat, lon = 40.780667, -73.9610365
+        pano1 = GSV_pano(panoId=panoId_2019)
+        # pano1 = GSV_pano(request_lon=lon, request_lat=lat)
+        dm = pano1.get_depthmap(zoom=0)
+        point_cloud = pano1.get_point_cloud(distance_threshole=50, zoom=3)['point_cloud']
+        P = point_cloud
+        v = pptk.viewer(P[:, :3])
+        v.set(point_size=0.001, show_axis=False, show_grid=False)
+        v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+        # color_map = np.random.rand(255, 3)
+        # v.color_map(color_map)
+        # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+        mid_column_sum = dm[:, 127].sum()
+
+        self.assertEqual(round(mid_column_sum, 5), 864.18066)
 
     # OK, 2020-12-28
     # def test_get_panorama(self):
@@ -142,38 +147,38 @@ class TestPano(unittest.TestCase):
 
 
 
-    def test_get_DOM(self):
-        panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
-        panoId_2019 = "-ft2bZI1Ial4C6N_iwmmvw"
-
-        # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"  # NJIT kinney street
-
-        # panoId_2019 = "LF85GNgr34Rs4wy0_a6lkQ"  # NJIT kinney street
-        # panoId_2019 = "A3ABgCfEs9T5_TNGkFteXw"  # NJIT kinney street
-        # lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
-        # lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
-        lat, lon = 40.7084995,-74.2556749  # 1.  Walker Ave to Franklin elem. school, NJ
-        lat, lon = 40.7084382,-74.2557599  # 2.  Walker Ave to Franklin elem. school, NJ
-        lat, lon = 40.7086017,-74.2555401  # 3.  Walker Ave to Franklin elem. school, NJ
-
-        # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
-
-        start_time = time.perf_counter()
-
-        pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526, saved_path=os.getcwd())
-        zoom = 4
-        DOM_resolution = 0.05
-
-
-
-        DOM_points = pano1.get_DOM_points(width=40, height=40, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
-        print("Time spent (seconds): ", time.perf_counter() - start_time)
-        points = DOM_points
-        # print(DOM_points)
-        v = pptk.viewer(points[:, :3])
-        v.set(point_size=0.01, show_axis=True, show_grid=False)
-
-        v.attributes(points[:, 3:6]/255.0 )
+    # def test_get_DOM(self):
+    #     panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"  # NJIT kinney street
+    #     panoId_2019 = "-ft2bZI1Ial4C6N_iwmmvw"
+    #
+    #     # panoId_2019 = "-0D29S37SnmRq9Dju9hkqQ"  # NJIT kinney street
+    #
+    #     # panoId_2019 = "LF85GNgr34Rs4wy0_a6lkQ"  # NJIT kinney street
+    #     # panoId_2019 = "A3ABgCfEs9T5_TNGkFteXw"  # NJIT kinney street
+    #     # lat, lon = 40.7065092, -74.2565972  # Near Franklin elem. school, NJ
+    #     # lat, lon = 40.7303117, -74.1815408  # NJIT kinney street
+    #     lat, lon = 40.7084995,-74.2556749  # 1.  Walker Ave to Franklin elem. school, NJ
+    #     lat, lon = 40.7084382,-74.2557599  # 2.  Walker Ave to Franklin elem. school, NJ
+    #     lat, lon = 40.7086017,-74.2555401  # 3.  Walker Ave to Franklin elem. school, NJ
+    #
+    #     # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd())
+    #
+    #     start_time = time.perf_counter()
+    #
+    #     pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526, saved_path=os.getcwd())
+    #     zoom = 4
+    #     DOM_resolution = 0.05
+    #
+    #
+    #
+    #     DOM_points = pano1.get_DOM_points(width=40, height=40, resolution=DOM_resolution, zoom=zoom, img_type="DOM")
+    #     print("Time spent (seconds): ", time.perf_counter() - start_time)
+    #     points = DOM_points
+    #     # print(DOM_points)
+    #     v = pptk.viewer(points[:, :3])
+    #     v.set(point_size=0.01, show_axis=True, show_grid=False)
+    #
+    #     v.attributes(points[:, 3:6]/255.0 )
 
 
     # def test_clip_pano(self, to_phi=90):

@@ -1408,7 +1408,7 @@ class GSV_pano(object):
 
         v = np.ones((height * width, 3), np.float)
 
-        v[:, :2] = np.dot(DI, trans.T)
+        v[:, :2] = np.dot(DI, trans.T)  # to spherical coordinates
         v = np.dot(v, m.T)
 
         diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)

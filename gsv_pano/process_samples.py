@@ -26,7 +26,7 @@ import shapely
 from shapely.geometry import Point, Polygon
 
 shapely.speedups.disable()
-
+shapely.speedups.disable()
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
     path = default_path

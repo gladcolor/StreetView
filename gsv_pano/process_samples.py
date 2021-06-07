@@ -746,6 +746,6 @@ if __name__ == '__main__':
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()
     # download_panos_DC()
-    download_panos_DC_from_jsons()
+    # download_panos_DC_from_jsons()
     # get_DOMs()
     # quick_DOM()

@@ -191,6 +191,7 @@ class GSV_pano(object):
         url = "https://maps.googleapis.com/maps/api/js/GeoPhotoService.SingleImageSearch?pb=!1m5!1sapiv3!5sUS!11m2!1m1!1b0!2m4!1m2!3d{0:}!4d{1:}!2d50!3m10!2m2!1sen!2sGB!9m1!1e2!11m4!1m3!1e2!2b1!3e2!4m10!1e1!1e2!1e3!1e4!1e8!1e6!5m1!1e2!6m1!1e2&callback=_xdc_._v2mub5"
         url = url.format(lat, lon)
         resp = requests.get(url, proxies=None)
+        # print(url)
         line = resp.text.replace("/**/_xdc_._v2mub5 && _xdc_._v2mub5( ", "")[:-2]
 
         if len(line) > 1000:
@@ -1407,7 +1408,7 @@ class GSV_pano(object):
 
         v = np.ones((height * width, 3), np.float)
 
-        v[:, :2] = np.dot(DI, trans.T)
+        v[:, :2] = np.dot(DI, trans.T)  # to spherical coordinates
         v = np.dot(v, m.T)
 
         diag = np.sqrt(v[:, 2] ** 2 + v[:, 0] ** 2)

@@ -3,6 +3,7 @@ import numpy as np
 import os
 import math
 import fiona
+import random
 import yaml
 import multiprocessing as mp
 from pano import GSV_pano
@@ -26,7 +27,7 @@ import shapely
 from shapely.geometry import Point, Polygon
 
 shapely.speedups.disable()
-shapely.speedups.disable()
+
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
     path = default_path
@@ -200,6 +201,7 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
                         pass
 
             if is_processed:
+                print("Skip: ", seg_file)
                 continue
             pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')

@@ -15,7 +15,22 @@ from PIL import Image
 
 from tqdm import tqdm
 
+import datetime
+import  utils
+import fiona
+import json
+import geopandas as gpd
+from PIL import Image
+import matplotlib.pyplot as plt
+from adjustText import adjust_text
+from numpy import linalg as LA
 
+from tqdm import tqdm
+
+import shapely
+from shapely.geometry import Point, Polygon
+
+shapely.speedups.disable()
 
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
@@ -33,8 +48,9 @@ yaml_path = 'log_config.yaml'
 setup_logging(yaml_path)
 logger = logging.getLogger('LOG.file')
 
+logging.shutdown()
 
-def get_panorama(mp_list, saved_path):
+def get_panorama(mp_list, saved_path, zoom=4):
     total = len(mp_list)
     saved_path = saved_path
     processed_cnt = 0
@@ -42,7 +58,7 @@ def get_panorama(mp_list, saved_path):
         try:
             i, lon, lat = mp_list.pop(0)
             pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
-            pano1.download_panorama(zoom=5)
+            pano1.download_panorama(zoom=zoom)
 
             processed_cnt = total - len(mp_list)
             print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}. {processed_cnt} / {total}")
@@ -50,6 +66,75 @@ def get_panorama(mp_list, saved_path):
         except Exception as e:
             print(e)
             continue
+
+
+def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
+    total_cnt = len(json_file_list)
+    pre_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
+    start_time_all = time.perf_counter()
+    while len(json_file_list) > 0:
+        try:
+            start_time = time.perf_counter()
+            json_file = json_file_list.pop()
+            basename = os.path.basename(json_file)[:-5] + "_4.jpg"
+            new_name = os.path.join(saved_path, basename)
+            if os.path.exists(new_name):
+                print(f"{basename} exits, continue.")
+                continue
+
+            basename = os.path.basename(json_file)[:-5] + "_5.jpg"
+            new_name = os.path.join(pre_dir, basename)
+            if os.path.exists(new_name):
+                print(f"{basename} exits, resample the current file.")
+                img_pil = Image.open(new_name)
+                w, h = img_pil.size
+                w = int(w/2)
+                h = int(h/2)
+                img_pil = img_pil.resize((w, h))
+                zoom4_pano_name = os.path.join(saved_path, os.path.basename(json_file)[:-5] + "_4.jpg")
+                img_pil.save(zoom4_pano_name)
+                continue
+            pano1 = GSV_pano(json_file=json_file, saved_path=saved_path)
+            pano1.get_panorama(zoom=zoom)
+            total_time = (time.perf_counter() - start_time_all)
+            efficency = total_time / (total_cnt - len(json_file_list))
+            time_remain = efficency * len(json_file_list)
+            print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {utils.delta_time(total_time)} , time remain: {utils.delta_time(time_remain)}  \n")
+
+        except Exception as e:
+            logging.error("Error in downoad_panoramas_from_json_list(): %s, %s" % (e, json_file), exc_info=True)
+            continue
+
+def download_panos_DC_from_jsons():
+    logger.info("Started...")
+    saved_path = r'H:\Research\sidewalk_wheelchairs\DC_panoramas_4'
+    json_files_path = r'D:\Research\sidewalk_wheelchair\jsons'
+
+    json_files = glob.glob(os.path.join(json_files_path, "*.json"))
+    zoom = 4
+
+
+    # panoIds = [os.path.basename(f)[:-5] for f in json_files]
+
+    # downoad_panoramas_from_json_list(json_files, saved_path, zoom)
+
+    logger.info("Making mp_list...")
+    panoIds_mp = mp.Manager().list()
+
+    skips = 24400
+    for f in json_files[skips:]:
+        panoIds_mp.append(f)
+
+
+    process_cnt = 10
+
+    pool = mp.Pool(processes=process_cnt)
+
+    for i in range(process_cnt):
+        pool.apply_async(downoad_panoramas_from_json_list, args=(panoIds_mp, saved_path, zoom))
+    pool.close()
+    pool.join()
+
 
 def download_panos_DC():
     logger.info("Started...")
@@ -155,6 +240,30 @@ def get_DOMs():
         except Exception as e:
             print("Error :", e, seg_file)
             continue
+
+
+def get_DOMs():
+
+    seg_dir = r'D:\Research\sidewalk_wheelchair\DC_segmented'
+    seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
+    random.shuffle(seg_files)
+
+    saved_path = r"D:\Research\sidewalk_wheelchair\DC_DOMs"
+
+    resolution = 0.05
+
+    seg_files_mp = mp.Manager().list()
+    for f in seg_files:
+        seg_files_mp.append(f)
+
+    process_cnt = 18
+    pool = mp.Pool(processes=process_cnt)
+
+    for i in range(process_cnt):
+        pid_id = i
+        pool.apply_async(get_DOM, args=(pid_id, seg_files_mp, saved_path, resolution))
+    pool.close()
+    pool.join()
 
 def quick_DOM():
 

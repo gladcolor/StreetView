@@ -748,4 +748,5 @@ if __name__ == '__main__':
     # download_panos_DC()
     download_panos_DC_from_jsons()
     # get_DOMs()
+    # get_DOMs()
     # quick_DOM()

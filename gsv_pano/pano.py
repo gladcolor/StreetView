@@ -1373,10 +1373,13 @@ class GSV_pano(object):
 
         # rotation matrix
         m = np.eye(3)
+
+        # sphere orientation
         m = m.dot(utils.rotate_z(pitch))
         m = m.dot(utils.rotate_x(theta))
-        m = m.dot(utils.rotate_y(to_phi))
 
+        # orientate to the perspective direction
+        m = m.dot(utils.rotate_y(to_phi))
         m = m.dot(utils.rotate_x(to_theta))
 
         if len(img.shape) == 3:
@@ -1398,11 +1401,15 @@ class GSV_pano(object):
         fov_v = math.atan((height * math.tan((fov_h / 2)) / width)) * 2
 
         DI = np.ones((height * width, 3), np.int)
+
+        # matrix to spherical coordinates
         trans = np.array([[2. * np.tan(fov_h / 2) / float(width), 0., -np.tan(fov_h / 2)],
                           [0., -2. * np.tan(fov_v / 2) / float(height), np.tan(fov_v / 2)]])
 
-        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
 
+
+        # DI: pixel row/column number
+        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
         DI[:, 0] = xx.reshape(height * width)
         DI[:, 1] = yy.reshape(height * width)
 

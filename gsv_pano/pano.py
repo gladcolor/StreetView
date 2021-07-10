@@ -74,7 +74,7 @@ import utils
 import logging.config
 
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
                 filename='Pano.log',
@@ -85,7 +85,7 @@ GROUND_VECTOR_THRES = 10
 DEM_SMOOTH_SIGMA    = 1
 DEM_COARSE_RESOLUTION = 0.8
 
-def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
+def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.INFO):
     path = default_path
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:
@@ -145,6 +145,10 @@ class GSV_pano(object):
 
         try:
 
+            if request_lat and request_lon:
+                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
+                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
+
             if os.path.exists(self.json_file):
                 try:
                     with open(self.json_file, 'r') as f:
@@ -156,13 +160,13 @@ class GSV_pano(object):
 
                 except Exception as e:
                     logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
-            else:
-                basename = os.path.basename(json_file)[:22]
-                if panoId == 0:
-                    panoId = basename
-                    self.panoId = panoId
+            # else:
+            #     basename = os.path.basename(json_file)[:22]
+            #     if panoId == 0:
+            #         panoId = basename
+            #         self.panoId = panoId
 
-            if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
+            if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
                 self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
                 self.lon = self.jdata['Location']['lng']
@@ -172,9 +176,6 @@ class GSV_pano(object):
 
 
 
-            if request_lat and request_lon:
-                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
-                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
 
 
             # if self.crs_local and (self.lat is not None) and (self.lon is not None ):
@@ -389,12 +390,12 @@ class GSV_pano(object):
                 self.depthmap['zoom'] = zoom
 
                 if len(saved_path) > 0:
-                    if os.path.exists(saved_path):
-                        os.path.mkdir()
+                    if not os.path.exists(saved_path):
+                        os.path.makedirs()
                     new_name = os.path.join(saved_path, self.jdata['Location']['panoId'] + ".tif")
                     im = depthMap
 
-                    im[np.where(im == max(im))[0]] = 0
+                    # im[np.where(im == max(im))[0]] = 0
 
                     # im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
                     # display image
@@ -407,6 +408,13 @@ class GSV_pano(object):
         return self.depthmap
 
     def get_ground_points(self, zoom=0, color=False, img_type='pano'):
+        '''
+
+        :param zoom:
+        :param color:
+        :param img_type:  'pano' or 'seg'
+        :return:
+        '''
 
         depthmap = self.get_depthmap(zoom=zoom)['depthMap']
         ground_mask = self.get_depthmap(zoom=zoom)['ground_mask']
@@ -793,7 +801,7 @@ class GSV_pano(object):
         :param arr_row:
         :param arr_col:
         :param zoom:
-        :param type: "pano" or "seg"
+        :param img_type: "pano" or "seg"
         :return:
         '''
         np_img = None

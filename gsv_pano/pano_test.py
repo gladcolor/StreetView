@@ -45,19 +45,23 @@ class TestPano(unittest.TestCase):
     # OK, 2020 - 12 - 29
     def test_get_point_cloud(self):
         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
-        panoId_2019 = "8PHWULc5liwQMHSE7LqFnA"
-        # lat, lon = 40.780667, -73.9610365
-        pano1 = GSV_pano(panoId=panoId_2019)
-        # pano1 = GSV_pano(request_lon=lon, request_lat=lat)
+        panoId_2019 = "AZK1jDGIZC1zmuooSZCzEg" # Walker Ave to Franlin Elementary
+
+        lat, lon = 40.7093514, -74.2453146  # road bridge ramp tilt, z = 37 m
+
+
+    # lat, lon = 40.780667, -73.9610365
+    #     pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526)
+        pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6526, saved_path=os.getcwd())
         dm = pano1.get_depthmap(zoom=0)
         point_cloud = pano1.get_point_cloud(distance_threshole=50, zoom=3)['point_cloud']
         P = point_cloud
         v = pptk.viewer(P[:, :3])
         v.set(point_size=0.001, show_axis=False, show_grid=False)
         v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
-        # color_map = np.random.rand(255, 3)
-        # v.color_map(color_map)
-        # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+        color_map = np.random.rand(255, 3)
+        v.color_map(color_map)
+        P = np.concatenate([P, colors, planes, normalvectors], axis=1)
         mid_column_sum = dm[:, 127].sum()
 
         self.assertEqual(round(mid_column_sum, 5), 864.18066)
@@ -91,6 +95,7 @@ class TestPano(unittest.TestCase):
 #         panoId_2019 = "K5hylqKRbrEUUWUnXpEUFQ"
 #         panoId_2019 = "6_N2PE5LuVclj7agvuywWw"
 #         panoId_2019 = "RFoFa5edI4V_bErU2XCWGQ"
+#         panoId_2019 = "AZK1jDGIZC1zmuooSZCzEg"  # Walker Ave to Franklin Elementary, Union, NJ. image 2019
 #
 #         # lat, lon = 40.7092976, -74.2531686  # Millrun Manor Dr.
 #         # lat, lon = 33.9951421,-81.0254529 # Bull St. Callcot, UofSC
@@ -109,11 +114,11 @@ class TestPano(unittest.TestCase):
 #         zoom = 4
 #         json_file = r'D:\Code\StreetView\gsv_pano\v-jZjDLJbQBv5LpKqgIXAA.json'
 #
-#         pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
+#         # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
 #         # pano1 = GSV_pano(json_file=json_file, saved_path=os.getcwd(), crs_local=6526)
-#         # pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
+#         pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
 #
-#         # dm = pano1.get_depthmap()
+#         dm = pano1.get_depthmap(zoom=0, saved_path=os.getcwd())
 #         # P = pano1.get_DEM(width=40, height=40, resolution=0.03, zoom=zoom)["DEM"]
 #         # self.assertEqual(DEM.shape, (1333, 1333))
 #
@@ -131,17 +136,17 @@ class TestPano(unittest.TestCase):
 #         # points = pano1.get_DEM(width = 40, height = 40, resolution=DOM_resolution, zoom=zoom)['DEM']
 #         timer_end = time.perf_counter()
 #         print("Time spent (second):", timer_end - timer_start)
-        # points = DOM['DOM_points']
-        # P = np.argwhere(points > -100)
-
-        # z = points[points > -1000].ravel().reshape(-1, 1)
-        # P = np.concatenate([P, z], axis=1)
-        # thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
-        # pixels = pano1.find_pixel_to_thetaphi(thetas, phis, zoom=zoom)
-        # v = pptk.viewer(points[:, :3])
-        # v.set(point_size=0.01, show_axis=True, show_grid=False)
-        # v.attributes(pixels /255.0)
-        # v.attributes(points[:, 3:6]/255.0 )
+#         points = DOM['DOM_points']
+#         P = np.argwhere(points > -100)
+#
+#         z = points[points > -1000].ravel().reshape(-1, 1)
+#         P = np.concatenate([P, z], axis=1)
+#         thetas, phis = pano1.XYZ_to_spherical(P[:, :3])
+#         pixels = pano1.find_pixel_to_thetaphi(thetas, phis, zoom=zoom)
+#         v = pptk.viewer(points[:, :3])
+#         v.set(point_size=0.01, show_axis=True, show_grid=False)
+#         v.attributes(pixels /255.0)
+#         v.attributes(points[:, 3:6]/255.0 )
 
 
 
@@ -441,21 +446,25 @@ class TestPano(unittest.TestCase):
     #     v = pptk.viewer(P[:, :3])
     #     v.set(point_size=0.001, show_axis=True, show_grid=False)
     #     v.attributes(P[:, 3:6]/255.0)
-
-# def test_get_ground_points(self):
+    #
+    # def test_get_ground_points(self):
     #     # lat, lon = 40.7084995,-74.2556749  # Walker Ave to Franklin elem. school, NJ
     #     lat, lon = 38.9484225, -77.0294996 # DC
     #     panoId_2019 = r'-0D29S37SnmRq9Dju9hkqQ'
     #     panoId_2019 = r'--rT8OYN1YM3tkQ45-dtwQ'
+    #     panoId_2019 = r'AZK1jDGIZC1zmuooSZCzEg'
     #
     #     # pano1 = GSV_pano(panoId=panoId_2019, saved_path="D:\Code\StreetView\gsv_pano\street_view_depthmap")
     #     saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\test_results'
-    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path, crs_local=6487)
-    #     zoom = 5
+    #     # pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=os.getcwd(), crs_local=6526)
+    #     pano1 = GSV_pano(panoId=panoId_2019, saved_path=os.getcwd(), crs_local=6526)
+    #     zoom = 3
     #
     #     timer_start = time.perf_counter()
     #
-    #     P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")
+    #     pano1.set_segmentation_path(full_path=r'D:\Code\StreetView\gsv_pano\AZK1jDGIZC1zmuooSZCzEg.png')
+    #
+    #     P = pano1.get_ground_points(zoom=zoom, color=True, img_type="pano")  # have bug on: img_type='seg'
     #
     #
     #

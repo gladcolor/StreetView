@@ -47,24 +47,32 @@ class TestPano(unittest.TestCase):
         panoId_2019 = "BM1Qt23drK3-yMWxYfOfVg"
         panoId_2019 = "AZK1jDGIZC1zmuooSZCzEg" # Walker Ave to Franlin Elementary
 
-        lat, lon = 40.7093514, -74.2453146  # road bridge ramp tilt, z = 37 m
+        # lat, lon = 40.7093514, -74.2453146  # road bridge ramp tilt, z = 37 m
 
 
     # lat, lon = 40.780667, -73.9610365
-    #     pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526)
-        pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6526, saved_path=os.getcwd())
-        dm = pano1.get_depthmap(zoom=0)
-        point_cloud = pano1.get_point_cloud(distance_threshole=50, zoom=3)['point_cloud']
+        pano1 = GSV_pano(panoId=panoId_2019, crs_local=6526)
+    #     pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6526, saved_path=os.getcwd())
+        dm = pano1.get_depthmap(zoom=0, saved_path=os.getcwd())
+        # point_cloud = pano1.get_point_cloud(distance_threshole=200, zoom=0)['point_cloud']
+        point_cloud = pano1.get_ground_points(color=True, zoom=4)
+        # point_cloud = pano1.get_DOM_points()
+
+        print(point_cloud.shape)
+
+
         P = point_cloud
         v = pptk.viewer(P[:, :3])
         v.set(point_size=0.001, show_axis=False, show_grid=False)
-        v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
-        color_map = np.random.rand(255, 3)
-        v.color_map(color_map)
-        P = np.concatenate([P, colors, planes, normalvectors], axis=1)
-        mid_column_sum = dm[:, 127].sum()
+        # v.attributes(P[:, 4:7] / 255.0, P[:, 3], P[:, 8:11]/255.0, P[:, 7])
+        # v.attributes(P[:, 3:6] / 255.0)  # for DOM points
+        v.attributes(P[:, 4:7] / 255.0)
+        # color_map = np.random.rand(255, 3)
+        # v.color_map(color_map)
+        # P = np.concatenate([P, colors, planes, normalvectors], axis=1)
+        # mid_column_sum = dm[:, 127].sum()
 
-        self.assertEqual(round(mid_column_sum, 5), 864.18066)
+        # self.assertEqual(round(mid_column_sum, 5), 864.18066)
 
     # OK, 2020-12-28
     # def test_get_panorama(self):

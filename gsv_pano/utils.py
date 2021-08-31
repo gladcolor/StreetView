@@ -501,9 +501,8 @@ def sort_pano_jsons(json_dir, saved_path=''):
         with open(os.path.join(saved_path, 'sorted_panoIds.txt'), 'w') as f:
             f.writelines('\n'.join(sorted_panoIds))
 
+    return sorted_panoIds
 
-
-    return list
 
 def degree_difference(angle1, angle2):
     diff = abs(angle1 - angle2) % 360

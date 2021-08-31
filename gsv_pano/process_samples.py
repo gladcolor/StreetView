@@ -29,6 +29,8 @@ from tqdm import tqdm
 import shapely
 from shapely.geometry import Point, Polygon
 
+import pandas as pd
+
 
 
 shapely.speedups.disable()
@@ -51,7 +53,7 @@ logger = logging.getLogger('LOG.file')
 
 logging.shutdown()
 
-def get_panorama(mp_list, saved_path, zoom=4):
+def get_panorama(mp_list, saved_path, zoom=4, json_only=True):
     total = len(mp_list)
     saved_path = saved_path
     processed_cnt = 0
@@ -59,7 +61,9 @@ def get_panorama(mp_list, saved_path, zoom=4):
         try:
             i, lon, lat = mp_list.pop(0)
             pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
-            pano1.download_panorama(zoom=zoom)
+
+            if not json_only:
+                pano1.download_panorama(zoom=zoom)
 
             processed_cnt = total - len(mp_list)
             print(f"PID {os.getpid()} downloaded row # {i}, {lon}, {lat}, {pano1.panoId}. {processed_cnt} / {total}")
@@ -244,7 +248,7 @@ def get_DOMs():
     for f in seg_files:
         seg_files_mp.append(f)
 
-    process_cnt = 18
+    process_cnt = 8
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):
@@ -263,7 +267,7 @@ def quick_DOM():
     pano_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
     seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
     pano_files = glob.glob(os.path.join(pano_dir, "*.jpg"))
-    saved_path = r'F:\Research\sidewalk_wheelchair\DOMs'
+    saved_path = r'F:\Research\sidewalk_wheelchair\DOMs_full'
     resolution = 0.05
 
     img_w = 40
@@ -306,7 +310,7 @@ def quick_DOM():
 
             pano1.depthmap['ground_mask'] = np.where(pano1.depthmap['depthMap'] < distance_threshole, 1, 0)
             mask_h, mask_w = pano1.depthmap['ground_mask'].shape
-            pano1.depthmap['ground_mask'][int(mask_h / 4 * 3):, :] = 0
+            pano1.depthmap['ground_mask'][int(mask_h / 4 * 4):, :] = 0
 
 
 
@@ -415,6 +419,8 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     in_points = seed_points[seed_points.within(polyon)]
 
+
+
     seed_points_mp = mp.Manager().list()
     for idx, row in in_points.iterrows():
         seed_points_mp.append((row['lon'], row['lat']))
@@ -422,15 +428,21 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     print("Start...")
     print(f"Generate {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
 
-    # random.shuffle(seed_points_mp)
+    random.shuffle(seed_points_mp)
 
     pending_panoId_mp = mp.Manager().list()
 
-    pending_panoId = collect_links_from_panoramas_mp(saved_path)
+    pending_panoId = []
+    pending_panoId = collect_links_from_panoramas_mp(saved_path)   # the existing jsons.
+
+
 
     for p in pending_panoId:
         pending_panoId_mp.append(p)
 
+    if process_cnt == 1:
+        download_panoramas_from_seed_points(
+        seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, True)
     # download_panoramas_from_seed_points(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, True)
 
     pool = mp.Pool(processes=process_cnt)
@@ -451,9 +463,10 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
 def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=0, depthmap=False):
     total_cnt = len(seed_points)
-    while len(seed_points) > 1:
 
-        print(f"Processed {len(seed_points)} / {total_cnt} seed points.")
+    while len(seed_points) > 0:
+
+        print(f"Processed {total_cnt - len(seed_points)} / {total_cnt} seed points.")
 
         seed_point = seed_points.pop()
 
@@ -472,14 +485,23 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
 
         while len(pending_panoIds) > 0:
             try:
+
                 panoId = pending_panoIds.pop()
 
                 json_name = os.path.join(saved_path, panoId + ".json")
                 if os.path.exists(json_name):
-                    # pano2 = GSV_pano(json_file=json_name)
+                    #pano2 = GSV_pano(json_file=json_name)
+                    # pano2 = GSV_pano(panoId=panoId)
+                    points_name = os.path.join(saved_path, panoId + ".npy")  # 52 m per file for zoom=2
+                    if not os.path.exists(points_name):
+                        g_points = pano1.get_ground_points(zoom=0, color=True)
+                        np.save(points_name, g_points)  # 55 m per file
+                        pano1.get_panorama(saved_path=saved_path, zoom=3)
                     continue
                 else:
                     pano2 = GSV_pano(panoId=panoId)
+
+
                     # print("Downloaded: ", pano2.panoId)
 
 
@@ -489,25 +511,33 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                 if pt.within(polygon) and (step < max_step):
                     with open(json_name, 'w') as f:
                         json.dump(pano2.jdata, f)
+                        g_points = pano2.get_ground_points(zoom=0, color=True)
+                        #points_name = os.path.join(saved_path, panoId + ".npz")
+                        #np.savez(points_name, ground_points=g_points)   # 55 m per file for zoom=2
+                        points_name = os.path.join(saved_path, panoId + ".npy")   # 52 m per file for zoom=2
+                        np.save(points_name, g_points)  # 55 m per file
+                        #with open(points_name, 'w'
+                        #print(g_points)
                         # downloaded_cnt += 1
                     step += 1
-                    if step % 100 == 0:
+                    if step % 5 == 0:
                         print(f"Process (PID) {os.getpid()} has walked {step} steps.")
+
                     links = pano2.jdata["Links"]
                     for link in links:
                         link_panoId = link['panoId']
                         if link_panoId in pending_panoIds:
                             try:
                                 pending_panoIds.remove(link_panoId)
+
                             except:
                                 pass
                         pending_panoIds.append(link_panoId)
-
-                        # print(link_panoId)
+                        print('link_panoId:', link_panoId)
+                    print(f"Processed: {panoId}. Len of pending_panoIds: {len(pending_panoIds)}")
                 else:
+                    print(f"{panoId} is outside the area of interest.")
                     continue
-
-
 
             except Exception as e:
                 print("Error in download_panoramas_from_seed_point():", e)
@@ -589,11 +619,18 @@ def sort_jsons():
 
 
 def download_panoramas():
-    shape_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\State_of_Washington_DC.shp'
-    AOI = gpd.read_file(shape_file)
-    saved_path = r'D:\Research\sidewalk_wheelchair\jsons'
+    # shape_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\State_of_Washington_DC.shp'
+    # AOI = gpd.read_file(shape_file)
+    # saved_path = r'D:\Research\sidewalk_wheelchair\jsons'
+    saved_path = r'H:\Research\interchange\high_five\jsons'
 
-    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
+    # polygon = shapely.geometry.box(minx=-85.7499798, miny=38.2547416, maxx=-85.7337196, maxy=38.2677969)  # Kennedy interchange, Louisville, KY
+    polygon = shapely.geometry.box(minx=-96.7732, miny=32.9193, maxx=-96.7559, maxy=32.9301)  # Dallas High FIve Intercahnge, Dallas, TX.
+
+    # down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=4)
+    down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=4)
+
+    dir_json_to_csv_list(json_dir=saved_path, saved_name=r'H:\Research\interchange\high_five\high_five_jsons.csv')
     # pass
 
 def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=10):
@@ -741,7 +778,190 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
                 continue
 
 
+def download_panos_Columbia():
+        logger.info("Started...")
+        saved_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\jsons'
+        shp_path = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\vectors\kx-south-carolina-address-points-SHP\columbia_metro.shp'
+        points = fiona.open(shp_path)
 
+        print("Len of shp:", len(points))
+
+        skips = 0
+
+        # points = points[skips:]
+
+        print("Len of shp after skipping:", len(points))
+
+        logger.info("Making mp_list...")
+        lonlats_mp = mp.Manager().list()
+
+        for i in range(len(points) - skips):
+            i += skips
+            geometry = points[i]['geometry']['coordinates'] # using fiona
+            # geometry = points[i].shape.__geo_interface__['coordinates']  # using pyshp
+
+            lon, lat = geometry
+            lonlats_mp.append((i, lon, lat))
+        logger.info("Finished mp_list (%d records).", len(lonlats_mp))
+
+        cut_point = 100
+        lonlats_mp_first100 = lonlats_mp[:cut_point]
+        random.shuffle(lonlats_mp_first100)
+        # lonlats_mp[:cut_point] = lonlats_mp_first100
+
+        random.shuffle(lonlats_mp)
+
+        process_cnt = 8
+        pool = mp.Pool(processes=process_cnt)
+
+        for i in range(process_cnt):
+            pool.apply_async(get_panorama, args=(lonlats_mp, saved_path))
+        pool.close()
+        pool.join()
+    # for i in tqdm(range(len(points))):
+    #     geometry = points[i]['geometry']['coordinates']
+    #     lon, lat = geometry
+    #     logger.info("Processing row #: %d, %f, %f", i, lon, lat)
+    #     get_panorama(lon, lat, saved_path)
+
+
+def getHouse_image_Columbia():
+    saved_path = r'H:\Research\Columbia_LFE\Google_thumbnails30'
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+
+    csv_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\vectors\kx-south-carolina-address-points-SHP/columbia_metro.csv'
+    df = pd.read_csv(csv_file)
+
+    for idx, row in df[108593:].iterrows():
+
+        ID = int(row['ID'])
+        h_LAT = row['LAT']   # h_ means heading
+        h_LON = row['LON']
+
+        print("idx, ID:  ", idx, ID)
+
+        setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
+
+
+
+        logger.info("ID: %s polygon.centroid: %f, %f", ID, h_LON, h_LAT)
+
+        # panoId, pano_lon, pano_lat = gpano.getPanoIDfrmLonlat(h_LON, h_LAT)
+
+
+
+        try:
+
+            # jdata = gpano.getPanoJsonfrmLonat(h_LON, h_LAT)
+            gpano = GSV_pano(request_lon=h_LON, request_lat=h_LAT)
+            jdata = gpano.jdata
+            panoid = jdata['Location']['panoId']
+            pano_lon = float(jdata['Location']['lng'])
+            pano_lat = float(jdata['Location']['lat'])
+            pano_yaw = float(jdata['Projection']['pano_yaw_deg'])
+
+            heading = gpano.getDegreeOfTwoLonlat(pano_lat, pano_lon, h_LAT, h_LON)
+
+            # determine toward to right or left
+            yaw_r = (pano_yaw + 90) % 360
+            yaw_l = (pano_yaw + 270) % 360
+            diff = [heading - yaw_r, heading - yaw_l]
+            # diff
+            diff_cos = [math.cos(math.radians(diff[0])), math.cos(math.radians(diff[1]))]
+            max_idx = np.argmax(diff_cos)
+            yaw = [yaw_r, yaw_l][max_idx]
+
+            fov = 30
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw-30, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw+30, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw-15, fov=fov, height=768, width=768)
+
+            gpano.getImagefrmAngle(pano_lon, pano_lat, saved_path=saved_path,
+                                   prefix=ID, yaw=yaw+15, fov=fov, height=768, width=768)
+
+
+            print(f"Processing: {idx},  \n")
+
+        except Exception as e:
+            print("Error in getHouse_image_HamptonRoads, panoId, log:", idx, e)
+            continue
+
+
+
+def getHouse_image_Columbia2():
+    saved_path = r'H:\Research\Columbia_LFE\Google_thumbnails30_2'
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+
+    csv_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\vectors\kx-south-carolina-address-points-SHP/columbia_metro.csv'
+
+    json_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\all_jsons'
+
+    json_files = glob.glob(os.path.join(json_dir, '*.json'))
+
+    print(f"Found {len(json_files)} files in: {json_dir}")
+
+    random.shuffle(json_files)
+
+    # df = pd.read_csv(csv_file)
+    for idx, f in enumerate(json_files):
+    # for idx, row in df[0:].iterrows():
+
+        # ID = int(row['ID'])
+        # h_LAT = row['LAT']   # h_ means heading
+        # h_LON = row['LON']
+
+        # print("idx, ID:  ", idx, ID)
+
+        setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info_columbia_pano_download.log"))
+
+        # logger.info("ID: %s polygon.centroid: %f, %f", ID, h_LON, h_LAT)
+
+        # panoId, pano_lon, pano_lat = gpano.getPanoIDfrmLonlat(h_LON, h_LAT)
+
+
+        try:
+
+            # jdata = gpano.getPanoJsonfrmLonat(h_LON, h_LAT)
+            # gpano = GSV_pano(request_lon=h_LON, request_lat=h_LAT)
+            gpano = GSV_pano(json_file=f)
+            jdata = gpano.jdata
+            panoid = jdata['Location']['panoId']
+            pano_lon = float(jdata['Location']['lng'])
+            pano_lat = float(jdata['Location']['lat'])
+            pano_yaw = float(jdata['Projection']['pano_yaw_deg'])
+
+            # heading = gpano.getDegreeOfTwoLonlat(pano_lat, pano_lon, h_LAT, h_LON)
+            #
+            # # determine toward to right or left
+            # yaw_r = (pano_yaw + 90) % 360
+            # yaw_l = (pano_yaw + 270) % 360
+            # diff = [heading - yaw_r, heading - yaw_l]
+            # # diff
+            # diff_cos = [math.cos(math.radians(diff[0])), math.cos(math.radians(diff[1]))]
+            # max_idx = np.argmax(diff_cos)
+            # yaw = [yaw_r, yaw_l][max_idx]
+
+            fov = 30
+            phi_list = [60, 75, 90, 105, 120, -60, -75, -90, -105, -120]
+            gpano.get_image_from_headings(saved_path=saved_path, phi_list=phi_list, fov=fov, height=768, width=768, override=False)
+
+            if idx % 1 == 0:
+                print(f"Processing: {idx} / {len(json_files)}. ")
+
+        except Exception as e:
+            print("Error in getHouse_image_Columbia2, panoId, log:", idx, e)
+            continue
 if __name__ == '__main__':
     # pending_Ids = collect_links_from_panoramas_mp(r'H:\Research\sidewalk_wheelchair\DC_DOMs')
     # print(len(pending_Ids))
@@ -751,11 +971,14 @@ if __name__ == '__main__':
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
     # download_panoramas()
+
     # merge_measurements()
-    # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
+    # dir_json_to_csv_list(json_dir=r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\all_jsons', saved_name=r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_LEF\jsons760k.txt')
     # sort_jsons()
     # download_panos_DC()
     # download_panos_DC_from_jsons()
     # get_DOMs()
     # get_DOMs()
     # quick_DOM()
+    # download_panos_Columbia()
+    getHouse_image_Columbia2()

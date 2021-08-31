@@ -166,6 +166,7 @@ class GSV_pano(object):
             #         panoId = basename
             #         self.panoId = panoId
 
+
             if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
                 self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
@@ -173,6 +174,7 @@ class GSV_pano(object):
                 self.lat = self.jdata['Location']['lat']
             # else:
             #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
+
 
 
 
@@ -187,6 +189,87 @@ class GSV_pano(object):
         except Exception as e:
             logging.exception("Error in GSV_pano _init__(): %s", e)
 
+    def getImagefrmAngle(self, lon: float, lat: float, saved_path='', prefix='', suffix='', width=1024, height=768,
+                         pitch=0, yaw=0, fov=90, override=False):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        lon = round(lon, 7)
+        lat = round(lat, 7)
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
+
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+               f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            # print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+
+
+            # new_name = f"{prefix}{}_{}_{}{}{}"
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+
+            if not override:
+                if os.path.exists(jpg_name):
+                    print(f"{jpg_name} exists, not override. return: jpgname, jpgname")
+                    return jpg_name, jpg_name
+
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
+
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                else:
+                    # print(url1)
+                    pass
+                return image, jpg_name
+
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+            return 0, 0
+
+    def getDegreeOfTwoLonlat(self, latA, lonA, latTarget, lonTarget):  # Bearing from point A to B (first to second),
+
+        """
+        Args:
+            point p1(latA, lonA)
+            point p2(latTarget, lonTarget)
+        Returns:
+            bearing between the two GPS points,
+            default: the basis of heading direction is north
+            https://blog.csdn.net/zhuqiuhui/article/details/53180395
+            This article shows the similar method
+            Bearing from point A to Target,
+            https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
+        """
+        radLatA = math.radians(float(latA))
+        radLonA = math.radians(float(lonA))
+        radLatTarget = math.radians(float(latTarget))
+        radLonTarget = math.radians(float(lonTarget))
+        dLon = radLonTarget - radLonA
+        y = math.sin(dLon) * cos(radLatTarget)
+        x = cos(radLatA) * sin(radLatTarget) - sin(radLatA) * cos(radLatTarget) * cos(dLon)
+        brng = degrees(atan2(y, x))
+        if brng < 0:
+            brng = (brng + 360)  # % 360
+        return brng
 
     def getPanoIDfrmLonlat(self, lon, lat):
         url = "https://maps.googleapis.com/maps/api/js/GeoPhotoService.SingleImageSearch?pb=!1m5!1sapiv3!5sUS!11m2!1m1!1b0!2m4!1m2!3d{0:}!4d{1:}!2d50!3m10!2m2!1sen!2sGB!9m1!1e2!11m4!1m3!1e2!2b1!3e2!4m10!1e1!1e2!1e3!1e4!1e8!1e6!5m1!1e2!6m1!1e2&callback=_xdc_._v2mub5"
@@ -1556,3 +1639,18 @@ class GSV_pano(object):
             cv2.imwrite(new_name.replace(".jpg", ".tif"), new_img)
 
         return new_img
+
+    def get_image_from_headings(self, saved_path, phi_list=[], heading_list=[], prefix="", fov=30, height=768, width=768,
+                                override=False):
+
+        if len(phi_list) > 0:
+            pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
+            heading_list = [(pano_yaw_deg + p) % 360 for p in phi_list]
+
+
+        for h in heading_list:
+            self.getImagefrmAngle(self.lon, self.lat, saved_path=saved_path,
+                                   prefix=self.panoId, yaw=pano_yaw_deg + h, fov=fov, height=768, width=768, override=override)
+
+
+

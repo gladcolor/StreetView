@@ -421,9 +421,10 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     for idx, row in in_points.iterrows():
         seed_points_mp.append((row['lon'], row['lat']))
 
-    print("Start...")
-    print(f"Generate {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
 
+    print(f"Generated {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
+
+    print("Start...")
     # random.shuffle(seed_points_mp)
 
     pending_panoId_mp = mp.Manager().list()
@@ -437,7 +438,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     pool = mp.Pool(processes=process_cnt)
 
-    print(f'Started to download panoramas using {len(seed_points)} seed points.')
+    print(f'Started to download panoramas using {len(in_points)} seed points.')
     print(f'Processes used: {process_cnt}.')
 
     for i in range(process_cnt):
@@ -453,60 +454,62 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
 def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=0, depthmap=False):
     total_cnt = len(seed_points)
+
+    verbose = True
+
+    seed_points = seed_points[79:]
+
     while len(seed_points) > 1:
 
-        print(f"Processed {len(seed_points)} / {total_cnt} seed points.")
+        print(f"Processed {total_cnt - len(seed_points)} / {total_cnt} seed points.")
 
         seed_point = seed_points.pop()
 
-        # downloaded_cnt = 0
-
         lon = seed_point[0]
         lat = seed_point[1]
-        pano1 = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
+        pano1 = GSV_pano(request_lon=lon, request_lat=lat)   # DON'T save!
 
-        if pano1.panoId == 0:
+        if pano1.panoId == 0:   # Find no panorama
             continue
+        else:
+            print(f"Found a panorama in seed point: {seed_point}")
 
-        pending_panoIds.append(pano1.panoId)
+        pending_panoIds.append(pano1.panoId)   # add a panoId to pending_panoIds
 
         step = 0
-
+        # Divide pending_panoIds and seed_points when thinking. The purpose of seed_points is to initiate and infill the pending_panoIds
         while len(pending_panoIds) > 0:
             try:
                 panoId = pending_panoIds.pop()
-
                 json_name = os.path.join(saved_path, panoId + ".json")
-                if os.path.exists(json_name):
-                    # pano2 = GSV_pano(json_file=json_name)
+                if os.path.exists(json_name):  # This panorama have been downloaded. Skip it.
                     continue
                 else:
                     pano2 = GSV_pano(panoId=panoId)
-                    # print("Downloaded: ", pano2.panoId)
 
                 lon = pano2.lon
                 lat = pano2.lat
                 pt = Point(lon, lat)
                 if pt.within(polygon) and (step < max_step):
-                    with open(json_name, 'w') as f:
-                        json.dump(pano2.jdata, f)
-                        # downloaded_cnt += 1
+                    if not os.path.exists(json_name):
+                        with open(json_name, 'w') as f:
+                            json.dump(pano2.jdata, f)
                     step += 1
-                    if step % 100 == 0:
-                        print(f"Process (PID) {os.getpid()} has walked {step} steps.")
+
                     links = pano2.jdata["Links"]
                     for link in links:
                         link_panoId = link['panoId']
-                        if link_panoId in pending_panoIds:
+                        if link_panoId in pending_panoIds:  # move this adjacent panoId to the next.
                             try:
                                 pending_panoIds.remove(link_panoId)
                             except:
-                                pass
+                                print(f"Failed when removing {link_panoId} in pending_panoIds.")
                         pending_panoIds.append(link_panoId)
-                        # print(link_panoId)
+
+                    if step % 100 == 0:
+                        print(f"Process (PID) {os.getpid()} has walked {step} steps. Pending panoIds: {len(pending_panoIds)}")
                 else:
                     continue
-
 
             except Exception as e:
                 print("Error in download_panoramas_from_seed_point():", e)
@@ -539,8 +542,7 @@ def collect_links_from_panoramas_mp(json_dir, process_cnt=10):
 
     return pending_panoIds_mp
 
-    # panoIds
-    # pass
+
 
 def find_neighors_from_json_files(panoIds, pending_Ids, json_dir):
     # print(len(panoIds))
@@ -588,9 +590,9 @@ def sort_jsons():
 
 
 def download_panoramas():
-    shape_file = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston.shp'
-    AOI = gpd.read_file(shape_file).set_crs("+proj=lcc +lat_1=28.38333333333333 +lat_2=30.28333333333334 +lat_0=27.83333333333333 +lon_0=-99 +x_0=600000.0000000001 +y_0=4000000 +datum=NAD83 +units=us-ft +no_defs").to_crs("EPSG:4326")
-    saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston1'
+    shape_file = r'H:\USC_OneDrive\OneDrive - University of South Carolina\test\Galveston.shp'
+    AOI = gpd.read_file(shape_file).to_crs("EPSG:4326")
+    saved_path = r'H:\USC_OneDrive\OneDrive - University of South Carolina\test\test_results'
 
     down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
     # pass

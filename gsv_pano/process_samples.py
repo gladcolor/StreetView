@@ -590,7 +590,7 @@ def sort_jsons():
 def download_panoramas():
     shape_file = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston.shp'
     AOI = gpd.read_file(shape_file).set_crs("+proj=lcc +lat_1=28.38333333333333 +lat_2=30.28333333333334 +lat_0=27.83333333333333 +lon_0=-99 +x_0=600000.0000000001 +y_0=4000000 +datum=NAD83 +units=us-ft +no_defs").to_crs("EPSG:4326")
-    saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston'
+    saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston1'
 
     down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
     # pass

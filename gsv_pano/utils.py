@@ -82,9 +82,9 @@ def refactorJson(jdata):
         # Projection
         try:
             newJson['Projection']['projection_type'] = 'spherical'
-            newJson['Projection']['pano_yaw_deg'] = float(jdata[1][0][5][0][1][2][0])
+            newJson['Projection']['pano_yaw_deg'] =  float(jdata[1][0][5][0][1][2][0])
             newJson['Projection']['tilt_yaw_deg'] =  float(jdata[1][0][5][0][1][2][1])
-            newJson['Projection']['tilt_pitch_deg'] =  float(jdata[1][0][5][0][1][2][2])
+            newJson['Projection']['tilt_pitch_deg'] =float(jdata[1][0][5][0][1][2][2])
         except Exception as e:
             print("Error in obtain newJson['Projection']: newJson['Location']", newJson['Location'])
 

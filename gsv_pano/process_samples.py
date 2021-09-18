@@ -105,6 +105,8 @@ def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
             logging.error("Error in downoad_panoramas_from_json_list(): %s, %s" % (e, json_file), exc_info=True)
             continue
 
+
+
 def download_panos_DC_from_jsons():
     logger.info("Started...")
     saved_path = r'H:\Research\sidewalk_wheelchairs\DC_panoramas_4'
@@ -482,7 +484,6 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                     pano2 = GSV_pano(panoId=panoId)
                     # print("Downloaded: ", pano2.panoId)
 
-
                 lon = pano2.lon
                 lat = pano2.lat
                 pt = Point(lon, lat)
@@ -502,11 +503,9 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                             except:
                                 pass
                         pending_panoIds.append(link_panoId)
-
                         # print(link_panoId)
                 else:
                     continue
-
 
 
             except Exception as e:
@@ -589,9 +588,9 @@ def sort_jsons():
 
 
 def download_panoramas():
-    shape_file = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\vectors\State_of_Washington_DC.shp'
-    AOI = gpd.read_file(shape_file)
-    saved_path = r'D:\Research\sidewalk_wheelchair\jsons'
+    shape_file = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston.shp'
+    AOI = gpd.read_file(shape_file).set_crs("+proj=lcc +lat_1=28.38333333333333 +lat_2=30.28333333333334 +lat_0=27.83333333333333 +lon_0=-99 +x_0=600000.0000000001 +y_0=4000000 +datum=NAD83 +units=us-ft +no_defs").to_crs("EPSG:4326")
+    saved_path = r'K:\OneDrive_USC\OneDrive - University of South Carolina\test\Galveston'
 
     down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
     # pass
@@ -750,7 +749,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas()
+    download_panoramas()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()

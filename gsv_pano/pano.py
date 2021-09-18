@@ -145,6 +145,11 @@ class GSV_pano(object):
 
         try:
 
+            if request_lat and request_lon:
+                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
+                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
+
+
             if os.path.exists(self.json_file):
                 try:
                     with open(self.json_file, 'r') as f:
@@ -154,27 +159,28 @@ class GSV_pano(object):
                         self.lon = self.jdata['Location']['lng']
                         self.lat = self.jdata['Location']['lat']
 
+
                 except Exception as e:
                     logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
-            else:
-                basename = os.path.basename(json_file)[:22]
-                if panoId == 0:
-                    panoId = basename
-                    self.panoId = panoId
+            # else:
+            #     basename = os.path.basename(json_file)[:22]
+            #     if panoId == 0:
+            #         panoId = basename
+            #         self.panoId = panoId
 
-            if (self.panoId != 0) and (self.panoId is not None) and (len(str(panoId)) == 22):
+            if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
                 self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
                 self.lon = self.jdata['Location']['lng']
                 self.lat = self.jdata['Location']['lat']
+
+
             # else:
             #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
 
 
 
-            if request_lat and request_lon:
-                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
-                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
+
 
 
             # if self.crs_local and (self.lat is not None) and (self.lon is not None ):
@@ -922,7 +928,7 @@ class GSV_pano(object):
         new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
         worldfile_name = new_name.replace(".tif", ".tfw")
         self.DOM['resolution'] = resolution
-        transformer = utils.epsg_transform(4326, self.crs_local)  # New Jersey state plane, meter
+        transformer = utils.epsg_transform('epsg:4326', self.crs_local)  # 6526: New Jersey state plane, meter
 
         x_m, y_m = transformer.transform(self.lat, self.lon)
         self.DOM['central_x'] = x_m

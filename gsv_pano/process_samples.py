@@ -20,6 +20,7 @@ import  utils
 import fiona
 import json
 import geopandas as gpd
+import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
@@ -594,8 +595,19 @@ def download_panoramas():
     AOI = gpd.read_file(shape_file).to_crs("EPSG:4326")
     saved_path = r'H:\USC_OneDrive\OneDrive - University of South Carolina\test\test_results'
 
-    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, json=True, process_cnt=10)
-    # pass
+    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, col_cnt=720, row_cnt=720, json=True, process_cnt=10)
+
+    csv_name = os.path.join(saved_path, os.path.basename(saved_path) + '.csv')
+    dir_json_to_csv_list(saved_path, csv_name)
+
+    isSave_shp = True
+    if isSave_shp:
+        shp_name = csv_name.replace('.csv', '.shp')
+        print("Saving shapefile: ", shp_name)
+        df = pd.read_csv(csv_name)
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['lon'], df['lat']))
+        gdf.to_file(shp_name)
+
 
 def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=10):
 

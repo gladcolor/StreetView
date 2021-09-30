@@ -52,6 +52,37 @@ logger = logging.getLogger('LOG.file')
 
 logging.shutdown()
 
+def panorama_from_point_shapefile():
+    # shp_file = r''
+    shape_file = r'G:\Research\Noise_map\Columbia_noise_pt.shp'
+    pt_gdf = gpd.read_file(shape_file)
+    # AOI = AOI.set_crs("EPSG:2278")
+    # pt_gdf = pt_gdf.to_crs("EPSG:4326")
+    # pt_gdf['x'] = pt_gdf['geometry'].centroid.x
+    # pt_gdf['y'] = pt_gdf['geometry'].centroid.y
+    saved_path = r'G:\Research\Noise_map\panoramas3'
+
+    if not os.path.exists(saved_path):
+        os.makedirs(saved_path)
+
+    csv_name = os.path.join(os.path.dirname(saved_path), os.path.basename(saved_path) + '.csv')
+
+    for idx, row in tqdm(pt_gdf.iterrows()):
+        lat = row['POINT_Y']
+        lon = row['POINT_X']
+        pano = GSV_pano(request_lat=lat, request_lon=lon, saved_path=saved_path)
+
+    dir_json_to_csv_list(saved_path, csv_name)
+    isSave_shp = True
+    if isSave_shp:
+        shp_name = csv_name.replace('.csv', '.shp')
+        print("Saving shapefile: ", shp_name)
+        df = pd.read_csv(csv_name)
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['lng'], df['lat']))
+        gdf.to_file(shp_name)
+
+    print("Done.")
+
 def get_panorama(mp_list, saved_path, zoom=4):
     total = len(mp_list)
     saved_path = saved_path
@@ -591,15 +622,21 @@ def sort_jsons():
 
 
 def download_panoramas():
-    shape_file = r'H:\USC_OneDrive\OneDrive - University of South Carolina\test\Galveston.shp'
-    AOI = gpd.read_file(shape_file).to_crs("EPSG:4326")
-    saved_path = r'H:\USC_OneDrive\OneDrive - University of South Carolina\test\test_results'
-
-    down_panos_in_area(polyon=AOI.iloc[0].geometry, saved_path=saved_path, col_cnt=720, row_cnt=720, json=True, process_cnt=10)
+    shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
+    AOI = gpd.read_file(shape_file)
+    # AOI = AOI.set_crs("EPSG:2278")
+    AOI = AOI.to_crs("EPSG:4326")
+    saved_path = r'G:\Research\Noise_map\panoramas2'
 
     csv_name = os.path.join(os.path.dirname(saved_path), os.path.basename(saved_path) + '.csv')
-    dir_json_to_csv_list(saved_path, csv_name)
 
+
+    for i in range(len(AOI)):
+        polygon =  AOI.iloc[i].geometry
+        down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=10, col_cnt=500, row_cnt=500)
+    # pass
+
+    dir_json_to_csv_list(saved_path, csv_name)
     isSave_shp = True
     if isSave_shp:
         shp_name = csv_name.replace('.csv', '.shp')
@@ -609,7 +646,6 @@ def download_panoramas():
         gdf.to_file(shp_name)
 
     print("Done.")
-
 
 def draw_panorama_apex_mp(json_dir='', saved_path='', local_crs=6487, process_cnt=10):
 
@@ -765,7 +801,8 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas()
+    # download_panoramas()
+    panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()

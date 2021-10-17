@@ -739,12 +739,17 @@ def convert_row_col_to_shperical(theta0, phi0, fov_h, height, width, tilt_pitch=
 
 
 def getHouse_image_HamptonRoads():
-    saved_path = r'/media/huan/HD4T/Dataset/HamptonRoads/Google_thumbnails30'
+    saved_path = r'/media/huan/HD8T/Dataset/HamptonRoads/Google_thumbnails30'
+    saved_path = r'/media/huan/HD8T/temp'
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
 
-    csv_file = r'/media/huan/HD4T/Dataset/HamptonRoads/Hampton_Roads_Elevation_Certificates__NAVD_88_-shp/lat-lon.csv'
+    csv_file = r'/media/huan/HD8T/Dataset/HamptonRoads/Hampton_Roads_Elevation_Certificates__NAVD_88_-shp/lat-lon.csv'
     df = pd.read_csv(csv_file)
+
+    df = df.iloc[0:1]
+    df.loc[0, 'LAT'] = 29.2582707
+    df.loc[0, 'LON'] = -94.8696048
 
     for idx, row in df.iterrows():
 
@@ -1014,10 +1019,10 @@ if __name__ == '__main__':
 
     # clip_panos_HamptonRoads()
 
-    # getHouse_image_HamptonRoads()
+    getHouse_image_HamptonRoads()
 
     # walk_forward()
-    get_PanoJPG_DC()
+    # get_PanoJPG_DC()
 
     print("Done")
 

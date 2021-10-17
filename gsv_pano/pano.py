@@ -1556,3 +1556,11 @@ class GSV_pano(object):
             cv2.imwrite(new_name.replace(".jpg", ".tif"), new_img)
 
         return new_img
+
+    def get_around_thumnails(self):
+        '''
+        r
+        :return:
+        '''
+
+        return

@@ -141,11 +141,11 @@ def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
 
 def download_panos_DC_from_jsons():
     logger.info("Started...")
-    saved_path = r'H:\Research\sidewalk_wheelchairs\DC_panoramas_4'
-    json_files_path = r'D:\Research\sidewalk_wheelchair\jsons'
+    saved_path = r'G:\Research\Noise_map\panoramas_jpg'
+    json_files_path = r'G:\Research\Noise_map\panoramas3'
 
     json_files = glob.glob(os.path.join(json_files_path, "*.json"))
-    zoom = 4
+    zoom = 3
 
 
     # panoIds = [os.path.basename(f)[:-5] for f in json_files]
@@ -155,12 +155,12 @@ def download_panos_DC_from_jsons():
     logger.info("Making mp_list...")
     panoIds_mp = mp.Manager().list()
 
-    skips = 24400
+    skips = 0
     for f in json_files[skips:]:
         panoIds_mp.append(f)
 
 
-    process_cnt = 10
+    process_cnt = 6
 
     pool = mp.Pool(processes=process_cnt)
 
@@ -791,7 +791,56 @@ def draw_panorama_apex(panoIds, json_dir, saved_path, results, local_crs=6487):
                 print(f"Error in draw_panorama_apex():", e, json_file)
                 continue
 
+def get_pano_jpgs(lon_lat_list=[], saved_path=os.getcwd()):
+    if len(lon_lat_list) == 0:
+        lon_lat_list = [(-94.8696048, 29.2582707)]
+    while len(lon_lat_list) > 0:
+        lon, lat = lon_lat_list.pop(0)
+        pano = GSV_pano(request_lon=lon, request_lat=lat, saved_path=saved_path)
+        pano.get_panorama(zoom=5 )
 
+
+
+def get_around_thumnail_Columbia():
+    saved_path = r'G:\Research\Noise_map\thumnails'
+    pano_dir = r'G:\Research\Noise_map'
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+
+    csv_file = r'G:\Research\Noise_map\panoramas2.csv'
+    df = pd.read_csv(csv_file)
+
+
+
+    for idx, row in df[2:10].iterrows():
+
+        panoId = row['panoId']
+        pano_yaw_deg = row["pano_yaw_deg"]
+        pano_yaw_deg = float(pano_yaw_deg)
+
+        bearing_list = [0.0, 90.0, 180.0, 270.0]
+        bearing_list = [pano_yaw_deg + b for b in bearing_list]
+
+        print("idx, panoId:  ", idx, panoId)
+
+        # setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
+
+        try:
+
+            utils.get_around_thumnail_from_bearing(
+                                             panoId=panoId,
+                                             bearing_list=bearing_list,
+                                             saved_path=saved_path,
+                                                   prefix=panoId,
+                                                   suffix='',
+                                             width=768, height=768,
+                                             pitch=0, fov=90)
+
+            print(f"Processing: {idx},  \n")
+
+        except Exception as e:
+            print("Error in get_around_thumnail_Columbia, panoId, log:", idx, e)
+            continue
 
 if __name__ == '__main__':
     # pending_Ids = collect_links_from_panoramas_mp(r'H:\Research\sidewalk_wheelchair\DC_DOMs')
@@ -802,12 +851,14 @@ if __name__ == '__main__':
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
     # download_panoramas()
-    panorama_from_point_shapefile()
+    # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()
     # download_panos_DC()
     # download_panos_DC_from_jsons()
     # get_DOMs()
+    # get_pano_jpgs()
     # get_DOMs()
+    get_around_thumnail_Columbia()
     # quick_DOM()

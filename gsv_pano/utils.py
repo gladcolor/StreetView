@@ -4,6 +4,8 @@ import base64
 import struct
 import PIL
 import glob
+import urllib
+from PIL import Image
 import os
 # import fiona
 import multiprocessing as mp
@@ -672,5 +674,72 @@ link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_othe
         except Exception as e:
             print("Error in reading json:", file, '-- ', e)
             continue
+
+
     list_txt.close()
 
+def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
+                                     panoId='',
+                                     bearing_list=[0.0, 90.0, 180.0, 270.0],
+                                     saved_path='', prefix='', suffix='',
+                                     width=1024, height=768,
+                     pitch=0,  fov=90):
+    ''':argument
+
+    '''
+    # w maximum: 1024
+    # h maximum: 768
+    server_num = random.randint(0, 3)
+    lon = round(lon, 7)
+    lat = round(lat, 7)
+    height = int(height)
+    pitch = int(pitch)
+    width = int(width)
+
+    for yaw in bearing_list:
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        if len(panoId) == 22:  # panoId is input
+            url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+                   f"&h={height}&pitch={pitch}&panoid={panoId}&yaw={yaw}&thumbfov={fov}"
+            # print("URL in getImagefrmAngle():", url1)
+        else:
+            if lat != 0 and lon !=0:
+                url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+                       f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
+            else:
+                print("Error in get_around_thumnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
+                # return 0, 0, 0
+        # print("URL in getImagefrmAngle():", url1)
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            # print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
+
+            # new_name = f"{prefix}{}_{}_{}{}{}"
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                else:
+                    # print(url1)
+                    pass
+                # return image, jpg_name, url1
+
+        except Exception as e:
+            print("Error in get_around_thumnail_from_bearing() getting url1", e)
+            print(url1)
+            # return 0, 0, url1

@@ -683,7 +683,8 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                                      bearing_list=[0.0, 90.0, 180.0, 270.0],
                                      saved_path='', prefix='', suffix='',
                                      width=1024, height=768,
-                     pitch=0,  fov=90):
+                     pitch=0,  fov=90,
+                                     overwrite=True):
     ''':argument
 
     '''
@@ -695,6 +696,14 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
     height = int(height)
     pitch = int(pitch)
     width = int(width)
+
+    suffix = str(suffix)
+    prefix = str(prefix)
+    if prefix != "":
+        # print('prefix:', prefix)
+        prefix = prefix + '_'
+    if suffix != "":
+        suffix = '_' + suffix
 
     for yaw in bearing_list:
         if yaw > 360:
@@ -715,22 +724,23 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                 # return 0, 0, 0
         # print("URL in getImagefrmAngle():", url1)
 
-        suffix = str(suffix)
-        prefix = str(prefix)
-        if prefix != "":
-            # print('prefix:', prefix)
-            prefix = prefix + '_'
-        if suffix != "":
-            suffix = '_' + suffix
+
 
         try:
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+
+            if not overwrite:
+                if os.path.exists(jpg_name):
+                    print("Skip existing file:", jpg_name)
+                    continue
+
             file = urllib.request.urlopen(url1)
             image = Image.open(file)
 
             # new_name = f"{prefix}{}_{}_{}{}{}"
 
-            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
-                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+
             if image.getbbox():
                 if saved_path != '':
                     image.save(jpg_name)

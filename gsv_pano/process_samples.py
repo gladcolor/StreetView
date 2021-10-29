@@ -802,17 +802,19 @@ def get_pano_jpgs(lon_lat_list=[], saved_path=os.getcwd()):
 
 
 def get_around_thumnail_Columbia():
-    saved_path = r'G:\Research\Noise_map\thumnails'
+    saved_path = r'G:\Research\Noise_map\thumnails2'
     pano_dir = r'G:\Research\Noise_map'
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
 
-    csv_file = r'G:\Research\Noise_map\panoramas2.csv'
-    df = pd.read_csv(csv_file)
+    csv_file = r'G:\Research\Noise_map\panoramas3.csv'
+    # df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file).sample(frac=1).reset_index()
 
+    start_idx = 0 # + 70000 #+ 70000  + 70000
+    end_idx = 70000 + 70000 +   70000 #+  #70000
 
-
-    for idx, row in df[2:10].iterrows():
+    for idx, row in df[:].iterrows():
 
         panoId = row['panoId']
         pano_yaw_deg = row["pano_yaw_deg"]
@@ -821,7 +823,7 @@ def get_around_thumnail_Columbia():
         bearing_list = [0.0, 90.0, 180.0, 270.0]
         bearing_list = [pano_yaw_deg + b for b in bearing_list]
 
-        print("idx, panoId:  ", idx, panoId)
+        print(f"idx: {idx} / {len(df)}, start_idx: {start_idx}, end_idx: {end_idx}, panoId: {panoId}. ")
 
         # setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
 
@@ -834,9 +836,10 @@ def get_around_thumnail_Columbia():
                                                    prefix=panoId,
                                                    suffix='',
                                              width=768, height=768,
-                                             pitch=0, fov=90)
+                                             pitch=0, fov=90,
+                                             overwrite=False)
 
-            print(f"Processing: {idx},  \n")
+            # print(f"Processing: {idx},  \n")
 
         except Exception as e:
             print("Error in get_around_thumnail_Columbia, panoId, log:", idx, e)

@@ -104,7 +104,8 @@ logger = logging.getLogger('LOG.file')
 logging.shutdown()
 
 class GSV_pano(object):
-    def __init__(self, panoId=0, json_file='', request_lon=None, request_lat=None, request_address='', crs_local=None, saved_path=''):
+    def __init__(self, panoId=0, json_file='', request_lon=None, request_lat=None,
+                 request_address='', crs_local=None, saved_path=''):
         self.panoId = panoId  # test case: BM1Qt23drK3-yMWxYfOfVg
         self.request_lon = request_lon  # test case: -74.18154077638651
         self.request_lat = request_lat  # test case: 40.73031168738437

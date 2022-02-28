@@ -657,11 +657,13 @@ def sort_jsons():
 
 
 def download_panoramas():
-    shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
+    #shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
+    shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
+
     AOI = gpd.read_file(shape_file)
     # AOI = AOI.set_crs("EPSG:2278")
     AOI = AOI.to_crs("EPSG:4326")
-    saved_path = r'G:\Research\Noise_map\panoramas2'
+    saved_path = r'K:\Research\Charleston_sidewalk\pano_json'
 
     csv_name = os.path.join(os.path.dirname(saved_path), os.path.basename(saved_path) + '.csv')
 
@@ -837,7 +839,7 @@ def get_pano_jpgs(lon_lat_list=[], saved_path=os.getcwd()):
 
 
 def get_around_thumnail_Columbia():
-    saved_path = r'H:\Research\Noise_map\thumnails'
+    saved_path = r'K:\Research\Noise_map\thumnails176k'
     # pano_dir = r'G:\Research\Noise_map'
     if not os.path.exists(saved_path):
         os.mkdir(saved_path)
@@ -845,7 +847,7 @@ def get_around_thumnail_Columbia():
     # csv_file = r'G:\Research\Noise_map\panoramas2.csv'
     # df = pd.read_csv(csv_file)
     print("Start to read files...")
-    gdf = gpd.read_file(r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\panoramas4_max_noise_179k_pano_yaw.shp')
+    gdf = gpd.read_file(r'K:\OneDrive_USC\OneDrive - University of South Carolina\Research\noise_map\vectors\panoramas4_max_noise_179k_pano_yaw.shp')
     # csv_file = r'G:\Research\Noise_map\panoramas3.csv'
     # df = pd.read_csv(csv_file)
     # df = pd.read_csv(csv_file).sample(frac=1).reset_index()
@@ -876,7 +878,7 @@ def get_around_thumnail_Columbia():
                                              bearing_list=bearing_list,
                                              saved_path=saved_path,
                                                    prefix=panoId,
-                                                   suffix='',
+                                                   suffix=['F', 'R', 'B', 'L'],
                                              width=768, height=768,
                                              pitch=0, fov=90,
                                              overwrite=False)
@@ -890,28 +892,45 @@ def get_around_thumnail_Columbia():
 def movefiles():
     from_path = r'H:\Research\Noise_map\panoramas4_jpg_half'
     to_path = r'\\DESKTOP-0QRHJF4\Noise_map2\panoramas4_jpg_half'
+    to_path = r'K:\Research\Noise_map\panoramas4_jpg_half'
 
-    img_dir = r'H:\Research\Noise_map\panoramas4_jpg\*.jpg'
+    img_dir = r'\\DESKTOP-H2OGE6L\panoramas4_jpg_half\*.jpg'
 
     jpgs = glob.glob(img_dir)
-    jpgs = jpgs[::-1]
-    print(f"Image count: {len(jpgs)}")
 
+    new_jpgs = glob.glob(os.path.join(to_path, "*.jpg"))
+
+    for j in new_jpgs:
+        try:
+            basename = os.path.basename(j)
+            new_name = os.path.join(img_dir[:-6], basename)
+            jpgs.remove(new_name)
+        except Exception as e:
+            print(e, j, new_name)
+    # jpgs = jpgs[::-1]
+    print(f"Image count: {len(jpgs)}")
+    skip_cnt = 0
+    copied_cnt = 0
     for idx, jpg in tqdm(enumerate(jpgs[:])):
 
+
         basename = os.path.basename(jpg)
-
-
         new_name = os.path.join(to_path, basename)
 
+        if idx % 1000 == 0:
+            print(f"Processed {idx} image. skip_cnt: {skip_cnt}, copied_cnt: {copied_cnt}")
+
         if os.path.exists(new_name):
+            skip_cnt = skip_cnt + 1
             continue
 
-        # shutil.copyfile(jpg, new_name)
-        cmd = f"copy {jpg} {new_name}"
-        os.system(cmd)
+        shutil.copyfile(jpg, new_name)
+        copied_cnt += 1
+        # cmd = f"copy {jpg} {new_name}"
+        # os.system(cmd)
         if idx % 1000 == 0:
-            print(f"Processed {idx} image.")
+            print(f"Processed {idx} image. skip_cnt: {skip_cnt}, copied_cnt: {copied_cnt}")
+
 
 
 if __name__ == '__main__':
@@ -922,7 +941,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas()
+    download_panoramas()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -934,4 +953,4 @@ if __name__ == '__main__':
     # get_DOMs()
     # get_around_thumnail_Columbia()
     # quick_DOM()
-    movefiles()
+    # movefiles()

@@ -697,15 +697,19 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
     pitch = int(pitch)
     width = int(width)
 
-    suffix = str(suffix)
+    # suffix = str(suffix)
     prefix = str(prefix)
     if prefix != "":
         # print('prefix:', prefix)
         prefix = prefix + '_'
-    if suffix != "":
+    if suffix != "" and (not isinstance(suffix, list)):
         suffix = '_' + suffix
 
-    for yaw in bearing_list:
+    elif not isinstance(suffix, list):
+        suffix = str(suffix)
+
+
+    for idx, yaw in enumerate(bearing_list):
         if yaw > 360:
             yaw = yaw - 360
         if yaw < 0:
@@ -727,8 +731,15 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
 
 
         try:
-            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
-                                                 str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
+
+            if isinstance(suffix, list):
+                if len(suffix) == len(bearing_list):
+                    suffix_element = f"_{suffix[idx]}"
+                    jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                         str('{:.2f}'.format(yaw)) + suffix_element + '.jpg'))
+            else:
+                jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                     str('{:.2f}'.format(yaw)) + suffix + '.jpg'))
 
             if not overwrite:
                 if os.path.exists(jpg_name):

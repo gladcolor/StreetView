@@ -673,6 +673,7 @@ class GPano():
 
         url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
                f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
+        print("URL in getImagefrmAngle():", url1)
 
         suffix = str(suffix)
         prefix = str(prefix)

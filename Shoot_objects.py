@@ -36,7 +36,7 @@ from pyproj import Transformer
 gpano = GPano.GPano()
 gsv = GPano.GSV_depthmap()
 
-def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
+def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.INFO):
     path = default_path
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:

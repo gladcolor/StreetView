@@ -68,7 +68,7 @@ f = open('Google_map_key.ini', 'r')
 MAP_KEY = f.readlines()[0]
 
 
-def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
+def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.INFO):
     path = default_path
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:

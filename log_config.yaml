@@ -14,7 +14,7 @@ handlers:
   file:
     class : logging.FileHandler
     formatter: simple
-    level: DEBUG
+    level: INFO
     filename: debug.log
     mode: w
   error:
@@ -27,15 +27,15 @@ handlers:
     encoding: utf8
 loggers:
   main.core:
-    level: DEBUG
+    level: INFO
     handlers: [console, file, error]
   LOG.file:
-    level: DEBUG
+    level: INFO
     handlers: [file]
   console_only:
-    level: DEBUG
+    level: INFO
     handlers: [file]
 
 root:
-  level: DEBUG
+  level: INFO
   handlers: [console]

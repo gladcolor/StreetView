@@ -931,6 +931,15 @@ def movefiles():
         if idx % 1000 == 0:
             print(f"Processed {idx} image. skip_cnt: {skip_cnt}, copied_cnt: {copied_cnt}")
 
+def test_get_depthmap():
+    saved_path = os.getcwd()
+
+    lon = -77.072465
+    lat = 38.985399
+
+    pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
+    # pano1.get_depthmap(zoom=0, saved_path=saved_path)
+    pano1.get_DOM(resolution=0.1)
 
 
 if __name__ == '__main__':
@@ -941,7 +950,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas()
+    # download_panoramas()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -954,3 +963,4 @@ if __name__ == '__main__':
     # get_around_thumnail_Columbia()
     # quick_DOM()
     # movefiles()
+    test_get_depthmap()

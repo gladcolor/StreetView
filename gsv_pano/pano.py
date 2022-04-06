@@ -262,7 +262,7 @@ class GSV_pano(object):
 
     def _enlarge_mask(self, arr_mask, width, height, erison_size=2):
         kernel = morphology.disk(erison_size)
-        mask = morphology.erosion(arr_mask, kernel)
+        mask = morphology.erosion(arr_mask, kernel).astype(np.int8)
         # mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
         # resized_mask = np.array(resized_mask)
         resized_mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
@@ -313,7 +313,7 @@ class GSV_pano(object):
                 # depthmap_dict['plane_idx_map'] = plane_idx_map
 
 
-                dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(int)
+                dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(np.int8)
 
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
@@ -338,7 +338,7 @@ class GSV_pano(object):
                 # dm_mask = np.array(dm_mask)
 
                 # depthmap_dict['normal_vector_map'] has been rescaled to [0, 255] from (-1,1).
-                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(int)  # < 10 is correct.
+                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(np.int8)  # < 10 is correct.
                 # ground_mask[:, 0] = np.where(ground_mask[:,  0] > 100, ground_mask[:, 0], 200)
                 # ground_mask[:, 2] = np.where(ground_mask[:,  2] < 10,1, 0)
                 #

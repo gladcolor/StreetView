@@ -934,11 +934,13 @@ def movefiles():
 def test_get_depthmap():
     saved_path = os.getcwd()
 
+    print(Image.__version__)
+
     lon = -77.072465
     lat = 38.985399
 
     pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
-    # pano1.get_depthmap(zoom=0, saved_path=saved_path)
+    pano1.get_depthmap(zoom=0, saved_path=saved_path)
     pano1.get_DOM(resolution=0.1)
 
 

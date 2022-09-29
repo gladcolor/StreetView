@@ -461,7 +461,7 @@ def merge_measurements():
 
     print("Done.")
 
-def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=0, depthmap=False, process_cnt=10):
+def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=-1, depthmap=False, process_cnt=10):
     '''
     Download street view images according to the given polygon
     :param polyon:
@@ -479,6 +479,8 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     x_scale = np.linspace(min_x, max_x, col_cnt)
     y_scale = np.linspace(min_y, max_y, row_cnt)
     xv, yv = np.meshgrid(x_scale, y_scale)
+
+    print(f"Generating seed points ({col_cnt} * {row_cnt})...")
 
     seed_points = gpd.GeoDataFrame(zip(xv.ravel(), yv.ravel()), columns={"lon":float, "lat":float}, geometry=gpd.points_from_xy(xv.ravel(), yv.ravel()))
 
@@ -547,7 +549,7 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
         # Divide pending_panoIds and seed_points when thinking. The purpose of seed_points is to initiate and infill the pending_panoIds
         while len(pending_panoIds) > 0:
             try:
-                panoId = pending_panoIds.pop()
+                panoId = pending_panoIds.pop()  # get the last one
                 json_name = os.path.join(saved_path, panoId + ".json")
                 if os.path.exists(json_name):  # This panorama have been downloaded. Skip it.
                     continue
@@ -569,9 +571,10 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                         if link_panoId in pending_panoIds:  # move this adjacent panoId to the next.
                             try:
                                 pending_panoIds.remove(link_panoId)
-                            except:
+                            except Exception as e:
                                 print(f"Failed when removing {link_panoId} in pending_panoIds.")
-                        pending_panoIds.append(link_panoId)
+                                print("e:", e)
+                        pending_panoIds.append(link_panoId)  # add it to the tail
 
                     if step % 100 == 0:
                         print(f"Process (PID) {os.getpid()} has walked {step} steps. Pending panoIds: {len(pending_panoIds)}")
@@ -659,12 +662,13 @@ def sort_jsons():
 def download_panoramas_by_area():
     #shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
     # shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
-    shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp'
+    # shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp'
+    shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Lexington.shp'
 
     AOI = gpd.read_file(shape_file)
     # AOI = AOI.set_crs("EPSG:2278")
     AOI = AOI.to_crs("EPSG:4326")
-    saved_path = r'F:\Research\Columbia_GSV\pano_jsons'
+    saved_path = r'F:\Research\Lexington_GSV\Lexington_pano_jsons'
     if not os.path.exists(saved_path):
         os.makedirs(saved_path)
 

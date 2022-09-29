@@ -203,6 +203,7 @@ def getLinks(jdata):
 
     except Exception as e:
         logging.exception("Error in getLinks().")
+        logging.exception(jdata_links)
         return link_list
 
 # def sort_pano_links(links_dict):

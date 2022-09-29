@@ -205,7 +205,37 @@ def download_panos_DC_from_jsons():
     pool.join()
 
 
+def download_panos_SC_from_jsons():
+    logger.info("Started...")
+    saved_path = r'H:\Research\Noise_map\panoramas4_jpg'
+    json_files_path = r'H:\Research\Noise_map\panoramas4'
 
+    # json_files = glob.glob(os.path.join(json_files_path, "*.json"))
+    zoom = 2
+
+    gdf = gpd.read_file(r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\panoramas4_max_noise_179k.shp')
+
+    json_files = gdf['panoId'].to_list()
+    # panoIds = [os.path.basename(f)[:-5] for f in json_files]
+
+    # downoad_panoramas_from_json_list(json_files, saved_path, zoom)
+
+    logger.info("Making mp_list...")
+    panoIds_mp = mp.Manager().list()
+
+    # skips = 0
+    for f in tqdm(json_files[:]):
+        panoIds_mp.append(os.path.join(json_files_path, f + '.json'))
+
+
+    process_cnt = 6
+
+    pool = mp.Pool(processes=process_cnt)
+
+    for i in range(process_cnt):
+        pool.apply_async(downoad_panoramas_from_json_list, args=(panoIds_mp, saved_path, zoom))
+    pool.close()
+    pool.join()
 
 def download_panos_DC():
         logger.info("Started...")

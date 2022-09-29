@@ -133,7 +133,7 @@ def get_panorama(mp_list, saved_path, zoom=4):
             print(e)
             continue
 
-def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=3):
+def downoad_panoramas_from_json_list(json_file_list, saved_path, zoom=4):
     total_cnt = len(json_file_list)
     pre_dir = r'E:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas'
     start_time_all = time.perf_counter()
@@ -204,36 +204,70 @@ def download_panos_DC_from_jsons():
     pool.close()
     pool.join()
 
+def downoad_panoramas_from_panoId_list(panoId_list, saved_path, depthmap=True, zoom=4):
+    total_cnt = len(panoId_list)
+    start_time_all = time.perf_counter()
+    os.makedirs(saved_path, exist_ok=True)
 
-def download_panos_SC_from_jsons():
+
+
+    logging.info(f"PID {os.getpid()} started to downoad_panoramas_from_panoId_list()...")
+
+    while len(panoId_list) > 0:
+        try:
+            start_time = time.perf_counter()
+            panoId = panoId_list.pop()
+            basename = panoId + f"_{zoom}.jpg"
+            new_name = os.path.join(basename, basename)
+            if os.path.exists(new_name):
+                continue
+            pano1 = GSV_pano(panoId=panoId, saved_path=saved_path)
+            pano1.get_panorama(zoom=zoom)
+            if depthmap:
+                pano1.get_depthmap(zoom=0, saved_path=saved_path)
+            total_time = (time.perf_counter() - start_time_all)
+            efficency = total_time / (total_cnt - len(panoId_list))
+            time_remain = efficency * len(panoId_list)
+            print(f"PID {os.getpid()}: {total_cnt - len(panoId_list) } / {total_cnt}; Time spent for this panorama (seconds): {time.perf_counter() - start_time:.1f}, time used: {utils.delta_time(total_time)} , time remain: {utils.delta_time(time_remain)}  \n")
+
+        except Exception as e:
+            logging.error("Error in downoad_panoramas_from_panoId_list(): %s, %s" % (e, panoId), exc_info=True)
+            continue
+
+def download_panos_SC_from_panoIds():
     logger.info("Started...")
-    saved_path = r'H:\Research\Noise_map\panoramas4_jpg'
-    json_files_path = r'H:\Research\Noise_map\panoramas4'
+    saved_path = r'D:\Columbia_GSV\panoramas'
+    # json_files_path = r'H:\Research\Noise_map\panoramas4'
 
     # json_files = glob.glob(os.path.join(json_files_path, "*.json"))
-    zoom = 2
+    zoom = 4
 
-    gdf = gpd.read_file(r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\panoramas4_max_noise_179k.shp')
+    # gdf = gpd.read_file(r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\panoramas4_max_noise_179k.shp')
+    df = pd.read_csv(r'd:\Columbia_GSV\Columbia_pano_jsons.csv')
 
-    json_files = gdf['panoId'].to_list()
+    panoIds = df['panoId'].to_list()
     # panoIds = [os.path.basename(f)[:-5] for f in json_files]
 
-    # downoad_panoramas_from_json_list(json_files, saved_path, zoom)
+
+
 
     logger.info("Making mp_list...")
     panoIds_mp = mp.Manager().list()
 
-    # skips = 0
-    for f in tqdm(json_files[:]):
-        panoIds_mp.append(os.path.join(json_files_path, f + '.json'))
+    # skips =
+    for p in tqdm(panoIds[:]):
+        panoIds_mp.append(p)
 
+    process_cnt = 14
 
-    process_cnt = 6
+    if process_cnt == 1:
+        downoad_panoramas_from_panoId_list(panoIds_mp, saved_path, True, zoom)
+        return
 
     pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):
-        pool.apply_async(downoad_panoramas_from_json_list, args=(panoIds_mp, saved_path, zoom))
+        pool.apply_async(downoad_panoramas_from_panoId_list, args=(panoIds_mp, saved_path, True, zoom))
     pool.close()
     pool.join()
 
@@ -989,7 +1023,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas_by_area()
+    # download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1003,3 +1037,4 @@ if __name__ == '__main__':
     # quick_DOM()
     # movefiles()
     # test_get_depthmap()
+    download_panos_SC_from_panoIds()

@@ -358,19 +358,25 @@ def parsePlanes(header, depthMap):
 
     # for i in range(header["width"] * header["height"]):  # original
     #     indices.append(depthMap[header["offset"] + i])
+    try:
+        # huan
+        indices = depthMap[header["offset"]:header["width"] * header["height"] + header["offset"]]
 
-    # huan
-    indices = depthMap[header["offset"]:header["width"] * header["height"] + header["offset"]]
+        # do not know how to optimize.
+        for i in range(header["numberOfPlanes"]):
+            byteOffset = header["offset"] + header["width"] * header["height"] + i * 4 * 4
+            n = [0, 0, 0]
+            n[0] = getFloat32(depthMap, byteOffset)
+            n[1] = getFloat32(depthMap, byteOffset + 4)
+            n[2] = getFloat32(depthMap, byteOffset + 8)
+            d = getFloat32(depthMap, byteOffset + 12)
+            planes.append({"n": n, "d": d})
 
-    # do not know how to optimize.
-    for i in range(header["numberOfPlanes"]):
-        byteOffset = header["offset"] + header["width"] * header["height"] + i * 4 * 4
-        n = [0, 0, 0]
-        n[0] = getFloat32(depthMap, byteOffset)
-        n[1] = getFloat32(depthMap, byteOffset + 4)
-        n[2] = getFloat32(depthMap, byteOffset + 8)
-        d = getFloat32(depthMap, byteOffset + 12)
-        planes.append({"n": n, "d": d})
+
+    except Exception as e:
+        logging.exception("Error in utils.parsePlanes(): %s" % e,  exc_info=True)
+        planes = []
+        indices = []
 
     return {"planes": planes, "indices": indices}
 

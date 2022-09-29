@@ -146,9 +146,19 @@ class GSV_pano(object):
 
         try:
 
+            if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
+                # print("panoid: ", self.panoId)
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                self.lon = self.jdata['Location']['lng']
+                self.lat = self.jdata['Location']['lat']
+            # else:
+            #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
+
             if request_lat and request_lon:
                 if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
                     self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
+
+
 
             if os.path.exists(self.json_file):
                 try:
@@ -167,13 +177,7 @@ class GSV_pano(object):
             #         panoId = basename
             #         self.panoId = panoId
 
-            if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
-                # print("panoid: ", self.panoId)
-                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
-                self.lon = self.jdata['Location']['lng']
-                self.lat = self.jdata['Location']['lat']
-            # else:
-            #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
+
 
 
 
@@ -315,21 +319,39 @@ class GSV_pano(object):
 
                 dm_mask = np.where(np.array(depthMap) > 0, 1, 0).astype(np.int8)
 
-                image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
-                image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+                max_zoom = len(self.jdata['Data']['level_sizes']) - 1
+                if zoom > max_zoom:
+                    logger.info("%s has no zoom %d depthmap. Used zoom %d instead." % (self.panoId, zoom, max_zoom))
+                    zoom = max_zoom
+                    # self.p
+                    zoom = min(zoom, max_zoom)
 
-                self.depthmap['width'] = image_width
-                self.depthmap['height'] = image_height
+                try:
+                    image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
+                    image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
+
+                except Exception as e:
+                    print("Error in get_depthmap() get image_width/height:", self.panoId, e)
+
+                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(np.int8)  # < 10 is correct.
+
 
                 # resize
-                depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
+                if zoom > 0:
+                    self.depthmap['width'] = image_width
+                    self.depthmap['height'] = image_height
+                    depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
+                    dm_mask = self._enlarge_mask(dm_mask, image_width, image_height, erison_size=2)
+                    ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
+                else:
+                    self.depthmap['width'] = 512
+                    self.depthmap['height'] = 256
+
                 depthMap = np.array(depthMap)
 
 
                 # dm_mask = np.where(np.array(dm_mask) > 0, 1, 0).astype(int)
                 # dm_mask = morphology.erosion(dm_mask, kernel)
-
-                dm_mask = self._enlarge_mask(dm_mask, image_width, image_height, erison_size=2)
 
                 depthMap = depthMap * dm_mask
 
@@ -338,11 +360,10 @@ class GSV_pano(object):
                 # dm_mask = np.array(dm_mask)
 
                 # depthmap_dict['normal_vector_map'] has been rescaled to [0, 255] from (-1,1).
-                ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(np.int8)  # < 10 is correct.
                 # ground_mask[:, 0] = np.where(ground_mask[:,  0] > 100, ground_mask[:, 0], 200)
                 # ground_mask[:, 2] = np.where(ground_mask[:,  2] < 10,1, 0)
                 #
-                ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
+
                 ground_mask = np.array(ground_mask)
                 ground_mask = ground_mask * dm_mask
 
@@ -380,8 +401,8 @@ class GSV_pano(object):
                 #         logging.exception("Error in get_dempthmap() linear regression: %s", e)
                 #
 
-                if zoom > 0:
-                    im =depthMap
+                # if zoom > 0:
+                #     im =depthMap
 
                 self.depthmap['depthMap'] = depthMap
                 self.depthmap['dm_mask'] = dm_mask
@@ -394,13 +415,13 @@ class GSV_pano(object):
                     if not os.path.exists(saved_path):
                         os.path.makedirs()
                     new_name = os.path.join(saved_path, self.jdata['Location']['panoId'] + ".tif")
-                    im = depthMap
+                    # im = depthMap
 
                     # im[np.where(im == max(im))[0]] = 0
 
                     # im = im.reshape((depthMap["height"], depthMap["width"]))  # .astype(int)
                     # display image
-                    img = PIL.Image.fromarray(im)
+                    img = PIL.Image.fromarray(depthMap)
                     img.save(new_name)
                 return self.depthmap
             except Exception as e:
@@ -1306,6 +1327,7 @@ class GSV_pano(object):
                 if zoom > max_zoom:
                     logger.info("%s has no zoom %d panorama. Used zoom %d instead." % (self.panoId, zoom, max_zoom))
                     zoom = max_zoom
+                    # self.p
                 # zoom = min(zoom, max_zoom)
                 image_width = self.jdata['Data']['level_sizes'][zoom][0][1]
                 image_height = self.jdata['Data']['level_sizes'][zoom][0][0]
@@ -1356,7 +1378,7 @@ class GSV_pano(object):
                 return self.panorama
 
         except Exception as e:
-            logger.exception("Error in get_panorama(): %s " % e)
+            logger.exception("Error in get_panorama(): %s, %s " % (e,  self.panoId))
             return None
 
 

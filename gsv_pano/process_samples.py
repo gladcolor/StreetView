@@ -524,7 +524,7 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
 
     verbose = True
 
-    seed_points = seed_points[79:]
+    seed_points = seed_points[:]
 
     while len(seed_points) > 1:
 
@@ -656,14 +656,17 @@ def sort_jsons():
     utils.sort_pano_jsons(r'D:\Research\sidewalk_wheelchair\DC_DOMs', saved_path=r'D:\Research\sidewalk_wheelchair')
 
 
-def download_panoramas():
+def download_panoramas_by_area():
     #shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
-    shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
+    # shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
+    shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp'
 
     AOI = gpd.read_file(shape_file)
     # AOI = AOI.set_crs("EPSG:2278")
     AOI = AOI.to_crs("EPSG:4326")
-    saved_path = r'K:\Research\Charleston_sidewalk\pano_json'
+    saved_path = r'F:\Research\Columbia_GSV\pano_jsons'
+    if not os.path.exists(saved_path):
+        os.makedirs(saved_path)
 
     csv_name = os.path.join(os.path.dirname(saved_path), os.path.basename(saved_path) + '.csv')
 
@@ -952,7 +955,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas()
+    download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -965,4 +968,4 @@ if __name__ == '__main__':
     # get_around_thumnail_Columbia()
     # quick_DOM()
     # movefiles()
-    test_get_depthmap()
+    # test_get_depthmap()

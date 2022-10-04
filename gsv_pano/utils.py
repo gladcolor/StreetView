@@ -482,12 +482,13 @@ def sort_pano_jsons(json_dir, saved_path=''):
     panoIds = sorted(panoIds, reverse=False)
     sorted_panoIds = []
     cnt = 0
+    print("Sorting panorama IDs...")
     while len(panoIds) > 0:
         try:
             panoId = panoIds.pop()
 
             cnt += 1
-            print(f"Processed {cnt} / {len(files)}")
+            # print(f"Processed {cnt} / {len(files)}")
             sorted_panoIds.append(panoId)
             json_file = os.path.join(json_dir, panoId + ".json")
             jdata = json.load(open(json_file, 'r'))
@@ -505,6 +506,7 @@ def sort_pano_jsons(json_dir, saved_path=''):
         except Exception as e:
             print("Error in sort_pano_jsons:", e)
             continue
+    print("Sorting panorama IDs finished.")
     if saved_path != "":
         os.makedirs(saved_path, exist_ok=True)
         with open(os.path.join(saved_path, 'sorted_panoIds.txt'), 'w') as f:
@@ -545,8 +547,14 @@ def delta_time(seconds):
     str_delta1 = str_delta1[:point_pos]
     return str_delta1
 
-def dir_jsons_to_list(json_dir, saved_name):
-    jsons_list = glob.glob(os.path.join(json_dir, "*.json"))
+def dir_jsons_to_list(json_dir, saved_name, sort=True):
+
+    if sort:
+        sorted_panoIds = sort_pano_jsons(json_dir, saved_path='')
+        jsons_list = [os.path.join(json_dir, p + '.json') for p in sorted_panoIds]
+    else:
+        jsons_list = glob.glob(os.path.join(json_dir, "*.json"))
+
     list_txt = open(saved_name, 'w', encoding="utf-8")
     list_txt.writelines('image_width,image_height,tile_width,tile_height,image_date,imagery_type,\
 projection_type,pano_yaw_deg,tilt_yaw_deg,tilt_pitch_deg,panoId,zoomLevels,lat,lng,original_lat,original_lng,elevation_wgs84_m,\

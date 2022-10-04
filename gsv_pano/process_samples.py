@@ -742,7 +742,7 @@ def download_panoramas_by_area():
     for i in range(len(AOI)):
         polygon =  AOI.iloc[i].geometry
         down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=10, col_cnt=500, row_cnt=500)
-    # pass
+
 
     dir_json_to_csv_list(saved_path, csv_name)
     isSave_shp = True
@@ -1023,7 +1023,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas_by_area()
+    download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1037,4 +1037,4 @@ if __name__ == '__main__':
     # quick_DOM()
     # movefiles()
     # test_get_depthmap()
-    download_panos_SC_from_panoIds()
+    # download_panos_SC_from_panoIds()

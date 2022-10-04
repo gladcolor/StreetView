@@ -1,3 +1,5 @@
+import time
+
 import requests
 import json
 import base64
@@ -480,16 +482,25 @@ def sort_pano_jsons(json_dir, saved_path=''):
     files = glob.glob(os.path.join(json_dir, "*.json"))[:]
     panoIds = [os.path.basename(f)[:-5] for f in files]
     panoIds = sorted(panoIds, reverse=False)
+    total_cnt = len(panoIds)
     sorted_panoIds = []
     cnt = 0
     print("Sorting panorama IDs...")
+    start_time = time.perf_counter()
     while len(panoIds) > 0:
         try:
             panoId = panoIds.pop()
 
             cnt += 1
             if cnt % 1000 == 0:
+                end_time = time.perf_counter()
+                total_time = end_time - start_time
+                efficency = total_time / (total_cnt - len(sorted_panoIds))
+                time_remain = efficency * len(panoIds)
                 print(f"Processed {cnt} / {len(files)}")
+                print(
+                    f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {delta_time(total_time)} , time remain: {delta_time(time_remain)}  \n")
+
             sorted_panoIds.append(panoId)
             json_file = os.path.join(json_dir, panoId + ".json")
             jdata = json.load(open(json_file, 'r'))

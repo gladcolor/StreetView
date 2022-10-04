@@ -495,7 +495,7 @@ def sort_pano_jsons(json_dir, saved_path=''):
             if cnt % 1000 == 0:
                 end_time = time.perf_counter()
                 total_time = end_time - start_time
-                efficency = total_time / (total_cnt - len(sorted_panoIds))
+                efficency = total_time / len(sorted_panoIds)
                 time_remain = efficency * len(panoIds)
                 print(f"Processed {cnt} / {len(files)}")
                 print(

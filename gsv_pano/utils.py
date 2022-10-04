@@ -488,7 +488,8 @@ def sort_pano_jsons(json_dir, saved_path=''):
             panoId = panoIds.pop()
 
             cnt += 1
-            # print(f"Processed {cnt} / {len(files)}")
+            if cnt % 1000 == 0:
+                print(f"Processed {cnt} / {len(files)}")
             sorted_panoIds.append(panoId)
             json_file = os.path.join(json_dir, panoId + ".json")
             jdata = json.load(open(json_file, 'r'))

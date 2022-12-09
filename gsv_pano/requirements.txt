@@ -12,7 +12,7 @@ beautifulsoup4 @ file:///home/conda/feedstock_root/build_artifacts/beautifulsoup
 bleach @ file:///home/conda/feedstock_root/build_artifacts/bleach_1656355450470/work
 branca @ file:///home/conda/feedstock_root/build_artifacts/branca_1650311966802/work
 brotlipy @ file:///D:/bld/brotlipy_1648854347500/work
-certifi==2022.9.24
+certifi==2022.12.7
 cffi @ file:///D:/bld/cffi_1656782940775/work
 charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1661170624537/work
 click @ file:///D:/bld/click_1651215332191/work

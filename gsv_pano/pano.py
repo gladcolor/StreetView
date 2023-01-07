@@ -14,7 +14,7 @@ import struct
 import base64
 import zlib
 import multiprocessing as mp
-from skimage import morphology
+# from skimage import morphology
 from pyproj import CRS
 from pyproj import Transformer
 
@@ -58,16 +58,16 @@ from pykrige.ok import OrdinaryKriging
 import matplotlib.pyplot as plt
 
 
-import selenium
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import sqlite3
-from bs4 import BeautifulSoup
-WINDOWS_SIZE = '100, 100'
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-Loading_time = 5
+# import selenium
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
+# import sqlite3
+# from bs4 import BeautifulSoup
+# WINDOWS_SIZE = '100, 100'
+# chrome_options = Options()
+# chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+# Loading_time = 5
 
 import utils
 
@@ -146,21 +146,23 @@ class GSV_pano(object):
 
         try:
 
+            # get the PanoID first, then initial the entire gsv_pano object by panoId.
+            if request_lat and request_lon:
+                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
+                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
+                    # return
+
             if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
                 self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
                 self.lon = self.jdata['Location']['lng']
                 self.lat = self.jdata['Location']['lat']
+                # return
+
             # else:
             #     logging.info("Found no paoraom in GSV_pano _init__(): %s" % panoId)
 
-            if request_lat and request_lon:
-                if (-180 <= request_lon <= 180) and (-90 <= request_lat <= 90):
-                    self.panoId, self.lon, self.lat = self.getPanoIDfrmLonlat(request_lon, request_lat)
-
-
-
-            if os.path.exists(self.json_file):
+            if (self.json_file != "") and (os.path.exists(self.json_file)):
                 try:
                     with open(self.json_file, 'r') as f:
                         jdata = json.load(f)
@@ -169,20 +171,17 @@ class GSV_pano(object):
                         self.lon = self.jdata['Location']['lng']
                         self.lat = self.jdata['Location']['lat']
 
+                        # return
+
                 except Exception as e:
-                    logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
-            # else:
+                    logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file,
+                                 e)
+
+                       # else:
             #     basename = os.path.basename(json_file)[:22]
             #     if panoId == 0:
             #         panoId = basename
             #         self.panoId = panoId
-
-
-
-
-
-
-
             # if self.crs_local and (self.lat is not None) and (self.lon is not None ):
             #     transformer = utils.epsg_transform(in_epsg=4326, out_epsg=self.crs_local)
             #     self.x, self.y = transformer.transform(self.lat, self.lon)

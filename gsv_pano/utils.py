@@ -704,7 +704,7 @@ link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_othe
 
     list_txt.close()
 
-def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
+def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
                                      panoId='',
                                      bearing_list=[0.0, 90.0, 180.0, 270.0],
                                      saved_path='', prefix='', suffix='',
@@ -750,7 +750,7 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                 url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
                        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
             else:
-                print("Error in get_around_thumnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
+                print("Error in get_around_thumbnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
                 # return 0, 0, 0
         # print("URL in getImagefrmAngle():", url1)
 
@@ -787,6 +787,6 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                 # return image, jpg_name, url1
 
         except Exception as e:
-            print("Error in get_around_thumnail_from_bearing() getting url1", e)
+            print("Error in get_around_thumbnail_from_bearing() getting url1", e)
             print(url1)
             # return 0, 0, url1

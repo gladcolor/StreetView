@@ -33,7 +33,7 @@ from shapely.geometry import Point, Polygon
 
 
 
-shapely.speedups.disable()
+# shapely.speedups.disable()
 
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
@@ -54,18 +54,26 @@ logger = logging.getLogger('LOG.file')
 logging.shutdown()
 
 def download_pano(latlon_list, saved_path):
+    total_cnt = len(latlon_list)
+    # downloaded_cnt = 0
     while len(latlon_list) > 0:
         lat, lon = latlon_list.pop(0)
+        remaining_cnt = len(latlon_list)
         try:
             pano = GSV_pano(request_lat=lat, request_lon=lon, saved_path=saved_path)
+            downloaded_cnt = total_cnt - remaining_cnt
+
+            if downloaded_cnt % 1000 == 0:
+                print(f"Finished {downloaded_cnt} / {total_cnt}")
+
         except Exception as e:
             print("Error in download_pano():", e)
 
 def panorama_from_point_shapefile():
     # shp_file = r''
     print("Reading shaple file...")
-    shape_file = r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\SC_road_10m_pt.shp'
-    pt_gdf = gpd.read_file(shape_file).to_crs("EPSG:4326")
+    shape_file = r'E:\OneDrive_USC\OneDrive - University of South Carolina\Research\street_image_mapping\data\Maryland\road_clipped_split2.shp'
+    pt_gdf = gpd.read_file(shape_file).to_crs("EPSG:4326")#.iloc[1000:1030]
     pt_gdf['POINT_Y'] = pt_gdf['geometry'].centroid.y
     pt_gdf['POINT_X'] = pt_gdf['geometry'].centroid.x
 
@@ -81,7 +89,7 @@ def panorama_from_point_shapefile():
     # pt_gdf = pt_gdf.to_crs("EPSG:4326")
     # pt_gdf['x'] = pt_gdf['geometry'].centroid.x
     # pt_gdf['y'] = pt_gdf['geometry'].centroid.y
-    saved_path = r'H:\Research\Noise_map\panoramas4'
+    saved_path = r'E:\Research\street_image_mapping\Maryland_panoramas\jsons'
 
 
     if not os.path.exists(saved_path):
@@ -90,12 +98,15 @@ def panorama_from_point_shapefile():
     csv_name = os.path.join(os.path.dirname(saved_path), os.path.basename(saved_path) + '.csv')
 
     print("Starting multiprocess...")
-    process_cnt = 10
-    pool = mp.Pool(processes=process_cnt)
-    for i in range(process_cnt):
-        pool.apply_async(download_pano, args=(lat_lon_mp, saved_path))
-    pool.close()
-    pool.join()
+    process_cnt = 6
+    if process_cnt == 1:
+        download_pano(latlon_list=lat_lon_mp, saved_path=saved_path)
+    else:
+        pool = mp.Pool(processes=process_cnt)
+        for i in range(process_cnt):
+            pool.apply_async(download_pano, args=(lat_lon_mp, saved_path))
+        pool.close()
+        pool.join()
 
 
     # for idx, row in tqdm(pt_gdf.iterrows()):
@@ -909,7 +920,7 @@ def get_pano_jpgs(lon_lat_list=[], saved_path=os.getcwd()):
 
 
 
-def get_around_thumnail_Columbia():
+def get_around_thumbnail_Columbia():
     saved_path = r'K:\Research\Noise_map\thumnails176k'
     # pano_dir = r'G:\Research\Noise_map'
     if not os.path.exists(saved_path):
@@ -934,8 +945,9 @@ def get_around_thumnail_Columbia():
         panoId = row['panoId']
         pano_yaw_deg = row["pano_yaw_d"]
         pano_yaw_deg = float(pano_yaw_deg)
-
-        bearing_list = [0.0, 90.0, 180.0, 270.0]
+        #
+        # bearing_list = [0.0, 90.0, 180.0, 270.0]
+        # bearing_list = [0.0, 90.0, 180.0, 270.0]
         bearing_list = [pano_yaw_deg + b for b in bearing_list]
 
         print(f"idx: {idx} / {len(df)}, start_idx: {start_idx}, end_idx: {end_idx}, panoId: {panoId}. ")
@@ -944,7 +956,7 @@ def get_around_thumnail_Columbia():
 
         try:
 
-            utils.get_around_thumnail_from_bearing(
+            utils.get_around_thumbnail_from_bearing(
                                              panoId=panoId,
                                              bearing_list=bearing_list,
                                              saved_path=saved_path,
@@ -952,14 +964,144 @@ def get_around_thumnail_Columbia():
                                                    suffix=['F', 'R', 'B', 'L'],
                                              width=768, height=768,
                                              pitch=0, fov=90,
-                                             overwrite=False)
+                                             overwrite=True)
 
             # print(f"Processing: {idx},  \n")
 
         except Exception as e:
-            print("Error in get_around_thumnail_Columbia, panoId, log:", idx, e)
+            print("Error in get_around_thumbnail_Columbia, panoId, log:", idx, e)
             continue
 
+def _get_around_thumbnail_sp(panoIds_yaw_list,
+                             shoot_angle_list,
+                             saved_path,
+                             suffix,
+                             width=1024, height=768,
+                             pitch=0, fov=90,
+                             overwrite=False): # _sp: single process
+    '''
+    Get the thumbnail
+    :param panoIds_yaw_list:
+    :param bearing_list:
+    :param saved_path:
+    :param prefix:
+    :param suffix:
+    :param width:
+    :param height:
+    :param pitch:
+    :param fov:
+    :param overwrite:
+    :return:
+    '''
+    total_cnt = len(panoIds_yaw_list)
+    processed_cnt = 0
+    while len(panoIds_yaw_list) > 0:
+        panoId, pano_yaw_deg = panoIds_yaw_list.pop(0)
+        processed_cnt = total_cnt - len(panoIds_yaw_list)
+        pano_yaw_deg = float(pano_yaw_deg)
+        bearing_list = [pano_yaw_deg + b for b in shoot_angle_list]
+        print(f"Process (PID: {os.getpid(): 6}) downloaded: {processed_cnt} / {total_cnt}, panoId: {panoId}")
+        try:
+            utils.get_around_thumbnail_from_bearing(
+                                             panoId=panoId,
+                                             bearing_list=bearing_list,
+                                             saved_path=saved_path,
+                                             prefix=panoId,
+                                             suffix=suffix,
+                                             width=width, height=height,
+                                             pitch=pitch, fov=fov,
+                                             overwrite=overwrite)
+
+        except Exception as e:
+            print("Error in _get_around_thumbnail_sp, panoId, log:", panoId, e)
+            continue
+    return
+
+def get_around_thumbnail_mp():
+    saved_path = r'E:\Research\street_image_mapping\Maryland_panoramas\thumbnails'
+    # pano_dir = r'G:\Research\Noise_map'
+    if not os.path.exists(saved_path):
+        os.mkdir(saved_path)
+
+    # csv_file = r'G:\Research\Noise_map\panoramas2.csv'
+    # df = pd.read_csv(csv_file)
+    print("Start to read files...")
+    gdf = gpd.read_file(r'E:\Research\street_image_mapping\Maryland_panoramas\jsons.shp')#.iloc[1000:1010]
+    # csv_file = r'G:\Research\Noise_map\panoramas3.csv'
+    # df = pd.read_csv(csv_file)
+    # df = pd.read_csv(csv_file).sample(frac=1).reset_index()
+    # gdf = gdf.sample(frac=1).reset_index()
+    df = gdf
+    start_idx = 0  #+ 60000 #+ 70000  + 70000
+    end_idx = len(df)  # 60000 #+ 60000 +   70000 #+  #70000
+
+    panoIds_yaw_list = zip(gdf['panoId'].to_list(), gdf['pano_yaw_d'].to_list())
+    panoIds_yaw_list = list(panoIds_yaw_list)
+    shoot_angle_list = [10, 20, 30, 195, 205, 215]
+    suffix=['F10', 'F20', 'F30', 'B10', 'B20', "B30"]
+    width = 1024
+    height = 768
+    pitch = 0
+    fov = 20
+    overwrite = False
+
+    print("Start to read download...")
+
+    process_cnt = 10
+    if process_cnt == 1:
+        _get_around_thumbnail_sp(panoIds_yaw_list=panoIds_yaw_list,
+                                 shoot_angle_list=shoot_angle_list,
+                                 saved_path=saved_path,
+                                 suffix=suffix,
+                                 width=width,
+                                 height=height,
+                                 pitch=pitch,
+                                 fov=fov,
+                                 overwrite=overwrite,
+
+                                 )
+    if process_cnt > 1:
+        pool = mp.Pool(processes=process_cnt)
+        panoIds_yaw_list_mp = mp.Manager().list()
+
+        for p in tqdm(panoIds_yaw_list):
+            panoIds_yaw_list_mp.append(p)
+        for i in range(process_cnt):
+            pool.apply_async(_get_around_thumbnail_sp, args=(panoIds_yaw_list_mp, shoot_angle_list,
+                                                         saved_path, suffix, width, height,
+                                                         pitch, fov, overwrite))
+        pool.close()
+        pool.join()
+
+    # for idx, row in gdf[:].iterrows():
+    # # for idx, row in df[:].iterrows():
+    #
+    #     panoId = row['panoId']
+    #     pano_yaw_deg = row["pano_yaw_d"]
+    #     pano_yaw_deg = float(pano_yaw_deg)
+    #
+    #
+    #     print(f"idx: {idx} / {len(df)}, start_idx: {start_idx}, end_idx: {end_idx}, panoId: {panoId}. ")
+    #
+    #     # setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
+    #
+    #     try:
+    #
+    #         utils.get_around_thumbnail_from_bearing(
+    #                                          panoId=panoId,
+    #                                          bearing_list=bearing_list,
+    #                                          saved_path=saved_path,
+    #                                                prefix=panoId,
+    #                                                suffix=['F10', 'F20', 'F30', 'B10', 'B20', "B30"],
+    #                                          width=1024, height=768,
+    #                                          pitch=0, fov=20,
+    #                                          overwrite=False)
+
+            # print(f"Processing: {idx},  \n")
+
+        # except Exception as e:
+        #     print("Error in get_around_thumbnail_Columbia, panoId, log:", idx, e)
+        #     continue
 def movefiles():
     from_path = r'H:\Research\Noise_map\panoramas4_jpg_half'
     to_path = r'\\DESKTOP-0QRHJF4\Noise_map2\panoramas4_jpg_half'
@@ -1023,7 +1165,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas_by_area()
+    # download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1037,4 +1179,6 @@ if __name__ == '__main__':
     # quick_DOM()
     # movefiles()
     # test_get_depthmap()
+    # get_around_thumbnail()
+    get_around_thumbnail_mp()
     # download_panos_SC_from_panoIds()

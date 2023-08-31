@@ -58,16 +58,16 @@ from pykrige.ok import OrdinaryKriging
 import matplotlib.pyplot as plt
 
 
-import selenium
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+# import selenium
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
 import sqlite3
 from bs4 import BeautifulSoup
-WINDOWS_SIZE = '100, 100'
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
-Loading_time = 5
+# WINDOWS_SIZE = '100, 100'
+# chrome_options = Options()
+# chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
+# Loading_time = 5
 
 import utils
 

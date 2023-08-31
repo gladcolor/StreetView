@@ -30,10 +30,10 @@ from numpy import linalg as LA
 from tqdm import tqdm
 import shapely
 from shapely.geometry import Point, Polygon
+from pyproj import Proj, transform
 
 
-
-shapely.speedups.disable()
+# shapely.speedups.disable()
 
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
@@ -1003,17 +1003,33 @@ def movefiles():
             print(f"Processed {idx} image. skip_cnt: {skip_cnt}, copied_cnt: {copied_cnt}")
 
 def test_get_depthmap():
-    saved_path = os.getcwd()
+    # saved_path = os.getcwd()
 
     print(Image.__version__)
 
-    lon = -77.072465
-    lat = 38.985399
+    # lon = -77.072465
+    # lat = 38.985399
+    # panoId = 'Mo_FV_euTUQ9Rg0m4Tu8IA'
+    panoId = 'yHssevrfy8ilNeoG8-ySTA'
+    saved_path = r'D:\OneDrive_PSU\OneDrive - The Pennsylvania State University\Research_doc\street_image_mapping'
+    # pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=3649, saved_path=saved_path)
+    pano1 = GSV_pano(panoId=panoId, crs_local=3649, saved_path=saved_path)
+    # EPSG:3649, NAD83(NSRS2007) / Pennsylvania North
+    # pano1.get_depthmap(zoom=0, saved_path=saved_path)
+    # pano1.get_DOM(resolution=0.1)
 
-    pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
-    pano1.get_depthmap(zoom=0, saved_path=saved_path)
-    pano1.get_DOM(resolution=0.1)
+def coordinate_transform():
+    # inProj = Proj('epsg:3857')  # NAD83 / Massachusetts Mainland (ftUS)
+    inProj = Proj('epsg:4326')  # NAD83 / Massachusetts Mainland (ftUS)
+    outProj = Proj('epsg:3649')
 
+    # lon, lat = transform(inProj, outProj, x, y)
+    # lon, lat =  -77.88773664419774, 40.81626264127956 # yHssevrfy8ilNeoG8-ySTA
+    lat, lon=  40.81622016725702, -77.88762336692993 # Mo_FV_euTUQ9Rg0m4Tu8IA
+
+    geometry = transform(inProj, outProj, lat, lon)  # return lat, lon , or (x, y)
+
+    print( geometry)
 
 if __name__ == '__main__':
     # pending_Ids = collect_links_from_panoramas_mp(r'H:\Research\sidewalk_wheelchair\DC_DOMs')
@@ -1023,7 +1039,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas_by_area()
+    # download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1038,3 +1054,4 @@ if __name__ == '__main__':
     # movefiles()
     # test_get_depthmap()
     # download_panos_SC_from_panoIds()
+    coordinate_transform()

@@ -31,9 +31,9 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from skimage import io
 import yaml
-import selenium
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+# import selenium
+# from selenium import webdriver
+# from selenium.webdriver.chrome.options import Options
 
 import PIL
 from PIL import Image, features

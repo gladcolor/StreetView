@@ -8,3 +8,9 @@ conda activate geo
 cd D:\Huan\Code\StreetView\gsv_pano
 d:
 python process_samples.py
+
+
+conda activate geo
+cd /user/hmn5304/Huan_research/StreetView/gsv_pano
+python process_samples.py
+

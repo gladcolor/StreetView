@@ -790,3 +790,49 @@ def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
             print("Error in get_around_thumbnail_from_bearing() getting url1", e)
             print(url1)
             # return 0, 0, url1
+
+
+def bearing_angle(x1, y1, x2, y2):
+    # Compute differences
+    delta_x = x2 - x1
+    delta_y = y2 - y1
+
+    # Calculate initial bearing
+    theta = math.atan2(delta_x, delta_y)
+
+    # Convert to degrees
+    bearing = math.degrees(theta)
+
+    # Normalize to [0, 360)
+    bearing = (bearing + 360) % 360
+
+    return bearing
+
+
+def row_col_to_angle(row, col, width, height, horizontal_fov_rad):
+    '''
+    Convert pixel row/col to angle (azimuth and altitude)
+    :param row:
+    :param col:
+    :param width:
+    :param height:
+    :param horizontal_fov_rad:
+    :return:
+    '''
+    # Normalize pixel coordinates
+    x = col - width / 2
+    y = height / 2 - row
+
+    azimuth_max = horizontal_fov_rad / 2
+    R = (width / 2) / math.tan(azimuth_max)  # in pixel
+
+    azimuth_rad = math.atan(x / R)  # = math.atan(x / R)
+
+    hypotenuse = R / math.cos(azimuth_rad)
+
+    altitude_rad = math.atan(y / hypotenuse)
+
+    # print("x, y, R:", x, y, R)
+    # print("azimuth_rad, math.cos(azimuth_rad):", azimuth_rad, math.cos(azimuth_rad))
+
+    return azimuth_rad, altitude_rad

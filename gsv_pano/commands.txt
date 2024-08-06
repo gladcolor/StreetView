@@ -1,6 +1,12 @@
+conda activate street_mapping_env
+cd E:\Research\StreetView\gsv_pano
+E:
+python process_samples.py
+
+
 conda activate Google_street_view
-cd F:\USC_OneDrive\OneDrive - University of South Carolina\StreetView\gsv_pano
-f:
+cd d:\USC_OneDrive\OneDrive - University of South Carolina\StreetView\gsv_pano
+d:
 python process_samples.py
 
 
@@ -10,10 +16,7 @@ d:
 python process_samples.py
 
 
-conda activate street_mapping_env
-cd E:\Research\StreetView\gsv_pano
-E:
-python process_samples.py
+
 
 
 

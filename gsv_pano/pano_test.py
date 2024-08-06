@@ -6,7 +6,7 @@ import time
 import glob
 
 
-import pptk
+# import pptk
 import cv2
 from pano import GSV_pano
 from PIL import Image
@@ -521,3 +521,11 @@ class TestPano(unittest.TestCase):
      #      pil_pano_img.show()
      #
      #      self.assertEqual(np.array(pil_pano_img).shape[:2], tuple(pano1.jdata['Data']['level_sizes'][zoom][0]))
+
+     # # 2023-06-10, Passed， by Huan
+    def test_extend_pano_json_counts(self):
+        panoId9 = "pea-mNjOAL7tVKwvQyn8rQ"
+        saved_path = r'D:\temp\test'
+        pano1 = GSV_pano(panoId=panoId9, saved_path=saved_path, json_override=False)
+        pano1.download_time_machine_jsons(saved_path=saved_path, links=True, oldest_year=2013, json_override=False)
+        pano1.download_pano_json_links(saved_path=saved_path, json_override=False)

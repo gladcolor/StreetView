@@ -30,7 +30,6 @@ from numpy import linalg as LA
 from tqdm import tqdm
 import shapely
 from shapely.geometry import Point, Polygon
-from pyproj import Proj, transform
 
 
 
@@ -73,8 +72,8 @@ def download_pano(latlon_list, saved_path):
 def panorama_from_point_shapefile():
     # shp_file = r''
     print("Reading shaple file...")
-    shape_file = r'H:\USC_OneDrive\OneDrive - University of South Carolina\Research\noise_map\vectors\SC_road_10m_pt.shp'
-    pt_gdf = gpd.read_file(shape_file).to_crs("EPSG:4326")
+    shape_file = r'E:\OneDrive_USC\OneDrive - University of South Carolina\Research\street_image_mapping\data\Maryland\road_clipped_split2.shp'
+    pt_gdf = gpd.read_file(shape_file).to_crs("EPSG:4326")#.iloc[1000:1030]
     pt_gdf['POINT_Y'] = pt_gdf['geometry'].centroid.y
     pt_gdf['POINT_X'] = pt_gdf['geometry'].centroid.x
 
@@ -90,7 +89,7 @@ def panorama_from_point_shapefile():
     # pt_gdf = pt_gdf.to_crs("EPSG:4326")
     # pt_gdf['x'] = pt_gdf['geometry'].centroid.x
     # pt_gdf['y'] = pt_gdf['geometry'].centroid.y
-    saved_path = r'H:\Research\Noise_map\panoramas4'
+    saved_path = r'E:\Research\street_image_mapping\Maryland_panoramas\jsons'
 
 
     if not os.path.exists(saved_path):
@@ -537,7 +536,7 @@ def merge_measurements():
 
     print("Done.")
 
-def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=-1, depthmap=False, process_cnt=10, file_types=['json', 'panorama']):
+def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=True, pano=False, pano_zoom=-1, depthmap=False, process_cnt=10):
     '''
     Download street view images according to the given polygon
     :param polyon:
@@ -566,7 +565,6 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     for idx, row in in_points.iterrows():
         seed_points_mp.append((row['lon'], row['lat']))
 
-    random.shuffle(seed_points_mp)
 
     print(f"Generated {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
 
@@ -588,7 +586,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     print(f'Processes used: {process_cnt}.')
 
     for i in range(process_cnt):
-        pool.apply_async(download_panoramas_from_seed_points, args=(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, json, pano))
+        pool.apply_async(download_panoramas_from_seed_points, args=(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, True))
     pool.close()
     pool.join()
 
@@ -598,7 +596,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     return in_points
 
-def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=4, depthmap=False):
+def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=0, depthmap=False):
     total_cnt = len(seed_points)
 
     verbose = True
@@ -640,36 +638,6 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                     if not os.path.exists(json_name):
                         with open(json_name, 'w') as f:
                             json.dump(pano2.jdata, f)
-
-                            # Download thumbnail, needs to be cleaned------------
-                            panoId = panoId
-                            pano_yaw_deg = pano2.jdata['Projection']['pano_yaw_deg']
-                            pano_yaw_deg = float(pano_yaw_deg)
-
-                            bearing_list = [45, 90.0, 135, 45 + 180, 90 + 180, 135 + 180]
-                            bearing_list = [pano_yaw_deg + b for b in bearing_list]
-
-                            try:
-                                #
-                                # utils.get_around_thumnail_from_bearing(
-                                #     panoId=panoId,
-                                #     bearing_list=bearing_list,
-                                #     saved_path=saved_path,
-                                #     prefix=panoId,
-                                #     suffix=['R45', 'R90', 'R135', "L45", "L90", "L135"],  # Wrong.
-                                #     # suffix=['R45', 'R90', 'R135', "L135", "L90", "L45"],  # Correct.
-                                #     width=1024, height=768,
-                                #     pitch=0, fov=90,
-                                #     overwrite=False)
-                                if pano_jpg:
-                                    pano2.saved_path = saved_path   # download the pano
-                                    pano2.get_panorama(zoom=pano_zoom)
-
-
-
-                            except:
-                                continue
-                            # -----------
                     step += 1
 
                     links = pano2.jdata["Links"]
@@ -770,14 +738,12 @@ def download_panoramas_by_area():
     #shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
     # shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
     # shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp'
-    # shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Lexington.shp'
-    # shape_file = r"D:\OneDrive_PSU\OneDrive - The Pennsylvania State University\Research_doc\street_image_mapping\vectors\south_harden.shp"
-    shape_file = r"/user/hmn5304/Huan_research/street_image_mapping/Richland.shp"
+    shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Lexington.shp'
 
     AOI = gpd.read_file(shape_file)
     # AOI = AOI.set_crs("EPSG:2278")
     AOI = AOI.to_crs("EPSG:4326")
-    saved_path = r'/gibd/external/Richland_panoramas'
+    saved_path = r'F:\Research\Lexington_GSV\Lexington_pano_jsons'
     if not os.path.exists(saved_path):
         os.makedirs(saved_path)
 
@@ -786,7 +752,7 @@ def download_panoramas_by_area():
 
     for i in range(len(AOI)):
         polygon =  AOI.iloc[i].geometry
-        down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, pano=True, process_cnt=30, col_cnt=50, row_cnt=50, file_types=['json', 'panorama'])
+        down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=10, col_cnt=500, row_cnt=500)
 
 
     dir_json_to_csv_list(saved_path, csv_name)
@@ -954,7 +920,7 @@ def get_pano_jpgs(lon_lat_list=[], saved_path=os.getcwd()):
 
 
 
-def get_around_thumnail_Columbia():
+def get_around_thumbnail_Columbia():
     saved_path = r'K:\Research\Noise_map\thumnails176k'
     # pano_dir = r'G:\Research\Noise_map'
     if not os.path.exists(saved_path):
@@ -979,8 +945,9 @@ def get_around_thumnail_Columbia():
         panoId = row['panoId']
         pano_yaw_deg = row["pano_yaw_d"]
         pano_yaw_deg = float(pano_yaw_deg)
-
-        bearing_list = [0.0, 90.0, 180.0, 270.0]
+        #
+        # bearing_list = [0.0, 90.0, 180.0, 270.0]
+        # bearing_list = [0.0, 90.0, 180.0, 270.0]
         bearing_list = [pano_yaw_deg + b for b in bearing_list]
 
         print(f"idx: {idx} / {len(df)}, start_idx: {start_idx}, end_idx: {end_idx}, panoId: {panoId}. ")
@@ -989,7 +956,7 @@ def get_around_thumnail_Columbia():
 
         try:
 
-            utils.get_around_thumnail_from_bearing(
+            utils.get_around_thumbnail_from_bearing(
                                              panoId=panoId,
                                              bearing_list=bearing_list,
                                              saved_path=saved_path,
@@ -1002,7 +969,7 @@ def get_around_thumnail_Columbia():
             # print(f"Processing: {idx},  \n")
 
         except Exception as e:
-            print("Error in get_around_thumnail_Columbia, panoId, log:", idx, e)
+            print("Error in get_around_thumbnail_Columbia, panoId, log:", idx, e)
             continue
 
 def _get_around_thumbnail_sp(panoIds_yaw_list,
@@ -1178,33 +1145,17 @@ def movefiles():
             print(f"Processed {idx} image. skip_cnt: {skip_cnt}, copied_cnt: {copied_cnt}")
 
 def test_get_depthmap():
-    # saved_path = os.getcwd()
+    saved_path = os.getcwd()
 
     print(Image.__version__)
 
-    # lon = -77.072465
-    # lat = 38.985399
-    # panoId = 'Mo_FV_euTUQ9Rg0m4Tu8IA'
-    panoId = 'yHssevrfy8ilNeoG8-ySTA'
-    saved_path = r'D:\OneDrive_PSU\OneDrive - The Pennsylvania State University\Research_doc\street_image_mapping'
-    # pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=3649, saved_path=saved_path)
-    pano1 = GSV_pano(panoId=panoId, crs_local=3649, saved_path=saved_path)
-    # EPSG:3649, NAD83(NSRS2007) / Pennsylvania North
-    # pano1.get_depthmap(zoom=0, saved_path=saved_path)
-    # pano1.get_DOM(resolution=0.1)
+    lon = -77.072465
+    lat = 38.985399
 
-def coordinate_transform():
-    # inProj = Proj('epsg:3857')  # NAD83 / Massachusetts Mainland (ftUS)
-    inProj = Proj('epsg:4326')  # NAD83 / Massachusetts Mainland (ftUS)
-    outProj = Proj('epsg:3649')
+    pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
+    pano1.get_depthmap(zoom=0, saved_path=saved_path)
+    pano1.get_DOM(resolution=0.1)
 
-    # lon, lat = transform(inProj, outProj, x, y)
-    # lon, lat =  -77.88773664419774, 40.81626264127956 # yHssevrfy8ilNeoG8-ySTA
-    lat, lon=  40.81622016725702, -77.88762336692993 # Mo_FV_euTUQ9Rg0m4Tu8IA
-
-    geometry = transform(inProj, outProj, lat, lon)  # return lat, lon , or (x, y)
-
-    print( geometry)
 
 if __name__ == '__main__':
     # pending_Ids = collect_links_from_panoramas_mp(r'H:\Research\sidewalk_wheelchair\DC_DOMs')
@@ -1214,7 +1165,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas_by_area()
+    download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1229,6 +1180,5 @@ if __name__ == '__main__':
     # movefiles()
     # test_get_depthmap()
     # get_around_thumbnail()
-    get_around_thumbnail_mp()
+    # get_around_thumbnail_mp()
     # download_panos_SC_from_panoIds()
-    # coordinate_transform()

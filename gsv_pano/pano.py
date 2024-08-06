@@ -105,7 +105,7 @@ logging.shutdown()
 
 class GSV_pano(object):
     def __init__(self, panoId=0, json_file='', request_lon=None, request_lat=None,
-                 request_address='', crs_local=None, saved_path=''):
+                 request_address='', crs_local=None, saved_path='', json_override=False):
         self.panoId = panoId  # test case: BM1Qt23drK3-yMWxYfOfVg
         self.request_lon = request_lon  # test case: -74.18154077638651
         self.request_lat = request_lat  # test case: 40.73031168738437
@@ -148,7 +148,8 @@ class GSV_pano(object):
 
             if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
-                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                # if :
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path, json_override=json_override)
                 self.lon = self.jdata['Location']['lng']
                 self.lat = self.jdata['Location']['lat']
             # else:
@@ -228,10 +229,18 @@ class GSV_pano(object):
         return jdata
 
 
-    def getJsonfrmPanoID(self, panoId, dm=1, saved_path=''):
+    def getJsonfrmPanoID(self, panoId, dm=1, saved_path='', json_override=True):
+
+        json_file = os.path.join(saved_path, panoId + '.json')
+        if not json_override:
+            if os.path.exists(json_file):
+                with open(json_file, 'r') as f:
+                    jdata = json.load(f)
+                return jdata
+
+        # if override the existing json file
         url = "https://www.google.com/maps/photometa/v1?authuser=0&hl=en&pb=!1m4!1smaps_sv.tactile!11m2!2m1!1b1!2m2!1szh-CN!2sus!3m3!1m2!1e2!2s{}!4m57!1e1!1e2!1e3!1e4!1e5!1e6!1e8!1e12!2m1!1e1!4m1!1i48!5m1!1e1!5m1!1e2!6m1!1e1!6m1!1e2!9m36!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e3!2b1!3e2!1m3!1e3!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e1!2b0!3e3!1m3!1e4!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e3"
         url = url.format(panoId)
-
 
         try:
             resp = requests.get(url, proxies=None)
@@ -251,7 +260,7 @@ class GSV_pano(object):
                 if not os.path.exists(self.saved_path):
                     os.makedirs(self.saved_path)
                 try:
-                    with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
+                    with open(json_file, 'w') as f:
                         json.dump(jdata, f)
                 except Exception as e:
                     logging.exception("Error in getJsonfrmPanoID() saving json file, %s, %s, %s.", panoId, url, e)
@@ -1496,6 +1505,55 @@ class GSV_pano(object):
                 print("Error in save_image(): ", self.saved_path, e)
 
 
+    def getImagefrmAngle(self, saved_path='', prefix='', suffix='', width=1024, height=768,
+                         pitch=0, yaw=0, fov=90):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        lon = round(self.lon, 7)
+        lat = round(self.lat, 7)
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
+
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+               f"&h={height}&pitch={pitch}&panoid={self.panoId}&yaw={yaw}&thumbfov={fov}"
+        # print("URL in getImagefrmAngle():", url1)
+        # print("GSV URL in getImagefrmAngle():", utils.get_GSV_URL_from_panoId(self.panoId))
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            # print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
+
+            # new_name = f"{prefix}{}_{}_{}{}{}"
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + f'fov={fov}' + '.jpg'))
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                else:
+                    # print(url1)
+                    pass
+                return image, jpg_name
+
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+            return 0, 0
 
     def clip_depthmap(self, to_theta=0, to_phi=0, width=1024, height=768, fov_h_deg=90, zoom=5, img_type="depthmap",
                   saved_path=os.getcwd()):
@@ -1580,17 +1638,41 @@ class GSV_pano(object):
 
         return new_img
 
-    def get_image_from_headings(self, saved_path, phi_list=[], heading_list=[], prefix="", fov=30, height=768, width=768,
+    def get_image_from_headings(self, saved_path, heading_list=[], prefix="", fov=30, height=768, width=1024,
                                 override=False):
 
-        if len(phi_list) > 0:
-            pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
-            heading_list = [(pano_yaw_deg + p) % 360 for p in phi_list]
 
+        pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
 
+        override = True
         for h in heading_list:
-            self.getImagefrmAngle(self.lon, self.lat, saved_path=saved_path,
+            self.getImagefrmAngle(saved_path=saved_path,
                                    prefix=self.panoId, yaw=pano_yaw_deg + h, fov=fov, height=768, width=768, override=override)
 
+    def download_time_machine_jsons(self, saved_path, links=True, oldest_year=2013, json_override=False):
 
+        time_machines = []
+        if self.jdata:
+            time_machines = self.jdata.get('Time_machine', [])
+        for panorama in time_machines:
+           try:
+               year = panorama['image_date'][0]
+               if year >= oldest_year:
+                   panoId = panorama['panoId']
+                   pano = GSV_pano(panoId=panoId, saved_path=saved_path, json_override=json_override)
+                   if links:
+                       pano.download_pano_json_links(saved_path=saved_path, json_override=json_override)
+           except Exception as e:
+               logging.error("Error in extend_pano_json_counts panorama loop:", e)
+
+    def download_pano_json_links(self, saved_path, json_override=False):
+        links = []
+        if self.jdata:
+            links = self.jdata.get('Links', [])
+        for link in links:
+            try:
+                panoId = link['panoId']
+                pano = GSV_pano(panoId=panoId, saved_path=saved_path, json_override=json_override)
+            except Exception as e:
+                logging.error("Error in extend_pano_json_counts link loop:", e)
 

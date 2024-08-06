@@ -42,7 +42,7 @@ def refactorJson(jdata):
         newJson['Projection'] = {}
         newJson['Location'] = {}
         newJson['Links'] = {}
-        newJson['Time_machine'] = {}
+        newJson['Time_machine'] = []
         newJson['model'] = {}
 
 
@@ -792,6 +792,36 @@ def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
             # return 0, 0, url1
 
 
+def getDegreeOfTwoLonlat(latA, lonA, latTarget, lonTarget):  #Bearing from point A to B (first to second),
+
+    """
+    Args:
+        point p1(latA, lonA)
+        point p2(latTarget, lonTarget)
+    Returns:
+        bearing between the two GPS points,
+        default: the basis of heading direction is north
+        https://blog.csdn.net/zhuqiuhui/article/details/53180395
+        This article shows the similar method
+        Bearing from point A to Target,
+        https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
+    """
+    radLatA = math.radians(float(latA))
+    radLonA = math.radians(float(lonA))
+    radLatTarget = math.radians(float(latTarget))
+    radLonTarget = math.radians(float(lonTarget))
+    dLon = radLonTarget - radLonA
+    y = math.sin(dLon) * math.cos(radLatTarget)
+    x = math.cos(radLatA) * math.sin(radLatTarget) - math.sin(radLatA) * math.cos(radLatTarget) * math.cos(dLon)
+    brng = math.degrees(math.atan2(y, x))
+    if brng < 0:
+        brng = (brng + 360) #% 360
+    return brng
+
+def get_GSV_URL_from_panoId(panoId):
+    return f"https://www.google.com/maps/@3a,90y,90h,90t/data=!3m6!1e1!3m4!1s{panoId}!2e0!7i16384!8i8192"
+
+
 def bearing_angle(x1, y1, x2, y2):
     # Compute differences
     delta_x = x2 - x1
@@ -836,3 +866,19 @@ def row_col_to_angle(row, col, width, height, horizontal_fov_rad):
     # print("azimuth_rad, math.cos(azimuth_rad):", azimuth_rad, math.cos(azimuth_rad))
 
     return azimuth_rad, altitude_rad
+
+
+def two_points_distance(x1, y1, x2, y2):
+    distance = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+    return distance
+
+def two_panos_distance(pano1, pano2):  # not finished
+    if pano1.x is not None:
+        distance = two_points_distance(pano1.x, pano1.y, pano2.x, pano2.y)
+
+    else:
+        print("Need to compute pano1.x/y, pano2.x/y first!")
+        return None
+
+    return distance

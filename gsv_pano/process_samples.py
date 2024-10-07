@@ -33,7 +33,7 @@ from shapely.geometry import Point, Polygon
 
 
 
-shapely.speedups.disable()
+# shapely.speedups.disable()
 
 
 def setup_logging(default_path='log_config.yaml', logName='', default_level=logging.DEBUG):
@@ -333,9 +333,14 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
         start_time = time.perf_counter()
         try:
             print("Process No.", pid_id, "is processing: ", total_cnt - len(seg_files), seg_file)
-            panoId = os.path.basename(seg_file)[:-4]
+            panoId = os.path.basename(seg_file)[:22]
+            zoom = os.path.basename(seg_file)[23:24]
+            zoom = int(zoom)
 
            # pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+            pano1 = GSV_pano(panoId=panoId, crs_local=3360,
+                             saved_path=saved_path)  # EPSG: 3360,  NAD83(HARN) / South Carolina
+            # pano1.get_depthmap(zoom=zoom, saved_path=saved_path)  # 131 MB
 
             new_name = os.path.join(saved_path, panoId + f"_DOM_{resolution:.2f}.tif")
             is_processed = os.path.exists(new_name)
@@ -353,15 +358,16 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
             if is_processed:
                 print("Skip: ", seg_file)
                 continue
-            pano1 = GSV_pano(panoId=panoId, crs_local=6487, saved_path=saved_path)
+            # pano1 = GSV_pano(panoId=panoId, crs_local=3360, saved_path=saved_path)  # EPSG: 3360,  NAD83(HARN) / South Carolina
             # pano1 = GSV_pano(request_lon = lon, request_lat=lat, saved_path=r'J:\Research\StreetView\gsv_pano\test_results')
             pano1.set_segmentation_path(full_path=seg_file)
             DOM = pano1.get_DOM(width=40, height=40, resolution=resolution, zoom=4, img_type='segmentation',  fill_clipped_seg=True)
+            # DOM['DOM'].convert("RGB").show()
             total_time = (time.perf_counter() - start_time_all)
 
             efficency = total_time / (total_cnt - len(seg_files))
             time_remain = efficency * len(seg_files)
-            print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {delta_time(total_time)} , time remain: {delta_time(time_remain)}  \n")
+            print(f"Time spent (seconds): {time.perf_counter() - start_time:.1f}, time used: {utils.delta_time(total_time)} , time remain: {utils.delta_time(time_remain)}  \n")
             # palette = Image.open(seg_file).getpalette()
             # palette = np.array(palette,dtype=np.uint8)
 
@@ -376,20 +382,27 @@ def get_DOM(pid_id, seg_files, saved_path, resolution):
 
 def get_DOMs():
 
-    seg_dir = r'D:\Research\sidewalk_wheelchair\DC_segmented'
+    seg_dir = r'H:\Richland_jsons_clipped_segmented'
     seg_files = glob.glob(os.path.join(seg_dir, "*.png"))
+    # seg_files = [r'H:\Richland_jsons_clipped_segmented\aEfzJNuQkyR5KkeSG6mTRQ_4.png']
     random.shuffle(seg_files)
 
-    saved_path = r"D:\Research\sidewalk_wheelchair\DC_DOMs"
+    saved_path = r"H:\Richland_jsons_DOMs"
 
     resolution = 0.05
+
+
+
+    process_cnt = 6
+    pool = mp.Pool(processes=process_cnt)
+
+    if process_cnt == 1:
+        pid_id = 1
+        get_DOM(pid_id, seg_files, saved_path, resolution)
 
     seg_files_mp = mp.Manager().list()
     for f in seg_files:
         seg_files_mp.append(f)
-
-    process_cnt = 18
-    pool = mp.Pool(processes=process_cnt)
 
     for i in range(process_cnt):
         pid_id = i
@@ -1151,10 +1164,27 @@ def test_get_depthmap():
 
     lon = -77.072465
     lat = 38.985399
+    # pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
 
-    pano1 = GSV_pano(request_lon=lon, request_lat=lat, crs_local=6487, saved_path=saved_path)
-    pano1.get_depthmap(zoom=0, saved_path=saved_path)
-    pano1.get_DOM(resolution=0.1)
+    panoId = 'Bx8_zDIF3Wed58B7_Dzz'
+    panoId = '---AebXb_3X-GVBDLerhew'
+    panoId = 'AedtEn5z3X7-2IWrxkzmxQ'
+    panoId = 'aEfzJNuQkyR5KkeSG6mTRQ'
+
+    pano1 = GSV_pano(panoId=panoId, crs_local=3360, saved_path=saved_path)
+    seg_file = r'H:\Richland_jsons_clipped_segmented\aEfzJNuQkyR5KkeSG6mTRQ_4.png'
+    # seg_file = r'H:\aEfzJNuQkyR5KkeSG6mTRQ_4.png'
+    pano1.set_segmentation_path(full_path=seg_file)
+    DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='segmentation',
+                        fill_clipped_seg=True)
+
+    # DOM["DOM"].show()
+    #
+    # DOM = pano1.get_DOM(width=40, height=40, resolution=0.05, zoom=4, img_type='DOM',
+    #                     fill_clipped_seg=False)
+
+    # pano1.get_depthmap(zoom=0, saved_path=saved_path)
+    # pano1.get_DOM(resolution=0.02)
 
 
 if __name__ == '__main__':
@@ -1165,14 +1195,14 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    download_panoramas_by_area()
+    # download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
     # sort_jsons()
     # download_panos_DC()
     # download_panos_DC_from_jsons()
-    # get_DOMs()
+    get_DOMs()
     # get_pano_jpgs()
     # get_DOMs()
     # get_around_thumnail_Columbia()

@@ -14,7 +14,7 @@ import struct
 import base64
 import zlib
 import multiprocessing as mp
-# from skimage import morphology
+from skimage import morphology
 from pyproj import CRS
 from pyproj import Transformer
 
@@ -795,6 +795,7 @@ class GSV_pano(object):
         return theta, phi
 
     def get_segmentation(self, zoom=4, fill_clipped_seg=False):
+        # load the segmentation
 
         if not os.path.exists(self.segmenation['full_path']):
             logger.error("No full_path for segmentation file! ", self.panoId, exc_info=True)
@@ -810,12 +811,15 @@ class GSV_pano(object):
             # fill_clipped_seg = True
             if fill_clipped_seg:
                 w, h = img_pil.size
-                large_img = Image.new('P', (w * 1, h * 4))  # new image
-                large_img.paste(img_pil, (0, h*2))
+                large_img = Image.new(img_pil.mode, (w * 1, h * 2))  # new image
                 draw = ImageDraw.Draw(large_img)
-                draw.rectangle([0, h * 3, w, h * 4], fill=10, width=0)
+                draw.rectangle([0, 0, w, h * 2], fill=(128, 64, 128), width=0)  # ROAD RGB color: [128, 64, 128]
+                large_img.paste(img_pil, (0, int(h * 0.5)))
+
+                # large_img.convert('RGB').show()
+
                 img_pil = large_img
-                # img_pil.show()
+                # img_pil.convert('RGB').show()
 
             self.segmenation['segmentation'] = np.array(img_pil)
 
@@ -862,6 +866,9 @@ class GSV_pano(object):
 
         if img_type == "segmentation":
             panorama = self.get_segmentation(zoom=zoom, fill_clipped_seg=fill_clipped_seg)['segmentation']
+            # correct.
+
+        # Image.fromarray(panorama.astype('uint8'), 'P').convert("RGB").show()
 
         if len(panorama.shape) > 2:
             image_height, image_width, channel = panorama.shape
@@ -872,15 +879,18 @@ class GSV_pano(object):
 
         v_reso = math.pi/image_height
         h_reso = math.pi * 2 / image_width
-        row = ((theta - math.pi/2 ) / -v_reso).astype(int)
+        row = ((theta - math.pi/2 ) / - v_reso).astype(int)
         col = ((phi + math.pi) / h_reso).astype(int)
         row[row >= image_height] = image_height - 1
         col[col >= image_width] = image_width - 1
 
         # new_img = np.zeros((image_height, image_width, channel)).astype(int)
         # new_img[row, col] = panorama[row, col]
-        # im = Image.fromarray(new_img.astype('uint8'), 'RGB')
-        # im.show()
+        # im = Image.fromarray(panorama.astype('uint8'), 'P')
+        # im.convert("RGB").show()
+
+
+        # panorama.convert("RGB").show()
 
         return panorama[row, col]
 
@@ -907,6 +917,7 @@ class GSV_pano(object):
 
 
         thetas, phis = self.XYZ_to_spherical(XYZs)  # input：meters
+        # correct
 
         colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type=img_type, fill_clipped_seg=fill_clipped_seg)
         channels = int(colors.size / w / h)
@@ -949,7 +960,7 @@ class GSV_pano(object):
 
         return DOM_points
 
-    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM", fill_clipped_seg=False):  # return: numpy array,
         """
         :param width:
         :param height:
@@ -999,6 +1010,9 @@ class GSV_pano(object):
                                           fill_clipped_seg=fill_clipped_seg
                                           )
 
+                # Image.fromarray(self.DOM['DOM']).convert(("RGB")).show()
+                # show wrong results
+
                 if self.saved_path != "":
                         if not os.path.exists(self.saved_path):
                             os.mkdir(self.saved_path)
@@ -1008,11 +1022,12 @@ class GSV_pano(object):
                             channels = DOM['DOM'].shape[2]
                         if channels == 3:
                             im = Image.fromarray(DOM['DOM'].astype("uint8"), "RGB")
-
+                            # im.convert(("RGB")).show()
                         if channels == 1:
                             im = Image.fromarray(DOM['DOM'].astype("uint8"), "P")
+                            # im.convert(("RGB")).show()
                             try:
-                                palette = Image.open(self.segmenation['full_path']).getpalette()
+                                palette = Image.open(self.segmenation['full_path']).convert('P').getpalette()
                                 im.putpalette(palette)
                             except Exception as e:
                                 print("Error in Image.putpalette():", e)

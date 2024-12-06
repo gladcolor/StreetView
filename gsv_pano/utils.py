@@ -704,7 +704,7 @@ link_backward_yawDeg,link_b_panoId,link_b_road_argb,link_b_description,link_othe
 
     list_txt.close()
 
-def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
+def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
                                      panoId='',
                                      bearing_list=[0.0, 90.0, 180.0, 270.0],
                                      saved_path='', prefix='', suffix='',
@@ -750,7 +750,7 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                 url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
                        f"&h={height}&pitch={pitch}&ll={lat}%2C{lon}&yaw={yaw}&thumbfov={fov}"
             else:
-                print("Error in get_around_thumnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
+                print("Error in get_around_thumbnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
                 # return 0, 0, 0
         # print("URL in getImagefrmAngle():", url1)
 
@@ -787,9 +787,39 @@ def get_around_thumnail_from_bearing(lon=0.0, lat=0.0,
                 # return image, jpg_name, url1
 
         except Exception as e:
-            print("Error in get_around_thumnail_from_bearing() getting url1", e)
+            print("Error in get_around_thumbnail_from_bearing() getting url1", e)
             print(url1)
             # return 0, 0, url1
+
+
+def getDegreeOfTwoLonlat(latA, lonA, latTarget, lonTarget):  #Bearing from point A to B (first to second),
+
+    """
+    Args:
+        point p1(latA, lonA)
+        point p2(latTarget, lonTarget)
+    Returns:
+        bearing between the two GPS points,
+        default: the basis of heading direction is north
+        https://blog.csdn.net/zhuqiuhui/article/details/53180395
+        This article shows the similar method
+        Bearing from point A to Target,
+        https://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
+    """
+    radLatA = math.radians(float(latA))
+    radLonA = math.radians(float(lonA))
+    radLatTarget = math.radians(float(latTarget))
+    radLonTarget = math.radians(float(lonTarget))
+    dLon = radLonTarget - radLonA
+    y = math.sin(dLon) * math.cos(radLatTarget)
+    x = math.cos(radLatA) * math.sin(radLatTarget) - math.sin(radLatA) * math.cos(radLatTarget) * math.cos(dLon)
+    brng = math.degrees(math.atan2(y, x))
+    if brng < 0:
+        brng = (brng + 360) #% 360
+    return brng
+
+def get_GSV_URL_from_panoId(panoId):
+    return f"https://www.google.com/maps/@3a,90y,90h,90t/data=!3m6!1e1!3m4!1s{panoId}!2e0!7i16384!8i8192"
 
 
 def bearing_angle(x1, y1, x2, y2):

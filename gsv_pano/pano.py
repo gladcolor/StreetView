@@ -61,8 +61,8 @@ import matplotlib.pyplot as plt
 # import selenium
 # from selenium import webdriver
 # from selenium.webdriver.chrome.options import Options
-import sqlite3
-from bs4 import BeautifulSoup
+# import sqlite3
+# from bs4 import BeautifulSoup
 # WINDOWS_SIZE = '100, 100'
 # chrome_options = Options()
 # chrome_options.add_argument("--headless")
@@ -106,7 +106,7 @@ logging.shutdown()
 
 class GSV_pano(object):
     def __init__(self, panoId=0, json_file='', request_lon=None, request_lat=None,
-                 request_address='', crs_local=None, saved_path=''):
+                 request_address='', crs_local=None, saved_path='', json_override=False):
         self.panoId = panoId  # test case: BM1Qt23drK3-yMWxYfOfVg
         self.request_lon = request_lon  # test case: -74.18154077638651
         self.request_lat = request_lat  # test case: 40.73031168738437
@@ -149,7 +149,8 @@ class GSV_pano(object):
 
             if (self.panoId != 0) and (self.panoId is not None) and (len(str(self.panoId)) == 22):
                 # print("panoid: ", self.panoId)
-                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path)
+                # if :
+                self.jdata = self.getJsonfrmPanoID(panoId=self.panoId, dm=1, saved_path=self.saved_path, json_override=json_override)
                 self.lon = self.jdata['Location']['lng']
                 self.lat = self.jdata['Location']['lat']
             # else:
@@ -229,10 +230,18 @@ class GSV_pano(object):
         return jdata
 
 
-    def getJsonfrmPanoID(self, panoId, dm=1, saved_path=''):
+    def getJsonfrmPanoID(self, panoId, dm=1, saved_path='', json_override=True):
+
+        json_file = os.path.join(saved_path, panoId + '.json')
+        if not json_override:
+            if os.path.exists(json_file):
+                with open(json_file, 'r') as f:
+                    jdata = json.load(f)
+                return jdata
+
+        # if override the existing json file
         url = "https://www.google.com/maps/photometa/v1?authuser=0&hl=en&pb=!1m4!1smaps_sv.tactile!11m2!2m1!1b1!2m2!1szh-CN!2sus!3m3!1m2!1e2!2s{}!4m57!1e1!1e2!1e3!1e4!1e5!1e6!1e8!1e12!2m1!1e1!4m1!1i48!5m1!1e1!5m1!1e2!6m1!1e1!6m1!1e2!9m36!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e3!2b1!3e2!1m3!1e3!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e1!2b0!3e3!1m3!1e4!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e3"
         url = url.format(panoId)
-
 
         try:
             resp = requests.get(url, proxies=None)
@@ -252,7 +261,7 @@ class GSV_pano(object):
                 if not os.path.exists(self.saved_path):
                     os.makedirs(self.saved_path)
                 try:
-                    with open(os.path.join(saved_path, panoId + '.json'), 'w') as f:
+                    with open(json_file, 'w') as f:
                         json.dump(jdata, f)
                 except Exception as e:
                     logging.exception("Error in getJsonfrmPanoID() saving json file, %s, %s, %s.", panoId, url, e)
@@ -787,6 +796,7 @@ class GSV_pano(object):
         return theta, phi
 
     def get_segmentation(self, zoom=4, fill_clipped_seg=False):
+        # load the segmentation
 
         if not os.path.exists(self.segmenation['full_path']):
             logger.error("No full_path for segmentation file! ", self.panoId, exc_info=True)
@@ -802,12 +812,15 @@ class GSV_pano(object):
             # fill_clipped_seg = True
             if fill_clipped_seg:
                 w, h = img_pil.size
-                large_img = Image.new('P', (w * 1, h * 4))  # new image
-                large_img.paste(img_pil, (0, h*2))
+                large_img = Image.new(img_pil.mode, (w * 1, h * 2))  # new image
                 draw = ImageDraw.Draw(large_img)
-                draw.rectangle([0, h * 3, w, h * 4], fill=10, width=0)
+                draw.rectangle([0, 0, w, h * 2], fill=(128, 64, 128), width=0)  # ROAD RGB color: [128, 64, 128]
+                large_img.paste(img_pil, (0, int(h * 0.5)))
+
+                # large_img.convert('RGB').show()
+
                 img_pil = large_img
-                # img_pil.show()
+                # img_pil.convert('RGB').show()
 
             self.segmenation['segmentation'] = np.array(img_pil)
 
@@ -854,6 +867,9 @@ class GSV_pano(object):
 
         if img_type == "segmentation":
             panorama = self.get_segmentation(zoom=zoom, fill_clipped_seg=fill_clipped_seg)['segmentation']
+            # correct.
+
+        # Image.fromarray(panorama.astype('uint8'), 'P').convert("RGB").show()
 
         if len(panorama.shape) > 2:
             image_height, image_width, channel = panorama.shape
@@ -864,15 +880,18 @@ class GSV_pano(object):
 
         v_reso = math.pi/image_height
         h_reso = math.pi * 2 / image_width
-        row = ((theta - math.pi/2 ) / -v_reso).astype(int)
+        row = ((theta - math.pi/2 ) / - v_reso).astype(int)
         col = ((phi + math.pi) / h_reso).astype(int)
         row[row >= image_height] = image_height - 1
         col[col >= image_width] = image_width - 1
 
         # new_img = np.zeros((image_height, image_width, channel)).astype(int)
         # new_img[row, col] = panorama[row, col]
-        # im = Image.fromarray(new_img.astype('uint8'), 'RGB')
-        # im.show()
+        # im = Image.fromarray(panorama.astype('uint8'), 'P')
+        # im.convert("RGB").show()
+
+
+        # panorama.convert("RGB").show()
 
         return panorama[row, col]
 
@@ -899,6 +918,7 @@ class GSV_pano(object):
 
 
         thetas, phis = self.XYZ_to_spherical(XYZs)  # input：meters
+        # correct
 
         colors = self.find_pixel_to_thetaphi(thetas, phis, zoom=zoom, img_type=img_type, fill_clipped_seg=fill_clipped_seg)
         channels = int(colors.size / w / h)
@@ -941,7 +961,7 @@ class GSV_pano(object):
 
         return DOM_points
 
-    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM",fill_clipped_seg=False):  # return: numpy array,
+    def get_DOM(self, width = 40, height = 40, resolution=0.03, zoom=3, img_type="DOM", fill_clipped_seg=False):  # return: numpy array,
         """
         :param width:
         :param height:
@@ -991,6 +1011,9 @@ class GSV_pano(object):
                                           fill_clipped_seg=fill_clipped_seg
                                           )
 
+                # Image.fromarray(self.DOM['DOM']).convert(("RGB")).show()
+                # show wrong results
+
                 if self.saved_path != "":
                         if not os.path.exists(self.saved_path):
                             os.mkdir(self.saved_path)
@@ -1000,11 +1023,12 @@ class GSV_pano(object):
                             channels = DOM['DOM'].shape[2]
                         if channels == 3:
                             im = Image.fromarray(DOM['DOM'].astype("uint8"), "RGB")
-
+                            # im.convert(("RGB")).show()
                         if channels == 1:
                             im = Image.fromarray(DOM['DOM'].astype("uint8"), "P")
+                            # im.convert(("RGB")).show()
                             try:
-                                palette = Image.open(self.segmenation['full_path']).getpalette()
+                                palette = Image.open(self.segmenation['full_path']).convert('P').getpalette()
                                 im.putpalette(palette)
                             except Exception as e:
                                 print("Error in Image.putpalette():", e)
@@ -1496,6 +1520,55 @@ class GSV_pano(object):
                 print("Error in save_image(): ", self.saved_path, e)
 
 
+    def getImagefrmAngle(self, saved_path='', prefix='', suffix='', width=1024, height=768,
+                         pitch=0, yaw=0, fov=90):
+        # w maximum: 1024
+        # h maximum: 768
+        server_num = random.randint(0, 3)
+        lon = round(self.lon, 7)
+        lat = round(self.lat, 7)
+        height = int(height)
+        pitch = int(pitch)
+        width = int(width)
+
+        if yaw > 360:
+            yaw = yaw - 360
+        if yaw < 0:
+            yaw = yaw + 360
+
+        url1 = f"https://geo{server_num}.ggpht.com/cbk?cb_client=maps_sv.tactile&authuser=0&hl=en&gl=us&output=thumbnail&thumb=2&w={width}" \
+               f"&h={height}&pitch={pitch}&panoid={self.panoId}&yaw={yaw}&thumbfov={fov}"
+        # print("URL in getImagefrmAngle():", url1)
+        # print("GSV URL in getImagefrmAngle():", utils.get_GSV_URL_from_panoId(self.panoId))
+
+        suffix = str(suffix)
+        prefix = str(prefix)
+        if prefix != "":
+            # print('prefix:', prefix)
+            prefix = prefix + '_'
+        if suffix != "":
+            suffix = '_' + suffix
+
+        try:
+            file = urllib.request.urlopen(url1)
+            image = Image.open(file)
+
+            # new_name = f"{prefix}{}_{}_{}{}{}"
+
+            jpg_name = os.path.join(saved_path, (prefix + str(lat) + '_' + str(lon) + '_' + str(pitch) + '_' +
+                                                 str('{:.2f}'.format(yaw)) + suffix + f'fov={fov}' + '.jpg'))
+            if image.getbbox():
+                if saved_path != '':
+                    image.save(jpg_name)
+                else:
+                    # print(url1)
+                    pass
+                return image, jpg_name
+
+        except Exception as e:
+            print("Error in getImagefrmAngle() getting url1", e)
+            print(url1)
+            return 0, 0
 
     def clip_depthmap(self, to_theta=0, to_phi=0, width=1024, height=768, fov_h_deg=90, zoom=5, img_type="depthmap",
                   saved_path=os.getcwd()):
@@ -1580,17 +1653,41 @@ class GSV_pano(object):
 
         return new_img
 
-    def get_image_from_headings(self, saved_path, phi_list=[], heading_list=[], prefix="", fov=30, height=768, width=768,
+    def get_image_from_headings(self, saved_path, heading_list=[], prefix="", fov=30, height=768, width=1024,
                                 override=False):
 
-        if len(phi_list) > 0:
-            pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
-            heading_list = [(pano_yaw_deg + p) % 360 for p in phi_list]
 
+        pano_yaw_deg = self.jdata['Projection']['pano_yaw_deg']
 
+        override = True
         for h in heading_list:
-            self.getImagefrmAngle(self.lon, self.lat, saved_path=saved_path,
+            self.getImagefrmAngle(saved_path=saved_path,
                                    prefix=self.panoId, yaw=pano_yaw_deg + h, fov=fov, height=768, width=768, override=override)
 
+    def download_time_machine_jsons(self, saved_path, links=True, oldest_year=2013, json_override=False):
 
+        time_machines = []
+        if self.jdata:
+            time_machines = self.jdata.get('Time_machine', [])
+        for panorama in time_machines:
+           try:
+               year = panorama['image_date'][0]
+               if year >= oldest_year:
+                   panoId = panorama['panoId']
+                   pano = GSV_pano(panoId=panoId, saved_path=saved_path, json_override=json_override)
+                   if links:
+                       pano.download_pano_json_links(saved_path=saved_path, json_override=json_override)
+           except Exception as e:
+               logging.error("Error in extend_pano_json_counts panorama loop:", e)
+
+    def download_pano_json_links(self, saved_path, json_override=False):
+        links = []
+        if self.jdata:
+            links = self.jdata.get('Links', [])
+        for link in links:
+            try:
+                panoId = link['panoId']
+                pano = GSV_pano(panoId=panoId, saved_path=saved_path, json_override=json_override)
+            except Exception as e:
+                logging.error("Error in extend_pano_json_counts link loop:", e)
 

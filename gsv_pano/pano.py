@@ -69,6 +69,7 @@ from bs4 import BeautifulSoup
 # chrome_options.add_argument("--windows-size=%s" % WINDOWS_SIZE)
 # Loading_time = 5
 
+# import utils0
 import utils
 
 import logging.config
@@ -275,7 +276,7 @@ class GSV_pano(object):
 
     def calculate_xy(self, transformer=None):
         if transformer and (self.lat is not None) and (self.lon is not None ):
-            self.x, self.y = transformer.transform(self.lat, self.lon)
+            self.x, self.y = transformer.transform(self.lat, selfF.lon)
             return self.x, self.y
 
         if self.crs_local and (self.lat is not None) and (self.lon is not None ):
@@ -1296,7 +1297,7 @@ class GSV_pano(object):
             logger.exception("Error in get_panorama(): %s", e)
             return None
 
-    def get_panorama(self, prefix="", suffix="", zoom: int = 5, check_size=False):
+    def get_panorama(self, prefix="", suffix="", zoom: int = 5, check_size=False, skip_exist=True):
         """Reference:
             https://developers.google.com/maps/documentation/javascript/streetview
             See the part from "Providing Custom Street View Panoramas" section.
@@ -1341,10 +1342,8 @@ class GSV_pano(object):
                     if os.path.exists(jpg_name):
                         new_name = jpg_name
 
-
-
-
                 if os.path.exists(new_name):
+
                     old_img = Image.open(new_name)
                     img_zoom = int(new_name[-5])
 
@@ -1368,6 +1367,7 @@ class GSV_pano(object):
                     if self.saved_path != "":
                         if not os.path.exists(self.saved_path):
                             os.mkdir(self.saved_path)
+                        # print("new_name:", new_name)
                         target.save(new_name)
 
                     self.panorama["image"] = np.array(target)

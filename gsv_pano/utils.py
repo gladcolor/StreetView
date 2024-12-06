@@ -836,3 +836,19 @@ def row_col_to_angle(row, col, width, height, horizontal_fov_rad):
     # print("azimuth_rad, math.cos(azimuth_rad):", azimuth_rad, math.cos(azimuth_rad))
 
     return azimuth_rad, altitude_rad
+
+
+def two_points_distance(x1, y1, x2, y2):
+    distance = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+    return distance
+
+def two_panos_distance(pano1, pano2):  # not finished
+    if pano1.x is not None:
+        distance = two_points_distance(pano1.x, pano1.y, pano2.x, pano2.y)
+
+    else:
+        print("Need to compute pano1.x/y, pano2.x/y first!")
+        return None
+
+    return distance

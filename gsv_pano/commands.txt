@@ -1,6 +1,6 @@
-conda activate Google_street_view
-cd F:\USC_OneDrive\OneDrive - University of South Carolina\StreetView\gsv_pano
-f:
+conda activate geo
+cd d:\Research\StreetView\gsv_pano
+D:
 python process_samples.py
 
 

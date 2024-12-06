@@ -15,8 +15,10 @@ import shutil
 from PIL import Image
 
 from tqdm import tqdm
+# import random
 
 import datetime
+# import  utils0
 import  utils
 import fiona
 import json
@@ -93,6 +95,7 @@ def panorama_from_point_shapefile():
     process_cnt = 10
     pool = mp.Pool(processes=process_cnt)
     for i in range(process_cnt):
+    
         pool.apply_async(download_pano, args=(lat_lon_mp, saved_path))
     pool.close()
     pool.join()
@@ -550,10 +553,14 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     in_points = seed_points[seed_points.within(polyon)]
 
+
+
+
     seed_points_mp = mp.Manager().list()
     for idx, row in in_points.iterrows():
         seed_points_mp.append((row['lon'], row['lat']))
 
+    random.shuffle(seed_points_mp)
 
     print(f"Generated {len(in_points)} seed points inside polygon.bounds {polyon.bounds}")
 
@@ -563,6 +570,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     pending_panoId_mp = mp.Manager().list()
 
     pending_panoId = collect_links_from_panoramas_mp(saved_path)
+
 
     for p in pending_panoId:
         pending_panoId_mp.append(p)
@@ -575,7 +583,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
     print(f'Processes used: {process_cnt}.')
 
     for i in range(process_cnt):
-        pool.apply_async(download_panoramas_from_seed_points, args=(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, True))
+        pool.apply_async(download_panoramas_from_seed_points, args=(seed_points_mp, pending_panoId_mp, saved_path, polyon, math.inf, json, pano))
     pool.close()
     pool.join()
 
@@ -585,7 +593,7 @@ def down_panos_in_area(polyon, saved_path='', col_cnt=100, row_cnt=100, json=Tru
 
     return in_points
 
-def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=0, depthmap=False):
+def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path, polygon, max_step=math.inf, json_file=True, pano_jpg=False, pano_zoom=4, depthmap=False):
     total_cnt = len(seed_points)
 
     verbose = True
@@ -627,6 +635,35 @@ def download_panoramas_from_seed_points(seed_points, pending_panoIds, saved_path
                     if not os.path.exists(json_name):
                         with open(json_name, 'w') as f:
                             json.dump(pano2.jdata, f)
+
+                            # Download thumbnail, needs to be cleaned------------
+                            panoId = panoId
+                            pano_yaw_deg = pano2.jdata['Projection']['pano_yaw_deg']
+                            pano_yaw_deg = float(pano_yaw_deg)
+
+                            bearing_list = [45, 90.0, 135, 45 + 180, 90 + 180, 135 + 180]
+                            bearing_list = [pano_yaw_deg + b for b in bearing_list]
+
+                            try:
+                                #
+                                utils.get_around_thumnail_from_bearing(
+                                    panoId=panoId,
+                                    bearing_list=bearing_list,
+                                    saved_path=saved_path,
+                                    prefix=panoId,
+                                    # suffix=['R45', 'R90', 'R135', "L45", "L90", "L135"],  # Wrong.
+                                    suffix=['R45', 'R90', 'R135', "L135", "L90", "L45"],  # Correct.
+                                    width=1024, height=768,
+                                    pitch=0, fov=90,
+                                    overwrite=False)
+                                # pano2.saved_path = saved_path   # download the pano
+                                # pano2.get_panorama(zoom=pano_zoom)
+
+
+
+                            except:
+                                continue
+                            # -----------
                     step += 1
 
                     links = pano2.jdata["Links"]
@@ -727,12 +764,15 @@ def download_panoramas_by_area():
     #shape_file = r'G:\Research\Noise_map\Columbia_MSA_all.shp'
     # shape_file = r'H:\My Drive\Research\Charleston_sidewalk\vectors\c_22mr22\charleston.shp'
     # shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp'
-    shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Lexington.shp'
+    # shape_file = r'F:\USC_OneDrive\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Lexington.shp'
+    # shape_file = r"D:\OneDrive_PSU\OneDrive - The Pennsylvania State University\Research_doc\street_image_mapping\vectors\south_harden.shp"
+    # shape_file = r"D:\OneDrive_USC\OneDrive - University of South Carolina\Research\Columbia_GSV\vectors\Richland.shp"
+    shape_file = r"D:\OneDrive_PSU\OneDrive - The Pennsylvania State University\Research_doc\street_image_mapping\vectors\heyward_st.shp"
 
     AOI = gpd.read_file(shape_file)
     # AOI = AOI.set_crs("EPSG:2278")
     AOI = AOI.to_crs("EPSG:4326")
-    saved_path = r'F:\Research\Lexington_GSV\Lexington_pano_jsons'
+    saved_path = r'D:\Research\street_image_mapping\Heyward_st_pano_thumnail'
     if not os.path.exists(saved_path):
         os.makedirs(saved_path)
 
@@ -741,7 +781,7 @@ def download_panoramas_by_area():
 
     for i in range(len(AOI)):
         polygon =  AOI.iloc[i].geometry
-        down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=10, col_cnt=500, row_cnt=500)
+        down_panos_in_area(polyon=polygon, saved_path=saved_path, json=True, process_cnt=11, col_cnt=5, row_cnt=5)
 
 
     dir_json_to_csv_list(saved_path, csv_name)
@@ -941,7 +981,6 @@ def get_around_thumnail_Columbia():
         print(f"idx: {idx} / {len(df)}, start_idx: {start_idx}, end_idx: {end_idx}, panoId: {panoId}. ")
 
         # setup_logging(yaml_path, logName=csv_file.replace(".csv", "_info.log"))
-
         try:
 
             utils.get_around_thumnail_from_bearing(
@@ -1031,7 +1070,18 @@ def coordinate_transform():
 
     print( geometry)
 
+def test_panorama_dawnloading():
+
+    panoId = r'TRMSL2Ucbez3R3EuHw28Pg'
+    saved_path = r'D:\Research\StreetView\Test'
+    pano = GSV_pano(panoId=panoId, saved_path=saved_path)
+    pano.get_panorama(zoom=4)
+
+    print("Done.")
+
 if __name__ == '__main__':
+    # test_panorama_dawnloading()
+
     # pending_Ids = collect_links_from_panoramas_mp(r'H:\Research\sidewalk_wheelchair\DC_DOMs')
     # print(len(pending_Ids))
     # utils.save_a_list(pending_Ids, r'H:\Research\sidewalk_wheelchair\pendingIds.txt')
@@ -1039,7 +1089,7 @@ if __name__ == '__main__':
     # draw_panorama_apex_mp(saved_path=r"H:\USC_OneDrive\OneDrive - University of South Carolina\Research\sidewalk_wheelchair\DC_panoramas\sidewalk_wheelchair",
     #                    json_dir=r'H:\Research\sidewalk_wheelchair\DC_DOMs')
 
-    # download_panoramas_by_area()
+    download_panoramas_by_area()
     # panorama_from_point_shapefile()
     # merge_measurements()
     # dir_json_to_csv_list(json_dir=r'D:\Research\sidewalk_wheelchair\jsons', saved_name=r'D:\Research\sidewalk_wheelchair\jsons250k.txt')
@@ -1054,4 +1104,4 @@ if __name__ == '__main__':
     # movefiles()
     # test_get_depthmap()
     # download_panos_SC_from_panoIds()
-    coordinate_transform()
+    # coordinate_transform()

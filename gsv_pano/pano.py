@@ -279,7 +279,7 @@ class GSV_pano(object):
         mask = morphology.erosion(arr_mask, kernel).astype(np.int8)
         # mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
         # resized_mask = np.array(resized_mask)
-        resized_mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
+        resized_mask = Image.fromarray(mask).resize((width, height), Image.NEAREST)
         resized_mask = np.array(resized_mask)
         return resized_mask
 
@@ -350,9 +350,9 @@ class GSV_pano(object):
                 if zoom > 0:
                     self.depthmap['width'] = image_width
                     self.depthmap['height'] = image_height
-                    depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
+                    depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.BILINEAR)
                     dm_mask = self._enlarge_mask(dm_mask, image_width, image_height, erison_size=2)
-                    ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
+                    ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.NEAREST)
                 else:
                     self.depthmap['width'] = 512
                     self.depthmap['height'] = 256
@@ -522,7 +522,7 @@ class GSV_pano(object):
         dem_coarse_np[empty_idx[:, 0], empty_idx[:, 1]] = z
         dem_coarse_np = gaussian_filter(dem_coarse_np, sigma=smooth_sigma)
 
-        dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+        dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.BILINEAR)
         dem_refined = np.array(dem_refined)
 
 
@@ -814,7 +814,7 @@ class GSV_pano(object):
                 w, h = img_pil.size
                 large_img = Image.new(img_pil.mode, (w * 1, h * 2))  # new image
                 draw = ImageDraw.Draw(large_img)
-                draw.rectangle([0, 0, w, h * 2], fill=(128, 64, 128), width=0)  # ROAD RGB color: [128, 64, 128]
+                draw.rectangle([0, 0, w, h * 2], fill=10, width=0)  # ROAD RGB color: [128, 64, 128], index=10
                 large_img.paste(img_pil, (0, int(h * 0.5)))
 
                 # large_img.convert('RGB').show()
@@ -970,8 +970,9 @@ class GSV_pano(object):
         :param type: DOM or segmentation
         :return:
         """
-        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
-        worldfile_name = new_name.replace(".tif", ".tfw")
+        street_img_ext = self.segmenation['full_path'][-3:]
+        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.{street_img_ext}")
+        worldfile_name = new_name[:-3] + street_img_ext[0] + street_img_ext[2] + 'w'
         self.DOM['resolution'] = resolution
         transformer = utils.epsg_transform(4326, self.crs_local)  # New Jersey state plane, meter
 
@@ -1006,7 +1007,7 @@ class GSV_pano(object):
                 DOM = self.calculate_DOM(width = width,
                                           height = height,
                                           resolution=resolution,
-                                          zoom=4,
+                                          zoom=zoom,
                                           img_type=img_type,
                                           fill_clipped_seg=fill_clipped_seg
                                           )
@@ -1030,11 +1031,12 @@ class GSV_pano(object):
                             try:
                                 palette = Image.open(self.segmenation['full_path']).convert('P').getpalette()
                                 im.putpalette(palette)
+                                im = im.convert("P", palette=palette, colors=256)
                             except Exception as e:
                                 print("Error in Image.putpalette():", e)
 
-                        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
-                        worldfile_name = new_name.replace(".tif", ".tfw")
+                        # new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.png")
+                        # worldfile_name = new_name.replace(".png", ".tfw")
                         worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
                         # im.show()
                         im.save(new_name)

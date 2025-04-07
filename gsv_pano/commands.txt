@@ -16,8 +16,17 @@ d:
 python process_samples.py
 
 
+conda activate geo
+cd E:\Research\StreetView\gsv_pano
+E:
+python process_samples.py
 
 
+
+conda activate geo
+cd E:\Research\StreetView\gsv_pano
+E:
+python process_samples.py
 
 
 

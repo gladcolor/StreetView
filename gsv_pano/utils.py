@@ -205,6 +205,7 @@ def getLinks(jdata):
 
     except Exception as e:
         logging.exception("Error in getLinks().")
+        logging.exception(link_dict['panoId'])
         logging.exception(jdata_links)
         return link_list
 
@@ -709,7 +710,7 @@ def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
                                      bearing_list=[0.0, 90.0, 180.0, 270.0],
                                      saved_path='', prefix='', suffix='',
                                      width=1024, height=768,
-                     pitch=0,  fov=90,
+                                     pitch=0,  fov=90,
                                      overwrite=True):
     ''':argument
 
@@ -753,7 +754,6 @@ def get_around_thumbnail_from_bearing(lon=0.0, lat=0.0,
                 print("Error in get_around_thumbnail_from_bearing() getting url1: ", "No lat/lon or valid panoId.")
                 # return 0, 0, 0
         # print("URL in getImagefrmAngle():", url1)
-
 
 
         try:
@@ -882,3 +882,5 @@ def two_panos_distance(pano1, pano2):  # not finished
         return None
 
     return distance
+
+

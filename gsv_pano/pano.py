@@ -173,6 +173,7 @@ class GSV_pano(object):
 
                 except Exception as e:
                     logging.info("Error in GSV_pano _init__() when loading local json file: %s, %s", self.json_file, e)
+                    print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             # else:
             #     basename = os.path.basename(json_file)[:22]
             #     if panoId == 0:
@@ -193,6 +194,8 @@ class GSV_pano(object):
 
         except Exception as e:
             logging.exception("Error in GSV_pano _init__(): %s", e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
+
 
 
     def getPanoIDfrmLonlat(self, lon, lat):
@@ -225,6 +228,7 @@ class GSV_pano(object):
         except Exception as e:
             # print("Error in getPanoJsonfrmLonat():", e)
             logging.exception("Error in getPanoJsonfrmLonat(): %s", e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             return None
 
         return jdata
@@ -254,6 +258,7 @@ class GSV_pano(object):
                 jdata = 0  # if there is no panorama
                 print("Error in getJsonfrmPanoID(), e, url:", panoId, url, e)
                 logging.exception("Error in getJsonfrmPanoID(), %s, %s, %s.", panoId, url, e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
                 return jdata
 
             if saved_path != '':
@@ -265,6 +270,7 @@ class GSV_pano(object):
                         json.dump(jdata, f)
                 except Exception as e:
                     logging.exception("Error in getJsonfrmPanoID() saving json file, %s, %s, %s.", panoId, url, e)
+                    print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
             if dm == 0:
                 jdata['model']['depth_map'] = ''
@@ -272,6 +278,7 @@ class GSV_pano(object):
 
         except Exception as e:
             logging.exception("Error in getJsonfrmPanoID() %s, %s, %s." , panoId, url, e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             return 0
 
     def _enlarge_mask(self, arr_mask, width, height, erison_size=2):
@@ -279,7 +286,7 @@ class GSV_pano(object):
         mask = morphology.erosion(arr_mask, kernel).astype(np.int8)
         # mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
         # resized_mask = np.array(resized_mask)
-        resized_mask = Image.fromarray(mask).resize((width, height), Image.LINEAR)
+        resized_mask = Image.fromarray(mask).resize((width, height), Image.NEAREST)
         resized_mask = np.array(resized_mask)
         return resized_mask
 
@@ -342,6 +349,7 @@ class GSV_pano(object):
 
                 except Exception as e:
                     print("Error in get_depthmap() get image_width/height:", self.panoId, e)
+                    print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
                 ground_mask = np.where(depthmap_dict['normal_vector_map'][:, :, 2] < GROUND_VECTOR_THRES, 1, 0).astype(np.int8)  # < 10 is correct.
 
@@ -350,9 +358,9 @@ class GSV_pano(object):
                 if zoom > 0:
                     self.depthmap['width'] = image_width
                     self.depthmap['height'] = image_height
-                    depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.LINEAR)
+                    depthMap = Image.fromarray(depthMap).resize((image_width, image_height), Image.BILINEAR)
                     dm_mask = self._enlarge_mask(dm_mask, image_width, image_height, erison_size=2)
-                    ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.LINEAR)
+                    ground_mask = Image.fromarray(ground_mask).resize((image_width, image_height), Image.NEAREST)
                 else:
                     self.depthmap['width'] = 512
                     self.depthmap['height'] = 256
@@ -436,6 +444,7 @@ class GSV_pano(object):
                 return self.depthmap
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
         return self.depthmap
 
@@ -522,7 +531,7 @@ class GSV_pano(object):
         dem_coarse_np[empty_idx[:, 0], empty_idx[:, 1]] = z
         dem_coarse_np = gaussian_filter(dem_coarse_np, sigma=smooth_sigma)
 
-        dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.LINEAR)
+        dem_refined = Image.fromarray(dem_coarse_np).resize((int(width/resolution), int(height/resolution)), Image.BILINEAR)
         dem_refined = np.array(dem_refined)
 
 
@@ -594,6 +603,7 @@ class GSV_pano(object):
             return np_image, worldfile
         except Exception as e:
             print("Error in points_to_DOM():", e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
     def get_road_plane(self, resolution=0.1, width=40, height=40):
         img_w = int(width / resolution * 1.7)
@@ -721,9 +731,11 @@ class GSV_pano(object):
                                 wf.write(str(line) + '\n')
                     except Exception as e:
                         print("Error in saving DEM: ", self.saved_path, e)
+                        print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
             except Exception as e:
                 logger.exception("Error in get_DEM(): %s", e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
         return self.DEM
 
@@ -814,7 +826,7 @@ class GSV_pano(object):
                 w, h = img_pil.size
                 large_img = Image.new(img_pil.mode, (w * 1, h * 2))  # new image
                 draw = ImageDraw.Draw(large_img)
-                draw.rectangle([0, 0, w, h * 2], fill=(128, 64, 128), width=0)  # ROAD RGB color: [128, 64, 128]
+                draw.rectangle([0, 0, w, h * 2], fill=(128, 64, 128), width=0)  # ROAD RGB color: (128, 64, 128), index=10
                 large_img.paste(img_pil, (0, int(h * 0.5)))
 
                 # large_img.convert('RGB').show()
@@ -970,8 +982,9 @@ class GSV_pano(object):
         :param type: DOM or segmentation
         :return:
         """
-        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
-        worldfile_name = new_name.replace(".tif", ".tfw")
+        street_img_ext = self.segmenation['full_path'][-3:]
+        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.{street_img_ext}")
+        worldfile_name = new_name[:-3] + street_img_ext[0] + street_img_ext[2] + 'w'
         self.DOM['resolution'] = resolution
         transformer = utils.epsg_transform(4326, self.crs_local)  # New Jersey state plane, meter
 
@@ -1006,7 +1019,7 @@ class GSV_pano(object):
                 DOM = self.calculate_DOM(width = width,
                                           height = height,
                                           resolution=resolution,
-                                          zoom=4,
+                                          zoom=zoom,
                                           img_type=img_type,
                                           fill_clipped_seg=fill_clipped_seg
                                           )
@@ -1030,11 +1043,13 @@ class GSV_pano(object):
                             try:
                                 palette = Image.open(self.segmenation['full_path']).convert('P').getpalette()
                                 im.putpalette(palette)
+                                im = im.convert("P", palette=palette, colors=256)
                             except Exception as e:
                                 print("Error in Image.putpalette():", e)
+                                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
-                        new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.tif")
-                        worldfile_name = new_name.replace(".tif", ".tfw")
+                        # new_name = os.path.join(self.saved_path, self.panoId + f"_DOM_{resolution:.2f}.png")
+                        # worldfile_name = new_name.replace(".png", ".tfw")
                         worldfile = [resolution, 0, 0, -resolution, x_m - width/2, y_m + height/2]
                         # im.show()
                         im.save(new_name)
@@ -1048,6 +1063,7 @@ class GSV_pano(object):
 
             except Exception as e:
                 logger.exception("Error in get_DOM(): %s", e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
 
 
@@ -1264,6 +1280,7 @@ class GSV_pano(object):
 
             except Exception as e:
                 logger.exception("Error in get_depthmap(): %s", e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
     def download_panorama(self, zoom: int=3):
         """Reference:
@@ -1319,6 +1336,7 @@ class GSV_pano(object):
 
         except Exception as e:
             logger.exception("Error in get_panorama(): %s", e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             return None
 
     def get_panorama(self, prefix="", suffix="", zoom: int = 5, check_size=False, skip_exist=True):
@@ -1403,6 +1421,7 @@ class GSV_pano(object):
 
         except Exception as e:
             logger.exception("Error in get_panorama(): %s, %s " % (e,  self.panoId))
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             return None
 
 
@@ -1518,6 +1537,7 @@ class GSV_pano(object):
                         wf.write(str(line) + '\n')
             except Exception as e:
                 print("Error in save_image(): ", self.saved_path, e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
 
     def getImagefrmAngle(self, saved_path='', prefix='', suffix='', width=1024, height=768,
@@ -1567,6 +1587,7 @@ class GSV_pano(object):
 
         except Exception as e:
             print("Error in getImagefrmAngle() getting url1", e)
+            print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
             print(url1)
             return 0, 0
 
@@ -1679,6 +1700,7 @@ class GSV_pano(object):
                        pano.download_pano_json_links(saved_path=saved_path, json_override=json_override)
            except Exception as e:
                logging.error("Error in extend_pano_json_counts panorama loop:", e)
+               print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
     def download_pano_json_links(self, saved_path, json_override=False):
         links = []
@@ -1690,4 +1712,5 @@ class GSV_pano(object):
                 pano = GSV_pano(panoId=panoId, saved_path=saved_path, json_override=json_override)
             except Exception as e:
                 logging.error("Error in extend_pano_json_counts link loop:", e)
+                print("GSV url:", utils.get_GSV_URL_from_panoId(self.panoId))
 
